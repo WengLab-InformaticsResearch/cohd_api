@@ -14,7 +14,8 @@ implemented in Flask
 from flask import Flask, request, redirect, jsonify
 from flask_cors import CORS
 import query_cohd_mysql
-import requests
+from google_analytics import GoogleAnalytics
+
 
 #########
 # INITS #
@@ -150,53 +151,10 @@ def args_to_query(args, arg_names):
 
 
 def google_analytics(endpoint=None, service=None, meta=None):
-    """ Reports the endpoint to Google Analytics
-
-    Reports the endpoint as a pageview to Google Analytics. If endpoint is specified, then endpoint is reported.
-    Otherwise, if service and meta are specified, then /api/{service}/{meta} is reported.
-
-    Uses Google Analytics Measurement Protocol for reporting:
-    https://developers.google.com/analytics/devguides/collection/protocol/v1/devguide
-
-    :param endpoint: The endpoint to submit as the document page
-    :param service: Combine with meta to submit /api/{service}/{meta} as the document page.
-    :param meta: Combine with service to submit /api/{service}/{meta} as the document page.
-    :return: None
-    """
-    print request.remote_addr
-    print request.user_agent
-
     # Report to Google Analytics iff the tracking ID is specified in the configuration file
-    if u'GA_TID' not in app.config:
-        # Google analytics not configured. Exit.
-        return
-
-    # Report the endpoint if specified, otherwise /api/{service}/{meta}
-    if endpoint is None:
-        if service is None or meta is None:
-            # Insufficient information.
-            print 'Insufficient endpoint information for cohd.py::google_analytics'
-            return
-
-        endpoint = u'/api/{service}/{meta}'.format(service=service, meta=meta)
-
-    try:
-        # Use a small timeout so that the Google Analytics request does not cause delays if there is an issue
-        endpoint_ga = u'http://www.google-analytics.com/collect'
-        payload = {
-            u'v': 1,
-            u'tid': app.config[u'GA_TID'],
-            u'cid': 555,
-            u't': u'pageview',
-            u'dh': u'cohd.nsides.io',
-            u'dp': endpoint,
-            u'uip': request.remote_addr,
-            u'ua': request.user_agent
-        }
-        requests.post(endpoint_ga, data=payload, timeout=0.1)
-    except requests.exceptions.Timeout:
-        # Log the timeout
-        print 'Google Analytics timeout: ' + endpoint
+    if u'GA_TID' in app.config:
+        tid = app.config[u'GA_TID']
+        GoogleAnalytics.google_analytics(request, tid, endpoint, service, meta)
 
 
 @app.route(u'/api/query')
