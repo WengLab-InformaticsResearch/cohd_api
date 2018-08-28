@@ -42,8 +42,11 @@ SET
 -- --------------------------------------------------------
 -- 5-year dataset: 2013-2017
 -- --------------------------------------------------------
+
+-- Data set info
 CALL add_dataset_info('5 year', 'Clinical data from 2013-2017');
 SET @dataset_id_5year = (SELECT LAST_INSERT_ID());
+CALL add_patient_count(@dataset_id_5year, 1790431);
 
 -- Load concept_counts data 
 -- Can't use prepared statements for LOAD
@@ -72,8 +75,11 @@ SET
 -- --------------------------------------------------------
 -- lifetime dataset
 -- --------------------------------------------------------
+
+-- Data set info
 CALL add_dataset_info('Lifetime', 'Clinical data from all years in the database');
 SET @dataset_id_lifetime = (SELECT LAST_INSERT_ID());
+CALL add_patient_count(@dataset_id_lifetime, 5364781);
 
 -- Load concept_counts data
 -- Can't use prepared statements for LOAD
@@ -99,6 +105,10 @@ SET
 	dataset_id = @dataset_id_lifetime
 ;
 
+-- --------------------------------------------------------
+-- Add primary keys and indices after finished loading data
+-- --------------------------------------------------------
+CALL alter_tables();
 
 -- --------------------------------------------------------
 -- Delete iatrogenic codes
@@ -116,3 +126,28 @@ LIMIT 1;
 -- --------------------------------------------------------
 -- Create the metadata tables
 CALL create_metadata_tables();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
