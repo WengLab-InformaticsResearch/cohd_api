@@ -8,7 +8,8 @@ from omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_
 # Configuration
 # log-in credentials for database
 CONFIG_FILE = u"cohd_mysql.cnf"
-DEFAULT_DATASET_ID = 1
+DATASET_ID_DEFAULT = 1
+DATASET_ID_DEFAULT_HIER = 3
 
 # OXO API configuration
 URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -16,10 +17,10 @@ _DEFAULT_OXO_DISTANCE = 2
 DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
 
 
-def _get_arg_datset_id(args):
+def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
     dataset_id = args.get(u'dataset_id')
     if dataset_id is None or dataset_id.isspace() or not dataset_id.strip().isdigit():
-        dataset_id = DEFAULT_DATASET_ID
+        dataset_id = DATASET_ID_DEFAULT
     else:
         dataset_id = int(dataset_id.strip())
 
@@ -102,7 +103,7 @@ def query_db(service, method, args):
                     IFNULL(concept_count, 0E0) AS concept_count
                 FROM cohd.concept c
                 LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
-                WHERE concept_name like %(like_query)s AND standard_concept = 'S' 
+                WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C') 
                     {domain_filter} 
                     {count_filter}
                 ORDER BY cc.concept_count DESC
@@ -160,6 +161,110 @@ def query_db(service, method, args):
                 WHERE concept_id IN (%s);''' % ','.join(['%s' for _ in concept_ids])
 
             cur.execute(sql, concept_ids)
+            json_return = cur.fetchall()
+
+        # Looks up ancestors of a given concept
+        # e.g. /api/query?service=omop&meta=conceptAncestors&concept_id=313217
+        elif method == u'conceptAncestors':
+            # Get non-required parameters
+            dataset_id = _get_arg_datset_id(args, DATASET_ID_DEFAULT_HIER)
+
+            # concept_id is required
+            concept_id = args.get(u'concept_id')
+            if concept_id is None or concept_id == [u''] or not concept_id.strip().isdigit():
+                return u'No concept_id specified', 400
+            concept_id = int(concept_id)
+
+            sql = '''SELECT ca.ancestor_concept_id, ca.min_levels_of_separation, ca.max_levels_of_separation, 
+                    c.concept_name, c.domain_id, c.vocabulary_id, c.concept_class_id, c.standard_concept, 
+                    c.concept_code, cc.concept_count
+                FROM concept_ancestor ca
+                JOIN concept c ON ca.ancestor_concept_id = c.concept_id
+                LEFT JOIN concept_counts cc ON ca.ancestor_concept_id = cc.concept_id
+                WHERE ca.descendant_concept_id = %(concept_id)s
+                    {vocabulary_filter}
+                    {concept_class_filter}
+                    AND (cc.dataset_id IS NULL OR cc.dataset_id = %(dataset_id)s)
+                ORDER BY concept_count ASC
+                LIMIT 1000;'''
+
+            params = {
+                'concept_id': concept_id,
+                'dataset_id': dataset_id,
+            }
+
+            # Filter concepts by vocabulary
+            vocabulary_id = args.get(u'vocabulary_id')
+            if vocabulary_id is None or vocabulary_id == [u''] or vocabulary_id.isspace():
+                vocabulary_filter = ''
+            else:
+                vocabulary_filter = 'AND vocabulary_id = %(vocabulary_id)s'
+                params['vocabulary_id'] = vocabulary_id
+
+            # Filter concepts by concept_class
+            concept_class_id = args.get(u'concept_class_id')
+            if concept_class_id is None or concept_class_id == [u''] or concept_class_id.isspace():
+                concept_class_filter = ''
+            else:
+                concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                params['concept_class_id'] = concept_class_id
+
+            # Add filter code to SQL
+            sql = sql.format(vocabulary_filter=vocabulary_filter, concept_class_filter=concept_class_filter)
+
+            cur.execute(sql, params)
+            json_return = cur.fetchall()
+
+        # Looks up descendants of a given concept
+        # e.g. /api/query?service=omop&meta=conceptDescendants&concept_id=313217
+        elif method == u'conceptDescendants':
+            # Get non-required parameters
+            dataset_id = _get_arg_datset_id(args, DATASET_ID_DEFAULT_HIER)
+
+            # concept_id is required
+            concept_id = args.get(u'concept_id')
+            if concept_id is None or concept_id == [u''] or not concept_id.strip().isdigit():
+                return u'No concept_id specified', 400
+            concept_id = int(concept_id)
+
+            sql = '''SELECT ca.descendant_concept_id, ca.min_levels_of_separation, ca.max_levels_of_separation, 
+                    c.concept_name, c.domain_id, c.vocabulary_id, c.concept_class_id, c.standard_concept, 
+                    c.concept_code, cc.concept_count
+                FROM concept_ancestor ca
+                JOIN concept c ON ca.descendant_concept_id = c.concept_id
+                LEFT JOIN concept_counts cc ON ca.descendant_concept_id = cc.concept_id
+                WHERE ca.ancestor_concept_id = %(concept_id)s
+                    {vocabulary_filter}
+                    {concept_class_filter}
+                    AND (cc.dataset_id IS NULL OR cc.dataset_id = %(dataset_id)s)
+                ORDER BY concept_count DESC
+                LIMIT 1000;'''
+
+            params = {
+                'concept_id': concept_id,
+                'dataset_id': dataset_id,
+            }
+
+            # Filter concepts by vocabulary
+            vocabulary_id = args.get(u'vocabulary_id')
+            if vocabulary_id is None or vocabulary_id == [u''] or vocabulary_id.isspace():
+                vocabulary_filter = ''
+            else:
+                vocabulary_filter = 'AND vocabulary_id = %(vocabulary_id)s'
+                params['vocabulary_id'] = vocabulary_id
+
+            # Filter concepts by concept_class
+            concept_class_id = args.get(u'concept_class_id')
+            if concept_class_id is None or concept_class_id == [u''] or concept_class_id.isspace():
+                concept_class_filter = ''
+            else:
+                concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                params['concept_class_id'] = concept_class_id
+
+            # Add filter code to SQL
+            sql = sql.format(vocabulary_filter=vocabulary_filter, concept_class_filter=concept_class_filter)
+
+            cur.execute(sql, params)
             json_return = cur.fetchall()
 
         # Find concept_ids and concept_names that are similar to the query

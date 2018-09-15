@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-  - url: 'http://cohd.nsides.io/api/'
+  - url: 'http://cohd.io/api/'
 info:
   description: |
     The Columbia Open Health Data (COHD) API provides access to counts and frequencies (i.e., EHR prevalence) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the [Columbia University Medical Center's](http://www.cumc.columbia.edu/) [OHDSI](https://www.ohdsi.org/) database including inpatient and outpatient data. Counts are the number of patients associated with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of patients associated with the concept divided by the total number of patients in the dataset, i.e., prevalence in the electronic health records. To protect patient privacy, all concepts and pairs of concepts where the count <= 10 were excluded, and counts were randomized by the Poisson distribution. 
@@ -30,6 +30,12 @@ info:
 
 
     COHD was developed at the [Columbia University Department of Biomedical Informatics](https://www.dbmi.columbia.edu/) as a collaboration between the [Weng Lab](http://people.dbmi.columbia.edu/~chw7007/), [Tatonetti Lab](http://tatonettilab.org/), and the [NCATS Biomedical Data Translator](https://ncats.nih.gov/translator) program (Red Team). This work was supported in part by grants: NCATS OT3TR002027, NLM R01LM009886-08A1, and NIGMS R01GM107145.
+    
+    The following external resources may be useful:  
+    [OHDSI](https://www.ohdsi.org/)  
+    [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)  
+    [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
+    [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
   version: 2.0.0
   termsOfService: 'http://cohd.nsides.io/terms/'
   title: Columbia Open Health Data (COHD)
@@ -191,6 +197,86 @@ paths:
       responses:
         default:
           description: Default response
+  /omop/conceptAncestors:
+    get:
+      tags:
+        - OMOP
+      summary: Retrieve the concept's hierarchical ancestors
+      description: >-
+        Retrieves the given concept's hierarchical ancestors and their counts. The hierarchical definitions were derived from the OMOP concept_ancestor table. For more information, see the documentation on OMOP's concept_ancestor table on [ohdsi.org](http://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:concept_ancestor) and [GitHub](https://github.com/OHDSI/CommonDataModel/wiki/CONCEPT_ANCESTOR).
+      parameters:
+        - name: concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept ID, e.g., 313217'
+          example: 313217
+        - name: vocabulary_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'The vocabulary_id to restrict ancestors to. For conditions, SNOMED and MedDRA are used. For drugs, RxNorm (only and ATC are used. For procedures, SNOMED, MedDRA, and ICD10PCS are used. Default: unrestricted'
+          example: 'RxNorm'
+        - name: concept_class_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'The concept_class_id to restrict ancestors to. Only certain hierarchical concept_class_ids are used in each vocabuarly: [ATC](https://en.wikipedia.org/wiki/Anatomical_Therapeutic_Chemical_Classification_System) {ATC 1st, ATC 2nd, ATC 3rd, ATC 4th, ATC 5th}; [MedDRA](https://en.wikipedia.org/wiki/MedDRA) {PT, HLT, HLGT, SOC}; [RxNorm](https://www.nlm.nih.gov/research/umls/rxnorm/docs/2015/appendix5.html) {Ingredient, Clinical Drug Form, Clinical Drug Comp, Clinical Drug}. Default: unrestricted'
+          example: 'Ingredient'
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: 'The dataset_id to retrieve counts from. Default: 3 (5-year hierarchical data set)'
+          example: 3
+      operationId: conceptAncestors
+      responses:
+        default:
+          description: Default response          
+  /omop/conceptDescendants:
+    get:
+      tags:
+        - OMOP
+      summary: Retrieve the concept's hierarchical descendants
+      description: >-
+        Retrieves the given concept's hierarchical descendants and their counts. The hierarchical definitions were derived from the OMOP concept_ancestor table. See the documentation on OMOP's concept_ancestor table on [ohdsi.org](http://www.ohdsi.org/web/wiki/doku.php?id=documentation:cdm:concept_ancestor) and [GitHub](https://github.com/OHDSI/CommonDataModel/wiki/CONCEPT_ANCESTOR).
+      parameters:
+        - name: concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept ID, e.g., 21601855'
+          example: 21601855
+        - name: vocabulary_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'The vocabulary_id to restrict ancestors to. For conditions, SNOMED and MedDRA are used. For drugs, RxNorm and ATC are used. For procedures, SNOMED, MedDRA, and ICD10PCS are used. Default: unrestricted'
+          example: 'RxNorm'
+        - name: concept_class_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'The concept_class_id to restrict ancestors to. Only certain hierarchical concept_class_ids are used in each vocabuarly: [ATC](https://en.wikipedia.org/wiki/Anatomical_Therapeutic_Chemical_Classification_System) {ATC 1st, ATC 2nd, ATC 3rd, ATC 4th, ATC 5th}; [MedDRA](https://en.wikipedia.org/wiki/MedDRA) {PT, HLT, HLGT, SOC}; [RxNorm](https://www.nlm.nih.gov/research/umls/rxnorm/docs/2015/appendix5.html) {Ingredient, Clinical Drug Form, Clinical Drug Comp, Clinical Drug}. Default: unrestricted'
+          example: 
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: 'The dataset_id to retrieve counts from. Default: 3 (5-year hierarchical data set)'
+          example: 3   
+      operationId: conceptDescendants
+      responses:
+        default:
+          description: Default response            
   /omop/mapToStandardConceptID:
     get:
       tags:

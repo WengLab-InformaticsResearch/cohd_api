@@ -48,6 +48,16 @@ def api_omop_concepts():
     return api_call(u'omop', u'concepts')
 
 
+@app.route(u'/api/omop/conceptAncestors')
+def api_omop_conceptAncestors():
+    return api_call(u'omop', u'conceptAncestors')
+
+
+@app.route(u'/api/omop/conceptDescendants')
+def api_omop_conceptDescendants():
+    return api_call(u'omop', u'conceptDescendants')
+
+
 @app.route(u'/api/omop/mapToStandardConceptID')
 def api_omop_mapToStandardConceptID():
     return api_call(u'omop', u'mapToStandardConceptID')
@@ -181,6 +191,8 @@ def api_call(service=None, meta=None, query=None):
     elif service == u'omop':
         if meta == u'findConceptIDs' or \
                 meta == u'concepts' or \
+                meta == u'conceptAncestors' or \
+                meta == u'conceptDescendants' or \
                 meta == u'mapToStandardConceptID' or \
                 meta == u'mapFromStandardConceptID' or \
                 meta == u'vocabularies' or \

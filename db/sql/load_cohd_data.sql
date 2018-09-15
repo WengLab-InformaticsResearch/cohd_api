@@ -18,7 +18,7 @@ CALL create_tables();
 -- How NULL is represented in the data files
 SET @NULL_SERIALIZATION = 'NULL';
 
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concepts_all_except_licensed.txt' 
+LOAD DATA LOCAL INFILE '/path/to/file/concepts_all_except_licensed.txt' 
 INTO TABLE concept
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''
@@ -29,7 +29,7 @@ SET
 	invalid_reason = nullif(@vinvalid_reason, @NULL_SERIALIZATION)
 ;
 
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concepts_relationships_all_except_licensed.txt' 
+LOAD DATA LOCAL INFILE '/path/to/file/concepts_relationships_all_except_licensed.txt' 
 INTO TABLE concept_relationship
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''
@@ -39,18 +39,25 @@ SET
 	invalid_reason = nullif(@vinvalid_reason, @NULL_SERIALIZATION)
 ;
 
+LOAD DATA LOCAL INFILE '/path/to/file/concept_ancestors_observed.txt' 
+INTO TABLE concept_ancestor
+FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
+LINES TERMINATED BY '\r\n' STARTING BY ''
+IGNORE 1 LINES
+(ancestor_concept_id, descendant_concept_id, min_levels_of_separation, max_levels_of_separation);
+
 -- --------------------------------------------------------
 -- 5-year dataset: 2013-2017
 -- --------------------------------------------------------
 
 -- Data set info
-CALL add_dataset_info('5 year', 'Clinical data from 2013-2017');
+CALL add_dataset_info('5-year non-hierarchical', 'Clinical data from 2013-2017. Each concept\'s count reflects the use of that specific concept.');
 SET @dataset_id_5year = (SELECT LAST_INSERT_ID());
 CALL add_patient_count(@dataset_id_5year, 1790431);
 
 -- Load concept_counts data 
 -- Can't use prepared statements for LOAD
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concept_counts_2013-2017_randomized_mincount=11.txt'
+LOAD DATA LOCAL INFILE '/path/to/file/concept_counts_2013-2017_randomized_mincount=11.txt'
 INTO TABLE concept_counts
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''
@@ -62,7 +69,7 @@ SET
 
 -- Load concept_pair_counts data
 -- Can't use prepared statements for LOAD
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concept_pair_counts_2013-2017_randomized_mincount=11.txt'
+LOAD DATA LOCAL INFILE '/path/to/file/concept_pair_counts_2013-2017_randomized_mincount=11.txt'
 INTO TABLE concept_pair_counts
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''
@@ -77,13 +84,13 @@ SET
 -- --------------------------------------------------------
 
 -- Data set info
-CALL add_dataset_info('Lifetime', 'Clinical data from all years in the database');
+CALL add_dataset_info('Lifetime non-hierarchical', 'Clinical data from all years in the database. Each concept\'s count reflects the use of that specific concept.');
 SET @dataset_id_lifetime = (SELECT LAST_INSERT_ID());
 CALL add_patient_count(@dataset_id_lifetime, 5364781);
 
 -- Load concept_counts data
 -- Can't use prepared statements for LOAD
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concept_counts_0-9999_randomized_mincount=11.txt'
+LOAD DATA LOCAL INFILE '/path/to/file/concept_counts_0-9999_randomized_mincount=11.txt'
 INTO TABLE concept_counts
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''
@@ -95,7 +102,7 @@ SET
 
 -- Load concept_pair_counts data
 -- Can't use prepared statements for LOAD
-LOAD DATA LOCAL INFILE 'D:/cohd/ohdsi_west_cumc_20180326/concept_pair_counts_0-9999_randomized_mincount=11.txt'
+LOAD DATA LOCAL INFILE '/path/to/file/concept_pair_counts_0-9999_randomized_mincount=11.txt'
 INTO TABLE concept_pair_counts
 FIELDS TERMINATED BY '\t' ENCLOSED BY '' ESCAPED BY '\\'
 LINES TERMINATED BY '\r\n' STARTING BY ''

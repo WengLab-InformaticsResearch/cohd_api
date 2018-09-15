@@ -45,7 +45,7 @@ BEGIN
 END//
 
 
--- Create the concept table
+-- Create the concept_relationship table
 CREATE PROCEDURE create_concept_relationship_table()
 BEGIN
     -- Create the concept table
@@ -56,6 +56,18 @@ BEGIN
 	  valid_start_date DATE NOT NULL,
 	  valid_end_date DATE NOT NULL,
 	  invalid_reason CHAR(1) NULL);
+END//
+
+
+-- Create the concept_ancestor table
+CREATE PROCEDURE create_concept_ancestor_table()
+BEGIN
+    -- Create the concept table
+	CREATE TABLE IF NOT EXISTS concept_ancestor (
+	  ancestor_concept_id INTEGER NOT NULL,
+	  descendant_concept_id INTEGER	NOT NULL,
+	  min_levels_of_separation INTEGER NOT NULL,
+	  max_levels_of_separation INTEGER NOT NULL);
 END//
 
 
@@ -86,6 +98,7 @@ BEGIN
     CALL create_patient_count_table();
 	CALL create_concepts_table();
 	CALL create_concept_relationship_table();
+    CALL create_concept_ancestor_table();
 	CALL create_concept_counts_table();
 	CALL create_concept_pair_counts_table();
 END//
@@ -106,14 +119,18 @@ BEGIN
       ADD INDEX concept_id_1 (concept_id_1 ASC),
       ADD INDEX concept_id_2 (concept_id_2 ASC);
       
+	ALTER TABLE concept_ancestor
+      ADD PRIMARY KEY (ancestor_concept_id, descendant_concept_id),
+      ADD INDEX (descendant_concept_id, ancestor_concept_id);
+      
 	ALTER TABLE concept_counts
       ADD PRIMARY KEY (dataset_id, concept_id),
       ADD INDEX concept_count (dataset_id ASC, concept_count ASC);
       
 	ALTER TABLE concept_pair_counts
       ADD PRIMARY KEY (dataset_id, concept_id_1, concept_id_2),
-      ADD INDEX concept_id_1_idx (dataset_id ASC, concept_id_1 ASC, concept_id_2 ASC, concept_count ASC),
-	  ADD INDEX concept_id_2_idx (dataset_id ASC, concept_id_2 ASC, concept_id_1 ASC, concept_count ASC);
+      ADD INDEX concept_id_1_idx (dataset_id ASC, concept_id_1 ASC, concept_count ASC),
+	  ADD INDEX concept_id_2_idx (dataset_id ASC, concept_id_2 ASC, concept_count ASC);
 END//
 
 
