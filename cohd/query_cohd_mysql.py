@@ -526,18 +526,6 @@ def query_db(service, method, args):
         # Returns most common single concept frequencies
         # e.g. /api/v1/query?service=frequencies&meta=mostFrequentConcept&dataset_id=1&q=100
         elif method == u'mostFrequentConcepts':
-            dataset_id = _get_arg_datset_id(args)
-
-            # Check q parameter (limit)
-            if query is None or query == [u''] or query.isspace() or not query.strip().isdigit():
-                limit_n = 100
-            else:
-                limit_n = int(query)
-
-            params = {
-                'dataset_id': dataset_id,
-                'limit_n': limit_n
-            }
             sql = '''SELECT cc.dataset_id, 
                         cc.concept_id, 
                         cc.concept_count, 
@@ -551,8 +539,26 @@ def query_db(service, method, args):
                         {vocabulary_filter}
                         {concept_class_filter}
                     ORDER BY concept_count DESC 
-                    LIMIT %(limit_n)s;    
+                    {limit}
+                    ;    
                     '''
+
+            # Get dataset_id
+            dataset_id = _get_arg_datset_id(args)
+            params = {
+                'dataset_id': dataset_id
+            }
+
+            # Check q parameter (limit)
+            if query is None or query == [u''] or query.isspace() or not query.strip().isdigit():
+                limit = ''
+            else:
+                limit_n = int(query)
+                if limit_n > 0:
+                    limit = 'LIMIT %(limit_n)s'
+                    params['limit_n'] = limit_n
+                else:
+                    limit = ''
 
             # Check domain parameter
             domain_id = args.get(u'domain')
@@ -563,23 +569,31 @@ def query_db(service, method, args):
                 params['domain_id'] = domain_id
 
             # Filter concepts by vocabulary
-            vocabulary_id = args.get(u'vocabulary_id')
-            if vocabulary_id is None or vocabulary_id == [u''] or vocabulary_id.isspace():
+            vocabulary_ids = args.get(u'vocabulary_id')
+            if vocabulary_ids is None or vocabulary_ids == [u''] or vocabulary_ids.isspace():
                 vocabulary_filter = ''
             else:
-                vocabulary_filter = 'AND vocabulary_id = %(vocabulary_id)s'
-                params['vocabulary_id'] = vocabulary_id
+                vids = []
+                for i, vocabulary_id in enumerate(vocabulary_ids.split(',')):
+                    vid = 'vid{x}'.format(x=i)
+                    vids.append('%({x})s'.format(x=vid))
+                    params[vid] = vocabulary_id
+                vocabulary_filter = 'AND vocabulary_id IN ({vids})'.format(vids=','.join(vids))
 
             # Filter concepts by concept_class
-            concept_class_id = args.get(u'concept_class_id')
-            if concept_class_id is None or concept_class_id == [u''] or concept_class_id.isspace():
+            concept_class_ids = args.get(u'concept_class_id')
+            if concept_class_ids is None or concept_class_ids == [u''] or concept_class_ids.isspace():
                 concept_class_filter = ''
             else:
-                concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
-                params['concept_class_id'] = concept_class_id
+                ccids = []
+                for i, concept_class_id in enumerate(concept_class_ids.split(',')):
+                    ccid = 'ccid{x}'.format(x=i)
+                    ccids.append('%({x})s'.format(x=ccid))
+                    params[ccid] = concept_class_id
+                concept_class_filter = 'AND concept_class_id IN ({ccids})'.format(ccids=','.join(ccids))
 
             # Add filter code to SQL
-            sql = sql.format(domain_filter=domain_filter, vocabulary_filter=vocabulary_filter,
+            sql = sql.format(limit=limit, domain_filter=domain_filter, vocabulary_filter=vocabulary_filter,
                              concept_class_filter=concept_class_filter)
 
             cur.execute(sql, params)

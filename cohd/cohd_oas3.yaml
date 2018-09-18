@@ -543,10 +543,10 @@ paths:
           example: 1
         - name: q
           in: query
-          required: true
+          required: false
           schema:
             type: integer
-          description: 'The number of concepts to retreieve, e.g., "100"'
+          description: '(Optional) The number of concepts to retreieve, e.g., 100. 0 or unspecified will return all matching concepts.'
           example: 100
         - name: domain
           in: query
@@ -560,14 +560,14 @@ paths:
           required: false
           schema:
             type: string
-          description: '(Optional) The vocabulary_id to restrict to, e.g., "SNOMED", "MedDRA", "RxNorm", "ATC" etc. Default: unrestricted'
+          description: '(Optional) The vocabulary_id(s) to restrict to, e.g., "SNOMED", "MedDRA", "RxNorm", "ATC" etc. Comma separated to include multiple vocabularies, e.g., "SNOMED,MedDRA". Default: unrestricted'
           example: 
         - name: concept_class_id
           in: query
           required: false
           schema:
             type: string
-          description: '(Optional) The concept_class_id to restrict to. concept_class_ids are specific to each vocabulary, e.g.,: [ATC](https://en.wikipedia.org/wiki/Anatomical_Therapeutic_Chemical_Classification_System) {ATC 1st, ATC 2nd, ATC 3rd, ATC 4th, ATC 5th}; [MedDRA](https://en.wikipedia.org/wiki/MedDRA) {PT, HLT, HLGT, SOC}; [RxNorm](https://www.nlm.nih.gov/research/umls/rxnorm/docs/2015/appendix5.html) {Ingredient, Clinical Drug Form, Clinical Drug Comp, Clinical Drug}. Default: unrestricted'
+          description: '(Optional) The concept_class_id(s) to restrict to. concept_class_ids are specific to each vocabulary, e.g.,: [ATC](https://en.wikipedia.org/wiki/Anatomical_Therapeutic_Chemical_Classification_System) {ATC 1st, ATC 2nd, ATC 3rd, ATC 4th, ATC 5th}; [MedDRA](https://en.wikipedia.org/wiki/MedDRA) {PT, HLT, HLGT, SOC}; [RxNorm](https://www.nlm.nih.gov/research/umls/rxnorm/docs/2015/appendix5.html) {Ingredient, Clinical Drug Form, Clinical Drug Comp, Clinical Drug}. Comma separated to include multiple concept_class_ids, e.g., "PT,HLT". Default: unrestricted'
           example:           
       operationId: mostFrequentConcepts
       responses:
