@@ -555,6 +555,20 @@ paths:
             type: string
           description: '(Optional) The domain_id to restrict to, e.g., "Condition", "Drug", "Procedure". See /metadata/domainCounts for a list of valid domain IDs.'
           example: 'Condition'
+        - name: vocabulary_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: '(Optional) The vocabulary_id to restrict to, e.g., "SNOMED", "MedDRA", "RxNorm", "ATC" etc. Default: unrestricted'
+          example: 
+        - name: concept_class_id
+          in: query
+          required: false
+          schema:
+            type: string
+          description: '(Optional) The concept_class_id to restrict to. concept_class_ids are specific to each vocabulary, e.g.,: [ATC](https://en.wikipedia.org/wiki/Anatomical_Therapeutic_Chemical_Classification_System) {ATC 1st, ATC 2nd, ATC 3rd, ATC 4th, ATC 5th}; [MedDRA](https://en.wikipedia.org/wiki/MedDRA) {PT, HLT, HLGT, SOC}; [RxNorm](https://www.nlm.nih.gov/research/umls/rxnorm/docs/2015/appendix5.html) {Ingredient, Clinical Drug Form, Clinical Drug Comp, Clinical Drug}. Default: unrestricted'
+          example:           
       operationId: mostFrequentConcepts
       responses:
         default:

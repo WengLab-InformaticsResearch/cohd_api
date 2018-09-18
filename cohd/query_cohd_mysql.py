@@ -542,22 +542,45 @@ def query_db(service, method, args):
                         cc.concept_id, 
                         cc.concept_count, 
                         cc.concept_count / (pc.count + 0E0) AS concept_frequency,
-                        c.domain_id, c.concept_name 
+                        c.domain_id, c.concept_name, c.vocabulary_id, c.concept_class_id
                     FROM cohd.concept_counts cc
                     JOIN cohd.concept c ON cc.concept_id = c.concept_id
                     JOIN cohd.patient_count pc ON cc.dataset_id = pc.dataset_id
                     WHERE cc.dataset_id = %(dataset_id)s
+                        {domain_filter}
+                        {vocabulary_filter}
+                        {concept_class_filter}
+                    ORDER BY concept_count DESC 
+                    LIMIT %(limit_n)s;    
                     '''
 
             # Check domain parameter
             domain_id = args.get(u'domain')
-            if domain_id is not None and domain_id != [u''] and not domain_id.isspace():
-                sql += '''    AND c.domain_id = %(domain_id)s
-                    '''
+            if domain_id is None or domain_id == [u''] or domain_id.isspace():
+                domain_filter = ''
+            else:
+                domain_filter = 'AND c.domain_id = %(domain_id)s'
                 params['domain_id'] = domain_id
 
-            sql += '''ORDER BY concept_count DESC 
-                    LIMIT %(limit_n)s;'''
+            # Filter concepts by vocabulary
+            vocabulary_id = args.get(u'vocabulary_id')
+            if vocabulary_id is None or vocabulary_id == [u''] or vocabulary_id.isspace():
+                vocabulary_filter = ''
+            else:
+                vocabulary_filter = 'AND vocabulary_id = %(vocabulary_id)s'
+                params['vocabulary_id'] = vocabulary_id
+
+            # Filter concepts by concept_class
+            concept_class_id = args.get(u'concept_class_id')
+            if concept_class_id is None or concept_class_id == [u''] or concept_class_id.isspace():
+                concept_class_filter = ''
+            else:
+                concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                params['concept_class_id'] = concept_class_id
+
+            # Add filter code to SQL
+            sql = sql.format(domain_filter=domain_filter, vocabulary_filter=vocabulary_filter,
+                             concept_class_filter=concept_class_filter)
 
             cur.execute(sql, params)
             json_return = cur.fetchall()
