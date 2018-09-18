@@ -42,7 +42,7 @@ info:
     [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)  
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
-  version: 2.0.0
+  version: 2.1.0
   termsOfService: 'http://cohd.nsides.io/terms/'
   title: Columbia Open Health Data (COHD)
   contact:
