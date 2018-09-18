@@ -33,7 +33,8 @@ app.config.from_pyfile(u'cohd_flask.conf')
 @app.route(u'/')
 def api_cohd():
     google_analytics(endpoint=u'/')
-    return redirect("http://smart-api.info/ui/?url=/api/metadata/6c33ed14d628a982c79fa36a75dbbbcf", code=302)
+    # return redirect("http://smart-api.info/ui/70117385218edc9bc01633829011dfcf", code=302)
+    return redirect("http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35", code=302)
 
 
 @app.route(u'/api/omop/findConceptIDs')
