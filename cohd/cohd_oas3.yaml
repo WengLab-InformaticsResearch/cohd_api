@@ -84,7 +84,28 @@ paths:
       operationId: datasets
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of dataset descriptions.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        dataset_name:
+                          type: string
+                          example: '5-year non-hierarchical'                      
+                        dataset_id:
+                          type: integer
+                          example: 1
+                        dataset_description: 
+                          type: string
+                          example: '5-year non-hierarchical dataset: Includes clinical data from 2013-2017'
   /metadata/domainCounts:
     get:
       tags:
@@ -103,7 +124,28 @@ paths:
       operationId: domainCounts
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of domain counts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 1
+                        domain_id: 
+                          type: string
+                          example: 'Condition'
+                        count:
+                          type: integer
+                          example: 1000  
   /metadata/domainPairCounts:
     get:
       tags:
@@ -123,7 +165,31 @@ paths:
       operationId: domainPairCounts
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of domain pair counts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 1
+                        domain_id_1: 
+                          type: string
+                          example: 'Condition'
+                        domain_id_2: 
+                          type: string
+                          example: 'Drug'
+                        count:
+                          type: integer
+                          example: 1000  
   /metadata/patientCount:
     get:
       tags:
@@ -142,7 +208,25 @@ paths:
       operationId: patientCount
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of patient counts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 1
+                        count:
+                          type: integer
+                          example: 100000  
   /omop/concepts:
     get:
       tags:
@@ -162,7 +246,37 @@ paths:
       operationId: concepts
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        concept_id:
+                          type: integer
+                          example: 192855
+                        concept_name:
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        domain_id:
+                          type: string
+                          example: "Condition"
+                        vocabulary_id:
+                          type: string
+                          example: "SNOMED"
+                        concept_class_id:
+                          type: string
+                          example: "Clinical Finding"
+                        concept_code:
+                          type: string
+                          example: "92546004"                          
   /omop/findConceptIDs:
     get:
       tags:
@@ -202,7 +316,40 @@ paths:
       operationId: findConceptIDs
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        concept_class_id: 
+                          type: string
+                          example: "Clinical Finding"
+                        concept_code: 
+                          type: string
+                          example: "92546004"
+                        concept_count: 
+                          type: integer
+                          example: 368
+                        concept_id: 
+                          type: integer
+                          example: 192855
+                        concept_name: 
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        domain_id: 
+                          type: string
+                          example: "Condition"
+                        vocabulary_id: 
+                          type: string
+                          example: "SNOMED"
   /omop/conceptAncestors:
     get:
       tags:
@@ -242,7 +389,49 @@ paths:
       operationId: conceptAncestors
       responses:
         default:
-          description: Default response          
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:   
+                        ancestor_concept_id: 
+                          type: integer
+                          example: 1177480
+                        concept_class_id: 
+                          type: string
+                          example: "Ingredient"
+                        concept_code:  
+                          type: string
+                          example: "5640"
+                        concept_count: 
+                          type: integer
+                          example: 233514
+                        concept_name: 
+                          type: string
+                          example: "Ibuprofen"
+                        domain_id: 
+                          type: string
+                          example: "Drug"
+                        max_levels_of_separation: 
+                          type: integer
+                          example: 2
+                        min_levels_of_separation: 
+                          type: integer
+                          example: 2
+                        standard_concept: 
+                          type: string
+                          example: "S"
+                        vocabulary_id: 
+                          type: string
+                          example: "RxNorm"
   /omop/conceptDescendants:
     get:
       tags:
@@ -282,7 +471,49 @@ paths:
       operationId: conceptDescendants
       responses:
         default:
-          description: Default response            
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:       
+                        concept_class_id: 
+                          type: string
+                          example: "Clinical Finding"
+                        concept_code:  
+                          type: string
+                          example: "49436004"
+                        concept_count:  
+                          type: integer
+                          example: 53272
+                        concept_name:  
+                          type: string
+                          example: "Atrial fibrillation"
+                        descendant_concept_id:   
+                          type: integer
+                          example: 313217
+                        domain_id:  
+                          type: string
+                          example: "Condition"
+                        max_levels_of_separation:   
+                          type: integer
+                          example: 0
+                        min_levels_of_separation:   
+                          type: integer
+                          example: 0
+                        standard_concept:  
+                          type: string
+                          example: "S"
+                        vocabulary_id:  
+                          type: string
+                          example: "SNOMED"                      
   /omop/mapToStandardConceptID:
     get:
       tags:
@@ -309,7 +540,40 @@ paths:
       operationId: mapToStandardConceptID
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:      
+                        source_concept_code: 
+                          type: string
+                          example: "715.3"
+                        source_concept_id:   
+                          type: integer
+                          example: 44834979
+                        source_concept_name:  
+                          type: string
+                          example: "Osteoarthrosis, localized, not specified whether primary or secondary"
+                        source_vocabulary_id:  
+                          type: string
+                          example: "ICD9CM"
+                        standard_concept_id:  
+                          type: integer
+                          example: 72990
+                        standard_concept_name:  
+                          type: string
+                          example: "Localized osteoarthrosis uncertain if primary OR secondary"
+                        standard_domain_id:  
+                          type: string
+                          example: "Condition"                      
   /omop/mapFromStandardConceptID:
     get:
       tags:
@@ -337,7 +601,40 @@ paths:
       operationId: mapFromStandardConceptID
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:      
+                        concept_class_id: 
+                          type: string
+                          example: "4-dig nonbill code"
+                        concept_code: 
+                          type: string
+                          example: "715.3"
+                        concept_id: 
+                          type: integer
+                          example: 44834979
+                        concept_name: 
+                          type: string
+                          example: "Osteoarthrosis, localized, not specified whether primary or secondary"
+                        domain_id: 
+                          type: string
+                          example: "Condition"
+                        standard_concept: 
+                          type: string
+                          example: null
+                        vocabulary_id: 
+                          type: string
+                          example: "ICD9CM"                      
   /omop/vocabularies:
     get:
       tags:
@@ -348,7 +645,22 @@ paths:
       operationId: vocabularies
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of vocabularies.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:      
+                        vocabulary_id: 
+                          type: string
+                          example: "SNOMED"
   /omop/xrefToOMOP:
     get:
       tags:
@@ -375,7 +687,49 @@ paths:
       operationId: xrefToOMOP
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of mappings from external concepts to OMOP concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:      
+                        intermediate_oxo_id: 
+                          type: string
+                          example: "ICD9CM:715.3"
+                        intermediate_oxo_label: 
+                          type: string
+                          example: ""
+                        omop_concept_name: 
+                          type: string
+                          example: "Localized osteoarthrosis uncertain if primary OR secondary"
+                        omop_distance: 
+                          type: integer
+                          example: 1
+                        omop_domain_id: 
+                          type: string
+                          example: "Condition"
+                        omop_standard_concept_id: 
+                          type: integer
+                          example: 72990
+                        oxo_distance: 
+                          type: integer
+                          example: 1
+                        source_oxo_id: 
+                          type: string
+                          example: "DOID:8398"
+                        source_oxo_label: 
+                          type: string
+                          example: "osteoarthritis"
+                        total_distance: 
+                          type: integer
+                          example: 2
   /omop/xrefFromOMOP:
     get:
       tags:
@@ -410,7 +764,64 @@ paths:
       operationId: xrefFromOMOP
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of mappings from OMOP concepts to external concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:      
+                        intermediate_omop_concept_code: 
+                          type: string
+                          example: "92546004"
+                        intermediate_omop_concept_id: 
+                          type: integer
+                          example: 192855
+                        intermediate_omop_concept_name: 
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        intermediate_omop_vocabulary_id: 
+                          type: string
+                          example: "SNOMED"
+                        intermediate_oxo_curie: 
+                          type: string
+                          example: "SNOMEDCT:92546004"
+                        intermediate_oxo_label: 
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        omop_distance: 
+                          type: integer
+                          example: 0
+                        oxo_distance: 
+                          type: integer
+                          example: 1
+                        source_omop_concept_code: 
+                          type: string
+                          example: "92546004"
+                        source_omop_concept_id: 
+                          type: integer
+                          example: 192855
+                        source_omop_concept_name: 
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        source_omop_vocabulary_id: 
+                          type: string
+                          example: "SNOMED"
+                        target_curie: 
+                          type: string
+                          example: "UMLS:C0154091"
+                        target_label: 
+                          type: string
+                          example: "Cancer in situ of urinary bladder"
+                        total_distance: 
+                          type: integer
+                          example: 1
   /frequencies/singleConceptFreq:
     get:
       tags:
@@ -438,7 +849,31 @@ paths:
       operationId: singleConceptFreq
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of single concept frequencies.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:   
+                        concept_count: 
+                          type: integer
+                          example: 368
+                        concept_frequency: 
+                          type: integer
+                          example: 0.0002055371025188907
+                        concept_id: 
+                          type: integer
+                          example: 192855
+                        dataset_id: 
+                          type: integer
+                          example: 1                      
   /frequencies/pairedConceptFreq:
     get:
       tags:
@@ -464,7 +899,34 @@ paths:
       operationId: pairedConceptFreq
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of paired concept frequencies.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:   
+                        concept_count: 
+                          type: integer
+                          example: 10
+                        concept_frequency: 
+                          type: integer
+                          example: 0.000005585247351056813
+                        concept_id_1: 
+                          type: integer
+                          example: 192855
+                        concept_id_2: 
+                          type: integer
+                          example: 2008271
+                        dataset_id: 
+                          type: integer
+                          example: 1                      
   /frequencies/associatedConceptFreq:
     get:
       tags:
@@ -491,7 +953,40 @@ paths:
       operationId: associatedConceptFreq
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of associated concept frequencies.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        associated_concept_id: 
+                          type: integer
+                          example: 19041324
+                        associated_concept_name: 
+                          type: string
+                          example: "Acetaminophen 325 MG Oral Tablet [Tylenol]"
+                        associated_domain_id: 
+                          type: string
+                          example: "Drug"
+                        concept_count: 
+                          type: integer
+                          example: 277
+                        concept_frequency: 
+                          type: integer
+                          example: 0.0001547113516242737
+                        concept_id: 
+                          type: integer
+                          example: 192855
+                        dataset_id: 
+                          type: integer
+                          example: 1        
   /frequencies/associatedConceptDomainFreq:
     get:
       tags:
@@ -525,7 +1020,40 @@ paths:
       operationId: associatedConceptDomainFreq
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of associated concept frequencies.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        associated_concept_id: 
+                          type: integer
+                          example: 2211361
+                        associated_concept_name: 
+                          type: string
+                          example: "Radiologic examination, chest, 2 views, frontal and lateral"
+                        associated_domain_id: 
+                          type: string
+                          example: "Procedure"
+                        concept_count: 
+                          type: integer
+                          example: 257
+                        concept_frequency: 
+                          type: integer
+                          example: 0.00014354085692216007
+                        concept_id: 
+                          type: integer
+                          example: 192855
+                        dataset_id: 
+                          type: integer
+                          example: 1                        
   /frequencies/mostFrequentConcepts:
     get:
       tags:
@@ -572,7 +1100,43 @@ paths:
       operationId: mostFrequentConcepts
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of most frequent concepts.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        concept_class_id: 
+                          type: string
+                          example: "Clinical Finding"
+                        concept_count: 
+                          type: integer
+                          example: 233790
+                        concept_frequency: 
+                          type: integer
+                          example: 0.1305774978203572
+                        concept_id: 
+                          type: integer
+                          example: 320128
+                        concept_name: 
+                          type: string
+                          example: "Essential hypertension"
+                        dataset_id: 
+                          type: integer
+                          example: 1
+                        domain_id: 
+                          type: string
+                          example: "Condition"
+                        vocabulary_id: 
+                          type: string
+                          example: "SNOMED"                      
   /association/chiSquare:
     get:
       tags:
@@ -628,7 +1192,40 @@ paths:
       operationId: chiSquare
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of concept pairs and chi-squared values.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        chi_square: 
+                          type: integer
+                          example: 370026.1780081638
+                        concept_2_domain: 
+                          type: string
+                          example: "Procedure"
+                        concept_2_name: 
+                          type: string
+                          example: "Instillation of therapeutic substance into bladder"
+                        concept_id_1: 
+                          type: integer
+                          example: 192855
+                        concept_id_2: 
+                          type: integer
+                          example: 4021588
+                        dataset_id: 
+                          type: integer
+                          example: 3
+                        p-value: 
+                          type: integer
+                          example: 0                          
   /association/obsExpRatio:
     get:
       tags:
@@ -687,7 +1284,43 @@ paths:
       operationId: obsExpRatio
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of paired concepts and observed-expected frequency ratio.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        concept_2_domain: 
+                          type: string
+                          example: "Procedure"
+                        concept_2_name: 
+                          type: string
+                          example: "Closed [transurethral] biopsy of bladder"
+                        concept_id_1: 
+                          type: integer
+                          example: 192855
+                        concept_id_2: 
+                          type: integer
+                          example: 2003784
+                        dataset_id: 
+                          type: integer
+                          example: 1
+                        expected_count: 
+                          type: integer
+                          example: 0.060838982345591645
+                        ln_ratio: 
+                          type: integer
+                          example: 7.561698473261244
+                        observed_count: 
+                          type: integer
+                          example: 117                      
   /association/relativeFrequency:
     get:
       tags:
@@ -743,7 +1376,43 @@ paths:
       operationId: relativeFrequency
       responses:
         default:
-          description: Default response
+          description: Unexpected error
+        '200':
+          description: An array of paired concepts and relative frequency.
+          content: 
+            application/json: 
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: 
+                      type: object
+                      properties:
+                        concept_2_count: 
+                          type: integer
+                          example: 82
+                        concept_2_domain: 
+                          type: string
+                          example: "Procedure"
+                        concept_2_name: 
+                          type: string
+                          example: "Radical cystectomy"
+                        concept_id_1: 
+                          type: integer
+                          example: 192855
+                        concept_id_2: 
+                          type: integer
+                          example: 2003805
+                        concept_pair_count: 
+                          type: integer
+                          example: 29
+                        dataset_id: 
+                          type: integer
+                          example: 1
+                        relative_frequency: 
+                          type: integer
+                          example: 0.35365853658536583                      
 components:
   schemas: {}
   responses: {}
