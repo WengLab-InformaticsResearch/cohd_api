@@ -3,7 +3,7 @@ from flask import jsonify
 from scipy.stats import chisquare
 from numpy import argsort
 from omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
-    xref_from_omop_standard_concept
+    xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
 
 # Configuration
 # log-in credentials for database
@@ -318,10 +318,23 @@ def query_db(service, method, args):
                 return u'No curie was specified', 400
 
             distance = args.get(u'distance')
-            if distance is None or distance == [u'']:
+            if distance is None or distance == [u''] or not distance.isdigit():
                 distance = _DEFAULT_OXO_DISTANCE
+            else:
+                distance = int(distance)
 
-            json_return = xref_to_omop_standard_concept(cur, curie, distance)
+            # check whether user wants recommended mappings (true) or all mappings (false)
+            recommend = args.get(u'recommend')
+            best = False
+            if recommend is not None and recommend.strip().lower() == u'true':
+                best = True
+
+            # Check if user wants to use OxO API or local OxO implementation
+            local_oxo = args.get(u'local')
+            if local_oxo is not None and local_oxo.lower() == u'true':
+                json_return = xref_to_omop_local(cur, curie, distance, best)
+            else:
+                json_return = xref_to_omop_standard_concept(cur, curie, distance, best)
 
         # Cross reference from OMOP using OXO service
         # e.g. /api/v1/query?service=omop&meta=xrefFromOMOP?concept_id=192855&distance=1
@@ -343,10 +356,23 @@ def query_db(service, method, args):
 
             # get distance, if specified
             distance = args.get(u'distance')
-            if distance is None or distance == [u'']:
+            if distance is None or distance == [u''] or not distance.isdigit():
                 distance = _DEFAULT_OXO_DISTANCE
+            else:
+                distance = int(distance)
 
-            json_return = xref_from_omop_standard_concept(cur, concept_id, mapping_targets, distance)
+            # check whether user wants recommended mappings (true) or all mappings (false)
+            recommend = args.get(u'recommend')
+            best = False
+            if recommend is not None and recommend.strip().lower() == u'true':
+                best = True
+
+            # Check if user wants to use OxO API or local OxO implementation
+            local_oxo = args.get(u'local')
+            if local_oxo is not None and local_oxo.strip().lower() == u'true':
+                json_return = xref_from_omop_local(cur, concept_id, mapping_targets, distance, best)
+            else:
+                json_return = xref_from_omop_standard_concept(cur, concept_id, mapping_targets, distance, best)
 
     elif service == u'frequencies':
         # Looks up observed clinical frequencies for a comma separated list of concepts

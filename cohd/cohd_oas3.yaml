@@ -674,7 +674,7 @@ paths:
           required: true
           schema:
             type: string
-          description: 'Compacy URI (CURIE) of the concept to map, e.g., DOID:8398'
+          description: 'Compact URI (CURIE) of the concept to map, e.g., DOID:8398'
           example: 'DOID:8398'
         - name: distance
           in: query
@@ -684,6 +684,22 @@ paths:
           description: >-
             Mapping distance for OxO. Note: this is the distance used in the OxO API to map from the original concept to an ICD9CM, ICD10CM, SNOMEDCT, or MeSH concept. One additional step may be taken by the COHD API to map to the OMOP standard concept. Default: 2.
           example: 2
+        - name: local
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: >-
+            COHD can either call the OxO API or use the local implementation of OxO. The full call to the OxO API will have the most updated mappings and term definitions, but is slower. The local implementation of OxO is faster but may contain outdated mappings and term definitions. If the parameter is false, COHD will call the full OxO API. If the parameter is true, COHD will use the local implementation.  Default: false.
+          example: false
+        - name: recommend
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: >-
+            By default (false), COHD returns all mappings found. If true, COHD will recommend a mapping based on path distances. Default: false.
+          example: false
       operationId: xrefToOMOP
       responses:
         default:
@@ -761,6 +777,22 @@ paths:
             Mapping distance for OxO. Note: this is the distance used in the OxO API to map from an ICD9CM, ICD10CM, SNOMEDCT, or MeSH concept to the desired ontology. One additional step may be taken by the COHD API to map to the OMOP standard concept to ICD9CM, ICD10CM, SNOMEDCT, or
             MeSH. Default: 2.
           example: 2
+        - name: local
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: >-
+            COHD can either call the OxO API or use the local implementation of OxO. The full call to the OxO API will have the most updated mappings and term definitions, but is slower. The local implementation of OxO is faster but may contain outdated mappings and term definitions. If the parameter is false, COHD will call the full OxO API. If the parameter is true, COHD will use the local implementation.  Default: false.
+          example: false
+        - name: recommend
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: >-
+            By default (false), COHD returns all mappings found. If true, COHD will recommend a mapping for each target based on path distances. Default: false.
+          example: false
       operationId: xrefFromOMOP
       responses:
         default:
