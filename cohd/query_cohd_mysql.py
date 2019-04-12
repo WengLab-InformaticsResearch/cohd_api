@@ -20,7 +20,7 @@ DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
 def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
     dataset_id = args.get(u'dataset_id')
     if dataset_id is None or dataset_id.isspace() or not dataset_id.strip().isdigit():
-        dataset_id = DATASET_ID_DEFAULT
+        dataset_id = default_dataset_id
     else:
         dataset_id = int(dataset_id.strip())
 
@@ -745,6 +745,13 @@ def query_db(service, method, args):
                     u'dataset_id': r[u'dataset_id'],
                     u'concept_id_1': r[u'concept_id_1'],
                     u'concept_id_2': r[u'concept_id_2'],
+                    u'n': pts,
+                    u'n_c1': c1,
+                    u'n_c2': c2,
+                    u'n_~c1_~c2': neg,
+                    u'n_c1_~c2': c1 - cpc,
+                    u'n_~c1_c2': c2 - cpc,
+                    u'n_c1_c2': cpc,
                     u'chi_square': cs.statistic,
                     u'p-value': cs.pvalue
                 }
