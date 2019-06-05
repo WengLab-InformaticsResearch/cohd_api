@@ -31,6 +31,8 @@ app.config.from_pyfile(u'cohd_flask.conf')
 
 
 @app.route(u'/')
+@app.route(u'/api')
+@app.route(u'/api/')
 def api_cohd():
     google_analytics(endpoint=u'/')
     # return redirect("http://smart-api.info/ui/70117385218edc9bc01633829011dfcf", code=302)
