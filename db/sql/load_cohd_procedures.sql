@@ -17,6 +17,16 @@ BEGIN
 END//
 
 
+-- Create the patient_count table
+CREATE PROCEDURE create_patient_count_table()
+BEGIN
+	CREATE TABLE patient_count (
+	  dataset_id INT NOT NULL,
+	  count INT UNSIGNED NOT NULL,
+	  PRIMARY KEY (dataset_id));
+END//
+
+
 -- Create the concept table
 CREATE PROCEDURE create_concepts_table()
 BEGIN
@@ -31,16 +41,11 @@ BEGIN
       concept_code VARCHAR(50) NOT NULL,
       valid_start_date DATE NOT NULL,
 	  valid_end_date DATE NOT NULL,
-	  invalid_reason CHAR(1) NULL,
-      PRIMARY KEY (concept_id),
-	  INDEX vocabulary_id (vocabulary_id ASC, concept_code ASC),
-	  INDEX concept_class (concept_class_id ASC),
-	  INDEX domain (domain_id ASC),
-      INDEX concept_code (concept_code ASC));
+	  invalid_reason CHAR(1) NULL);
 END//
 
 
--- Create the concept table
+-- Create the concept_relationship table
 CREATE PROCEDURE create_concept_relationship_table()
 BEGIN
     -- Create the concept table
@@ -50,10 +55,19 @@ BEGIN
 	  relationship_id VARCHAR(20) NOT NULL,
 	  valid_start_date DATE NOT NULL,
 	  valid_end_date DATE NOT NULL,
-	  invalid_reason CHAR(1) NULL,
-      PRIMARY KEY (concept_id_1, concept_id_2, relationship_id),
-      INDEX concept_id_1 (concept_id_1 ASC),
-      INDEX concept_id_2 (concept_id_2 ASC));
+	  invalid_reason CHAR(1) NULL);
+END//
+
+
+-- Create the concept_ancestor table
+CREATE PROCEDURE create_concept_ancestor_table()
+BEGIN
+    -- Create the concept table
+	CREATE TABLE IF NOT EXISTS concept_ancestor (
+	  ancestor_concept_id INTEGER NOT NULL,
+	  descendant_concept_id INTEGER	NOT NULL,
+	  min_levels_of_separation INTEGER NOT NULL,
+	  max_levels_of_separation INTEGER NOT NULL);
 END//
 
 
@@ -63,9 +77,7 @@ BEGIN
 	CREATE TABLE IF NOT EXISTS concept_counts (
 	  dataset_id INT NOT NULL,
 	  concept_id INT(11) NOT NULL,
-	  concept_count INT UNSIGNED NOT NULL,
-      PRIMARY KEY (dataset_id, concept_id),
-      INDEX concept_count (dataset_id ASC, concept_count ASC));
+	  concept_count INT UNSIGNED NOT NULL);
 END//
 
 
@@ -76,20 +88,49 @@ BEGIN
       dataset_id INT NOT NULL,
 	  concept_id_1 INT(11) NOT NULL,
 	  concept_id_2 INT(11) NOT NULL,
-	  concept_count INT UNSIGNED NOT NULL,
-      PRIMARY KEY (dataset_id, concept_id_1, concept_id_2),
-      INDEX concept_id_1_idx (dataset_id ASC, concept_id_1 ASC, concept_id_2 ASC, concept_count ASC),
-	  INDEX concept_id_2_idx (dataset_id ASC, concept_id_2 ASC, concept_id_1 ASC, concept_count ASC));
+	  concept_count INT UNSIGNED NOT NULL);
 END//
 
 
 CREATE PROCEDURE create_tables()
 BEGIN
 	CALL create_dataset_table();
+    CALL create_patient_count_table();
 	CALL create_concepts_table();
 	CALL create_concept_relationship_table();
+    CALL create_concept_ancestor_table();
 	CALL create_concept_counts_table();
 	CALL create_concept_pair_counts_table();
+END//
+
+
+-- Add primary keys and indices to tables
+CREATE PROCEDURE alter_tables()
+BEGIN
+	ALTER TABLE concept
+      ADD PRIMARY KEY (concept_id),
+	  ADD INDEX vocabulary_id (vocabulary_id ASC, concept_code ASC),
+	  ADD INDEX concept_class (concept_class_id ASC),
+	  ADD INDEX domain (domain_id ASC),
+      ADD INDEX concept_code (concept_code ASC);
+
+	ALTER TABLE concept_relationship
+      ADD PRIMARY KEY (concept_id_1, concept_id_2, relationship_id),
+      ADD INDEX concept_id_1 (concept_id_1 ASC),
+      ADD INDEX concept_id_2 (concept_id_2 ASC);
+      
+	ALTER TABLE concept_ancestor
+      ADD PRIMARY KEY (ancestor_concept_id, descendant_concept_id),
+      ADD INDEX (descendant_concept_id, ancestor_concept_id);
+      
+	ALTER TABLE concept_counts
+      ADD PRIMARY KEY (dataset_id, concept_id),
+      ADD INDEX concept_count (dataset_id ASC, concept_count ASC);
+      
+	ALTER TABLE concept_pair_counts
+      ADD PRIMARY KEY (dataset_id, concept_id_1, concept_id_2),
+      ADD INDEX concept_id_1_idx (dataset_id ASC, concept_id_1 ASC, concept_count ASC),
+	  ADD INDEX concept_id_2_idx (dataset_id ASC, concept_id_2 ASC, concept_count ASC);
 END//
 
 
@@ -101,6 +142,18 @@ BEGIN
     SET @dataset_description = dataset_description;
 	PREPARE prep_stmnt FROM 'INSERT INTO dataset (dataset_name, dataset_description) VALUES(?,?);';
     EXECUTE prep_stmnt USING @dataset_name, @dataset_description;
+    DEALLOCATE PREPARE prep_stmnt;
+END//
+
+
+-- Add patient_count
+CREATE PROCEDURE add_patient_count(IN dataset_id INT, IN patient_count INT UNSIGNED)
+BEGIN   
+    -- Insert the new dataset info
+	SET @dataset_id = dataset_id;
+    SET @patient_count = patient_count;
+	PREPARE prep_stmnt FROM 'INSERT INTO patient_count (dataset_id, count) VALUES(?,?);';
+    EXECUTE prep_stmnt USING @dataset_id, @patient_count;
     DEALLOCATE PREPARE prep_stmnt;
 END//
 
@@ -136,7 +189,6 @@ BEGIN
 	-- Drop existing table
     DROP TABLE IF EXISTS domain_concept_counts;
     DROP TABLE IF EXISTS domain_pair_concept_counts;
-    DROP TABLE IF EXISTS patient_count;
     
     -- Create the domain_concept_counts table
     CREATE TABLE domain_concept_counts
@@ -156,19 +208,11 @@ BEGIN
 	ON cpc.concept_id_2 = c2.concept_id
 	GROUP BY dataset_id, domain_id_1, domain_id_2;
     
-    -- Create the patient_count table
-    CREATE TABLE patient_count
-	SELECT dataset_id, ROUND(AVG(concept_count / concept_frequency)) AS count
-	FROM concept_counts cc
-	GROUP BY dataset_id;
-    
     -- Add keys and indices
 	ALTER TABLE domain_concept_counts
 		ADD PRIMARY KEY (dataset_id, domain_id);
 	ALTER TABLE domain_pair_concept_counts
 		ADD PRIMARY KEY (dataset_id, domain_id_1, domain_id_2);
-	ALTER TABLE patient_count
-		ADD PRIMARY KEY (dataset_id);
 END//
 
 

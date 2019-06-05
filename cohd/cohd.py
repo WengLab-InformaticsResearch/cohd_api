@@ -31,9 +31,12 @@ app.config.from_pyfile(u'cohd_flask.conf')
 
 
 @app.route(u'/')
+@app.route(u'/api')
+@app.route(u'/api/')
 def api_cohd():
     google_analytics(endpoint=u'/')
-    return redirect("http://smart-api.info/ui/?url=/api/metadata/6c33ed14d628a982c79fa36a75dbbbcf", code=302)
+    # return redirect("http://cohd.smart-api.info/", code=302)
+    return redirect("http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35", code=302)
 
 
 @app.route(u'/api/omop/findConceptIDs')
@@ -46,6 +49,16 @@ def api_omop_reference():
 @app.route(u'/api/v1/omop/concepts')
 def api_omop_concepts():
     return api_call(u'omop', u'concepts')
+
+
+@app.route(u'/api/omop/conceptAncestors')
+def api_omop_conceptAncestors():
+    return api_call(u'omop', u'conceptAncestors')
+
+
+@app.route(u'/api/omop/conceptDescendants')
+def api_omop_conceptDescendants():
+    return api_call(u'omop', u'conceptDescendants')
 
 
 @app.route(u'/api/omop/mapToStandardConceptID')
@@ -181,6 +194,8 @@ def api_call(service=None, meta=None, query=None):
     elif service == u'omop':
         if meta == u'findConceptIDs' or \
                 meta == u'concepts' or \
+                meta == u'conceptAncestors' or \
+                meta == u'conceptDescendants' or \
                 meta == u'mapToStandardConceptID' or \
                 meta == u'mapFromStandardConceptID' or \
                 meta == u'vocabularies' or \
