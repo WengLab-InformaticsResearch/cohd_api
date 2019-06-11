@@ -4,6 +4,7 @@ from scipy.stats import chisquare
 from numpy import argsort
 from omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
+from cohd_utilities import ln_ratio_ci, rel_freq_ci
 
 # Configuration
 # log-in credentials for database
@@ -863,6 +864,11 @@ def query_db(service, method, args):
             cur.execute(sql, params)
             json_return = cur.fetchall()
 
+            # # Add confidence interval to results
+            # for row in json_return:
+            #     row[u'confidence_interval'] = ln_ratio_ci(row[u'observed_count'], row[u'ln_ratio'])
+
+
         # Returns relative frequency between pairs of concepts
         # e.g. /api/v1/query?service=association&meta=relativeFrequency&dataset_id=1&concept_id_1=192855&concept_id_2=2008271
         elif method == u'relativeFrequency':
@@ -966,6 +972,10 @@ def query_db(service, method, args):
             cur.execute(sql, params)
             json_return = cur.fetchall()
 
+            # # Add confidence interval to results
+            # for row in json_return:
+            #     row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'])
+
     print cur._executed
     # print(json_return)
 
@@ -976,3 +986,55 @@ def query_db(service, method, args):
     json_return = jsonify(json_return)
 
     return json_return
+
+
+def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None):
+    """ Calls the desired association method and returns the results
+
+    Parameters
+    ----------
+    method: String - 'chiSquare', 'obsExpRatio', or 'relativeFrequency'
+    concept_id_1: String - OMOP concept ID
+    concept_id_2: (optional) String - OMOP concept ID
+    dataset_id: (optional) String - COHD dataset ID
+    domain_id: (optional) String - OMOP domain ID
+
+    Returns
+    -------
+    Dict results
+    """
+    assert method is not None and method and concept_id_1 is not None and str(concept_id_1), \
+        'query_cohd_mysql.py::query_association() - Bad input. method={method}; concept_id_1={concept_id_1}'.format(
+            method=method, concept_id_1=str(concept_id_1)
+        )
+
+    args = {
+        u'concept_id_1': str(concept_id_1)
+    }
+    if concept_id_2 is not None and str(concept_id_2):
+        args[u'concept_id_2'] = str(concept_id_2)
+    if dataset_id is not None and str(dataset_id):
+        args[u'dataset_id'] = str(dataset_id)
+    if domain_id is not None and domain_id:
+        args[u'domain'] = domain_id
+
+    response = query_db(service=u'association', method=method, args=args)
+    return response.get_json()
+
+
+def omop_concept_definition(concept_id):
+    """ Get the OMOP concept definition
+
+    Parameters
+    ----------
+    concept_id: String - OMOP concept ID
+
+    Returns
+    -------
+    Concept definition, or None
+    """
+    response = query_db(service=u'omop', method=u'concepts', args={u'q': str(concept_id)})
+    concept_result = response.get_json()
+    if concept_result is None or 'results' not in concept_result or len(concept_result[u'results']) != 1:
+        return None
+    return concept_result[u'results'][0]

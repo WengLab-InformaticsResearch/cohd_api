@@ -15,6 +15,7 @@ from flask import Flask, request, redirect, jsonify
 from flask_cors import CORS
 import query_cohd_mysql
 from google_analytics import GoogleAnalytics
+import cohd_translator
 
 
 #########
@@ -35,8 +36,7 @@ app.config.from_pyfile(u'cohd_flask.conf')
 @app.route(u'/api/')
 def api_cohd():
     google_analytics(endpoint=u'/')
-    # return redirect("http://cohd.smart-api.info/", code=302)
-    return redirect("http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35", code=302)
+    return redirect("http://cohd.smart-api.info/", code=302)
 
 
 @app.route(u'/api/omop/findConceptIDs')
@@ -151,6 +151,11 @@ def api_association_relativeFrequency():
     return api_call(u'association', u'relativeFrequency')
 
 
+@app.route(u'/api/translator/query', methods=['POST'])
+def api_translator_query():
+    return api_call(u'translator', u'query')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -218,6 +223,12 @@ def api_call(service=None, meta=None, query=None):
                 meta == u'obsExpRatio' or \
                 meta == u'relativeFrequency':
             result = query_cohd_mysql.query_db(service, meta, request.args)
+        else:
+            result = u'meta not recognized', 400
+    elif service == u'translator':
+        if meta == u'query':
+            reasoner = cohd_translator.COHDTranslatorReasoner(request)
+            result = reasoner.reason()
         else:
             result = u'meta not recognized', 400
     else:
