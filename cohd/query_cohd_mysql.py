@@ -7,8 +7,7 @@ from omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_
 from cohd_utilities import ln_ratio_ci, rel_freq_ci
 
 # Configuration
-# log-in credentials for database
-CONFIG_FILE = u"cohd_mysql.cnf"
+CONFIG_FILE = u"cohd_mysql.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
 
@@ -16,6 +15,14 @@ DATASET_ID_DEFAULT_HIER = 3
 URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
 _DEFAULT_OXO_DISTANCE = 2
 DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
+
+
+def sql_connection():
+    # Connect to MySQL database
+    # print u"Connecting to MySQL database"
+    return pymysql.connect(read_default_file=CONFIG_FILE,
+                           charset=u'utf8mb4',
+                           cursorclass=pymysql.cursors.DictCursor)
 
 
 def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
@@ -30,23 +37,17 @@ def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
 
 def query_db(service, method, args):
 
-    print u"Connecting to the MySQL API..."
+    # print u"Connecting to the MySQL API..."
 
-    # Connect to MySQL database
-    print u"Connecting to MySQL database"
-
-    conn = pymysql.connect(read_default_file=CONFIG_FILE,
-                           charset=u'utf8mb4',
-                           cursorclass=pymysql.cursors.DictCursor)
+    # Connect to MYSQL database
+    conn = sql_connection()
     cur = conn.cursor()
 
     json_return = []
 
     query = args.get(u'q')
 
-    print u"Service: ", service
-    print u"Method: ", method
-    print u"Query: ", query
+    print u"Service: {s}; Method: {m}, Query: {q}".format(s=service, m=method, q=query)
 
     if service == u'metadata':
         # The datasets in the COHD database
@@ -976,7 +977,7 @@ def query_db(service, method, args):
             # for row in json_return:
             #     row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'])
 
-    print cur._executed
+    # print cur._executed
     # print(json_return)
 
     cur.close()

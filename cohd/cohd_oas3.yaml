@@ -42,7 +42,7 @@ info:
     [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)  
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
-  version: 2.1.0
+  version: 2.2.0
   termsOfService: 'http://cohd.nsides.io/terms/'
   title: Columbia Open Health Data (COHD)
   contact:
@@ -1451,26 +1451,15 @@ paths:
         - Translator
       summary: 'IN DEVELOPMENT: Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
-        IN DEVELOPMENT: Query the COHD API following the [NCATS Translator Reasoner Standard API]
-        (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the
-        example query_graph.
-
-        For the source node, the curie of must be specified (type is ignored).
-
-        For the target node, both the curie and type are optional. If curie is specified for the target node, then the
-        association between the two identified concepts is returned. If curie is not specified and type is specified,
-        the associations between the source node and all concepts in the domain <type> are returned. If neither are
-        specified, then the associations between the source node and all concepts are returned.
-
-        query_options allows additional configuration of the results.
-        method: choose the association metric: ["obsExpRatio", "relativeFrequency", or "chiSquare"]
-        min_cooccurrence: The minimum co-occurrence count between the pair of concepts
-        threshold: threshold to apply to association metric. chiSquare: p-value < threshold. obsExpRatio:
-        abs(ln_ratio) >= thresohld. relativeFrequency: relative_frequency >= threshold.
-        confidence: alpha for confidence interval calculation. Only used for obsExpRatio. Checks that the CI doesn't
-        include 0.
-
-        Currently only supporting OMOP concepts for input and output.
+        IN DEVELOPMENT    
+            
+        Query the COHD API following the [NCATS Translator Reasoner Standard API] (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the example query_graph.    
+            
+        For the source node, the curie must be specified (type is ignored).    
+            
+        For the target node, both the curie and type are optional. If curie is specified for the target node, then the association between the two identified concepts is returned. If curie is not specified and type is specified, the associations between the source node and all concepts with the specified type are returned. If neither are specified, then the associations between the source node and all concepts are returned.
+        
+        COHD will attempt to map the CURIE to an OMOP concept and the node type to an OMOP domain. 
       operationId: query
       requestBody:
         description: Query information to be submitted
@@ -1481,17 +1470,18 @@ paths:
               $ref: '#/components/schemas/Query'
             example: >-
               {
+                "max_results": 50,
                 "query_message": {
                   "query_graph": {
                     "nodes": [
                       {
                         "node_id": "n00",
-                        "curie": "OMOP:313217",
-                        "type": "Condition"
+                        "curie": "DOID:9053",
+                        "type": "disease"
                       },
                       {
                         "node_id": "n01",
-                        "curie": "OMOP:192855"
+                        "type": "procedure"
                       }
                     ],
                     "edges": [
@@ -1509,7 +1499,13 @@ paths:
                   "dataset_id": 3,
                   "confidence_interval": 0.99,
                   "min_cooccurrence": 50,
-                  "thresohld": 0.5
+                  "threshold": 0.5,
+                  "ontology_targets": {
+                    "Condition": ["ICD9CM", "SNOMEDCT", "DOID"],
+                    "Drug": ["RxNorm"],
+                    "Procedure": ["ICD10PCS", "SNOMEDCT"],
+                    "_DEFAULT": []
+                  }
                 }
               }
       responses:
@@ -1528,12 +1524,50 @@ components:
       x-body-name: request_body
       type: object
       properties:
+        max_results:
+          type: integer
+          description: Maximum number of results to return (default and system maximum is 500)
         query_message:
           type: object
           description: Message object that represents the query to be answered
-          items:
-            $ref: '#/components/schemas/Message'
+          $ref: '#/components/schemas/Message'
+        query_options:
+          $ref: '#/components/schemas/QueryOptions'
       additionalProperties: true
+    QueryOptions:
+      description: Additional query options that apply to COHD
+      type: object
+      properties:
+        method:
+          description: "Type of association method to perform: 'obsExpRatio' (default), 'relativeFrequency', or 'chiSquare'"
+          type: string
+          example: 'obsExpRatio'
+        dataset_id:
+          description: "The COHD dataset to query"
+          type: integer
+          example: 3
+        confidence_interval:
+          description: "Criteria that the results are significant to the specified criteria level. This only applies when the method is 'obsExpRatio'. Default: not required."
+          type: number
+          example: 0.99
+        min_cooccurrence:
+          description: "Criteria that the results have a minimum co-occurrence count. Default: not required."
+          type: integer
+          example: 50
+        threshold:
+          description: "Criteria threshold to apply to the association metric. chiSquare: p-value < threshold. obsExpRatio: abs(ln_ratio) >= threshold. relativeFrequency: relative_frequency >= threshold." 
+          type: number
+          example: 0.5      
+        ontology_targets:
+          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each OMOP domain. They keys should be OMOP domains, e.g. 'Condition', 'Drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes can come from the OMOP Vocabulary (e.g., 'ICD9CM', 'RxNorm') or OxO (e.g., 'DOID', 'EFO')"
+          type: object
+          example:
+            {
+              "Condition": ["ICD9CM", "SNOMEDCT", "DOID"],
+              "Drug": ["RxNorm"],
+              "Procedure": ["ICD10PCS", "SNOMEDCT"],
+              "_DEFAULT": []
+            }
     Message:
       type: object
       properties:
