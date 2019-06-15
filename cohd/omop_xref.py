@@ -1,6 +1,6 @@
 import requests
+import query_cohd_mysql
 from numpy import argsort
-from pprint import pprint
 
 # OXO API configuration
 _URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -18,6 +18,15 @@ _OMOP_VOCAB_TO_OXO_PREFIX = {
     u'SNOMED': u'SNOMEDCT',
     u'MeSH': u'MeSH'
 }
+_OMOP_VOCABULARIES = ['ABMS', 'AMT', 'APC', 'ATC', 'BDPM', 'CDT', 'CIEL', 'Cohort', 'Concept Class', 'Condition Type',
+                      'Cost Type', 'CPT4', 'Currency', 'CVX', 'Death Type', 'Device Type', 'dm+d', 'Domain', 'DPD',
+                      'DRG', 'Drug Type', 'EphMRA ATC', 'Ethnicity', 'GCN_SEQNO', 'Gender', 'HCPCS', 'HES Specialty',
+                      'ICD10', 'ICD10CM', 'ICD10PCS', 'ICD9CM', 'ICD9Proc', 'ICDO3', 'ISBT', 'ISBT Attribute', 'LOINC',
+                      'MDC', 'Meas Type', 'MedDRA', 'MeSH', 'MMI', 'Multum', 'NDC', 'NDFRT', 'NFC', 'None', 'Note Type',
+                      'NUCC', 'Obs Period Type', 'Observation Type', 'OPCS4', 'OXMIS', 'PCORNet', 'Place of Service',
+                      'PPI', 'Procedure Type', 'Race', 'Read', 'Relationship', 'Revenue Code', 'RxNorm',
+                      'RxNorm Extension', 'SMQ', 'SNOMED', 'Specialty', 'Specimen Type', 'SPL', 'UCUM', 'VA Class',
+                      'VA Product', 'Visit', 'Visit Type', 'Vocabulary']
 
 
 def omop_vocab_to_oxo_prefix(vocab):
@@ -65,7 +74,9 @@ def omop_map_to_standard(cur, concept_code, vocabulary_id=None):
                 c1.vocabulary_id AS source_vocabulary_id, 
                 c2.concept_id AS standard_concept_id, 
                 c2.concept_name AS standard_concept_name,
-                c2.domain_id AS standard_domain_id
+                c2.domain_id AS standard_domain_id,
+                c2.concept_code AS standard_concept_code,
+                c2.vocabulary_id AS standard_vocabulary_id
             FROM concept c1
             JOIN concept_relationship cr ON c1.concept_id = cr.concept_id_1
             JOIN concept c2 ON cr.concept_id_2 = c2.concept_id
@@ -225,7 +236,7 @@ def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
     mappings_sorted = [mappings[i] for i in argsort(total_distances)]
 
     # Get the mapping to the best OMOP concept
-    if best:
+    if best and mappings_sorted:
         mappings_sorted = _xref_best_to(mappings_sorted)
 
     return mappings_sorted
@@ -495,7 +506,7 @@ def oxo_local(cur, source_curie, distance=2, targets=None):
     cur.execute(sql, params)
     results = cur.fetchall()
 
-    print cur._last_executed
+    # print cur._last_executed
 
     return results
 
@@ -582,7 +593,7 @@ def xref_to_omop_local(cur, curie, distance=2, best=False):
     mappings_sorted = [mappings[i] for i in argsort(total_distances)]
 
     # Get the best mapping
-    if best:
+    if best and mappings_sorted:
         mappings_sorted = _xref_best_to(mappings_sorted)
 
     return mappings_sorted
@@ -736,10 +747,11 @@ def xref_from_omop_local(cur, concept_id, mapping_targets=[], distance=2, best=F
     mappings_sorted = [mappings[i] for i in argsort(total_distances)]
 
     # Get the best mappings from each ontology
-    if best:
+    if best and mappings_sorted:
         mappings_sorted = _xref_best_from(mappings_sorted)
 
     return mappings_sorted
+
 
 def _xref_best_from(mappings):
     """ Get the best mapping for each target ontology
@@ -750,6 +762,9 @@ def _xref_best_from(mappings):
     :param mappings: List of mappings
     :return: List of best mappings
     """
+    # Check input
+    if not mappings:
+        return []
 
     # Keep track of all mappings per target ontology (prefix)
     mapping_scores = {}
@@ -811,6 +826,9 @@ def _xref_best_to(mappings):
     :param mappings: List of mappings
     :return: List of best mappings
     """
+    # Check input
+    if not mappings:
+        return []
 
     # Keep track of all mappings per target ontology (prefix)
     mapping_scores = {}
@@ -845,5 +863,183 @@ def _xref_best_to(mappings):
     best_mapping = mapping_representatives[best_omop_id]
     return [best_mapping]
 
+
 def _mapping_score(distance, max_distance=3):
     return (max_distance + 1 - distance) ** 2
+
+
+class ConceptMapper:
+    """
+    Maps between OMOP concepts and other vocabularies or ontologies using both OMOP mappings and OxO
+    """
+
+    def __init__(self, mappings=None, distance=2):
+        """ Constructor
+
+        Parameters
+        ----------
+        mappings: mappings between domain and ontology. Should have key '_other' to specify desired ontology when a
+        mapping is not specified for the domain.
+        distance: maximum allowed total distance (as opposed to OxO distance)
+        """
+        # Maximum distance allowed for mappings (min requirement is 1)
+        self.distance = max(distance, 1)
+
+        # Mappings from OMOP domain to desired ontology (CURIE prefix)
+        self.domain_targets = mappings
+        if mappings is None:
+            self.domain_targets_omop = None
+            self.domain_targets_oxo = None
+        else:
+            # Split the list of targets between those that can be handled with OMOP mappings and those that can't
+            self.domain_targets_omop = {}
+            self.domain_targets_oxo = {}
+            omop_vocabulary_set = set(_OMOP_VOCABULARIES)
+            for domain, targets in self.domain_targets.items():
+                # Get any targets that can be supported by just OMOP mapping
+                targets_set = set(targets)
+                self.domain_targets_omop[domain] = list(omop_vocabulary_set & targets_set)
+                targets_set.difference_update(omop_vocabulary_set)
+
+                # SNOMED-CT is SNOMED-CT in OxO but SNOMED in OMOP
+                if u'SNOMED-CT' in targets_set:
+                    self.domain_targets_omop[domain].append(u'SNOMED')
+                    targets_set.remove(u'SNOMED-CT')
+
+                # OxO will be used for the remaining targets
+                self.domain_targets_oxo[domain] = list(targets_set)
+
+    def map_to_omop(self, curie):
+        """ Map to OMOP concept from ontology
+
+        Parameters
+        ----------
+        curie: CURIE
+
+        Returns
+        -------
+        Dict like:
+        {
+            "omop_concept_name": "Osteoarthritis",
+            "omop_concept_id": 80180,
+            "distance": 2
+        }
+        or None
+        """
+        mapping = None
+
+        # Connection to MySQL database
+        conn = query_cohd_mysql.sql_connection()
+        cur = conn.cursor()
+
+        prefix, concept_code = curie.split(u':')
+        if prefix == u'OMOP':
+            # Already an OMOP concept
+            concept_def = query_cohd_mysql.omop_concept_definition(concept_code)
+            if concept_def:
+                mapping = {
+                    u'omop_concept_id': concept_code,
+                    u'omop_concept_name': concept_def[u'concept_name'],
+                    u'distance': 0
+                }
+        elif prefix in _OMOP_VOCABULARIES:
+            # Source vocabulary is in OMOP vocab
+            omop_mapping = omop_map_to_standard(cur, concept_code, prefix)
+            if omop_mapping:
+                mapping = {
+                    u'omop_concept_id': omop_mapping[0][u'standard_concept_id'],
+                    u'omop_concept_name': omop_mapping[0][u'standard_concept_name'],
+                    u'distance': int(concept_code != omop_mapping[0][u'standard_concept_code'] or
+                                     prefix != omop_mapping[0][u'standard_vocabulary_id'])
+                }
+        else:
+            # Use OxO to map from external ontology
+            best_mapping = xref_to_omop_local(cur, curie, distance=self.distance, best=True)
+            if best_mapping and best_mapping[0][u'total_distance'] <= self.distance:
+                # Simplify the returned information
+                mapping = {
+                    u'omop_concept_id': best_mapping[0][u'omop_standard_concept_id'],
+                    u'omop_concept_name': best_mapping[0][u'omop_concept_name'],
+                    u'distance': best_mapping[0][u'total_distance']
+                }
+
+        # Close MySQL connection
+        cur.close()
+        conn.close()
+
+        return mapping
+
+    def map_from_omop(self, concept_id, domain_id=None):
+        """ Map from OMOP concept to appropriate domain-specific ontology.
+
+        Parameters
+        ----------
+        concept_id: OMOP concept ID
+        domain_id: OMOP concept's domain. Will look it up if not specified
+
+        Returns
+        -------
+        Array of dict like:
+        [{
+            "target_curie": "UMLS:C0154091",
+            "target_label": "Carcinoma in situ of bladder",
+            "distance": 1
+        }]
+        or None
+        """
+        mappings = []
+
+        if self.domain_targets is None:
+            # No target mappings, don't perform any mapping
+            return mappings
+
+        # If the domain wasn't provided, look it up
+        if domain_id is None:
+            concept_def = query_cohd_mysql.omop_concept_definition(concept_id)
+            if not concept_def:
+                return None
+            domain_id = concept_def[u'domain_id']
+
+        conn = query_cohd_mysql.sql_connection()
+        cur = conn.cursor()
+
+        # Get OMOP mapping targets
+        omop_targets = self.domain_targets_omop.get(domain_id)
+        if omop_targets is None and u'_DEFAULT' in self.domain_targets_omop:
+            # No mapping for this domain, but default specified. Use the default mapping
+            omop_targets = self.domain_targets_omop[u'_DEFAULT']
+
+        # Get OMOP mappings
+        if omop_targets:
+            omop_mappings = omop_map_from_standard(cur, concept_id, omop_targets)
+            for omop_mapping in omop_mappings:
+                # Make the CURIE
+                prefix = omop_vocab_to_oxo_prefix(omop_mapping[u'vocabulary_id'])
+                curie = u'{prefix}:{id}'.format(prefix=prefix, id=omop_mapping[u'concept_code'])
+                mappings.append({
+                    u'target_curie': curie,
+                    u'target_label': omop_mapping[u'concept_name'],
+                    u'distance': int(str(omop_mapping[u'concept_id']) != str(concept_id))
+                })
+
+        # Determine the target ontology
+        oxo_targets = self.domain_targets_oxo.get(domain_id)
+        if oxo_targets is None and u'_DEFAULT' in self.domain_targets:
+            # No mapping for this domain, but default specified. Use the default mapping
+            oxo_targets = self.domain_targets_oxo[u'_DEFAULT']
+
+        # Get the OxO mappings
+        if oxo_targets:
+            oxo_mappings = xref_from_omop_local(cur, concept_id, oxo_targets, distance=self.distance, best=True)
+            for mapping in oxo_mappings:
+                if mapping[u'total_distance'] <= self.distance:
+                    mappings.append({
+                        u'target_curie': mapping[u'target_curie'],
+                        u'target_label': mapping[u'target_label'],
+                        u'distance': mapping[u'total_distance']
+                    })
+
+        cur.close()
+        conn.close()
+
+        return mappings
