@@ -1500,6 +1500,7 @@ paths:
                   "confidence_interval": 0.99,
                   "min_cooccurrence": 50,
                   "threshold": 0.5,
+                  "local_oxo": true,
                   "ontology_targets": {
                     "Condition": ["ICD9CM", "SNOMEDCT", "DOID"],
                     "Drug": ["RxNorm"],
@@ -1528,8 +1529,6 @@ components:
           type: integer
           description: Maximum number of results to return (default and system maximum is 500)
         query_message:
-          type: object
-          description: Message object that represents the query to be answered
           $ref: '#/components/schemas/Message'
         query_options:
           $ref: '#/components/schemas/QueryOptions'
@@ -1568,7 +1567,12 @@ components:
               "Procedure": ["ICD10PCS", "SNOMEDCT"],
               "_DEFAULT": []
             }
+        local_oxo:
+          description: "Whether to use the local implementation of OxO or the real implementation of OxO. Note, the local OxO implementation may contain outdated definitions and xrefs but runs faster. The real OxO has the most updated definitions and xrefs, but is slower (~1-2 seconds/concept). Default: true"
+          type: boolean
+          example: false
     Message:
+      description: Message object that represents the query to be answered (input) or the answer to the query (response)
       type: object
       properties:
         results:
@@ -1577,10 +1581,6 @@ components:
           items:
             $ref: '#/components/schemas/Result'
         query_graph:
-          type: object
-          description: >-
-            QueryGraph object that contains a serialization of a query in the form
-            of a graph
           $ref: '#/components/schemas/QueryGraph'
         knowledge_graph:
           type: object

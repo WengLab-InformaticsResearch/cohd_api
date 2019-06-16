@@ -873,7 +873,7 @@ class ConceptMapper:
     Maps between OMOP concepts and other vocabularies or ontologies using both OMOP mappings and OxO
     """
 
-    def __init__(self, mappings=None, distance=2):
+    def __init__(self, mappings=None, distance=2, local_oxo=True):
         """ Constructor
 
         Parameters
@@ -884,6 +884,9 @@ class ConceptMapper:
         """
         # Maximum distance allowed for mappings (min requirement is 1)
         self.distance = max(distance, 1)
+
+        # Wheter to use the local or real implementation of OxO
+        self.local_oxo = local_oxo
 
         # Mappings from OMOP domain to desired ontology (CURIE prefix)
         self.domain_targets = mappings
@@ -954,7 +957,10 @@ class ConceptMapper:
                 }
         else:
             # Use OxO to map from external ontology
-            best_mapping = xref_to_omop_local(cur, curie, distance=self.distance, best=True)
+            if self.local_oxo:
+                best_mapping = xref_to_omop_local(cur, curie, distance=self.distance, best=True)
+            else:
+                best_mapping = xref_to_omop_standard_concept(cur, curie, distance=self.distance, best=True)
             if best_mapping and best_mapping[0][u'total_distance'] <= self.distance:
                 # Simplify the returned information
                 mapping = {
@@ -1030,7 +1036,12 @@ class ConceptMapper:
 
         # Get the OxO mappings
         if oxo_targets:
-            oxo_mappings = xref_from_omop_local(cur, concept_id, oxo_targets, distance=self.distance, best=True)
+            if self.local_oxo:
+                oxo_mappings = xref_from_omop_local(cur, concept_id, oxo_targets, distance=self.distance, best=True)
+            else:
+                print "USING REMOTE OXO"
+                oxo_mappings = xref_from_omop_standard_concept(cur, concept_id, oxo_targets, distance=self.distance,
+                                                               best=True)
             for mapping in oxo_mappings:
                 if mapping[u'total_distance'] <= self.distance:
                     mappings.append({
