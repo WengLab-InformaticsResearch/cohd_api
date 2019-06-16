@@ -38,6 +38,7 @@ class COHDTranslatorReasoner:
         self._concept_mapper = ConceptMapper()
         self._request = request
         self._max_results = 500
+        self._local_oxo = True
 
         # Determine how the query should be performed
         self._interpret_query()
@@ -223,10 +224,15 @@ class COHDTranslatorReasoner:
         self._criteria.append(ResultCriteria(function=criteria_confidence,
                                              kargs={'alpha': self._confidence_interval}))
 
+        # Get option for local_oxo
+        local_oxo = self._query_options.get(u'local_oxo')
+        if local_oxo is not None:
+            self._local_oxo = local_oxo
+
         # Get query_option for ontology_targets
         ontology_map = self._query_options.get(u'ontology_targets')
         if ontology_map:
-            self._concept_mapper = ConceptMapper(ontology_map, distance=2)
+            self._concept_mapper = ConceptMapper(ontology_map, distance=2, local_oxo=self._local_oxo)
 
         if self._valid_query:
             return True
