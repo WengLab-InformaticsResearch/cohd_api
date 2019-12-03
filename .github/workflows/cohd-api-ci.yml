@@ -1,9 +1,6 @@
 name: COHD API Continuous Integration Workflow
 
-on: 
-  push:
-    paths:
-      cohd
+on: push
 
 jobs:
   build:
