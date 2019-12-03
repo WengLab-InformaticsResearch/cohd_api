@@ -1,3 +1,5 @@
+![](https://github.com/WengLab-InformaticsResearch/cohd_api/workflows/Greet%20Everyone/badge.svg)
+
 # Columbia Open Health Data API (COHD)
 A database of frequencies of clinical concepts observed at Columbia University Medical Center. Over 17,000 clinical concepts and 8.7M pairs of clinical concepts, including conditions, drugs, and procedures are included. The COHD RESTful API allows users to query the database. 
 
