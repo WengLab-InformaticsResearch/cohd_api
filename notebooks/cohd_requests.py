@@ -2,7 +2,6 @@
 
 import requests
 import pandas as pd
-import numpy as np
 
 
 # COHD API server
@@ -12,10 +11,16 @@ server = 'http://cohd.io/api'
 # Utility functions
 # ######################################################################
 
-# Convert JSON results to Pandas DataFrame
-def json_to_df(results):
-    # convert COHD's JSON response to Pandas dataframe
-    return pd.DataFrame(results['results'])
+def _process_response(response):
+    # Check the response status code
+    if response.status_code == requests.status_codes.codes.OK:
+        # Convert COHD's JSON response to Pandas dataframe
+        return pd.DataFrame(response.json()['results'])
+    else:
+        # Raise an error if the status code indicates an issue (e.g., not 200)
+        response.raise_for_status()
+
+
 
 # ######################################################################
 # COHD OMOP functions
@@ -35,8 +40,8 @@ def find_concept(concept_name, dataset_id=None, domain=None, min_count=1):
     if domain is not None:
         params['domain'] = domain
         
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 7:
         # re-order the columns so that it displays in a more logical order
         df = df[['concept_id', 'concept_name', 'domain_id', 'concept_class_id', 
@@ -54,8 +59,8 @@ def concept(concept_ids):
         concept_ids_string = [str(concept_ids)]
     
     params = {'q': concept_ids_string}
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 6:
         # re-order the columns so that it displays in a more logical order
         df = df[['concept_id', 'concept_name', 'domain_id', 'concept_class_id', 'vocabulary_id', 'concept_code']]
@@ -75,9 +80,9 @@ def concept_ancestors(concept_id, dataset_id=None, vocabulary_id=None, concept_c
         params['vocabulary_id'] = vocabulary_id
     if concept_class_id is not None:
         params['concept_class_id'] = concept_class_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 10:
         # re-order the columns so that it displays in a more logical order
         df = df[['ancestor_concept_id', 'concept_name', 'domain_id', 'vocabulary_id', 'concept_class_id', 
@@ -99,9 +104,9 @@ def concept_descendants(concept_id, dataset_id=None, vocabulary_id=None, concept
         params['vocabulary_id'] = vocabulary_id
     if concept_class_id is not None:
         params['concept_class_id'] = concept_class_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 10:
         # re-order the columns so that it displays in a more logical order
         df = df[['descendant_concept_id', 'concept_name', 'domain_id', 'vocabulary_id', 'concept_class_id', 
@@ -112,8 +117,8 @@ def concept_descendants(concept_id, dataset_id=None, vocabulary_id=None, concept
 # Get a list of OMOP vocabularies
 def vocabularies():
     url = f'{server}/omop/vocabularies'
-    json = requests.get(url).json()
-    df = json_to_df(json)
+    response = requests.get(url)
+    df = _process_response(response)
     return df
 
 # Map from non-standard OMOP concepts to standard OMOP concepts
@@ -124,9 +129,9 @@ def map_to_standard_concept_id(concept_code, vocabulary_id=None):
     params = {'concept_code': concept_code}
     if vocabulary_id is not None:
         params['vocabulary_id'] = vocabulary_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 7:
         # re-order the columns so that it displays in a more logical order
         df = df[['source_concept_id', 'source_vocabulary_id', 'source_concept_code', 'source_concept_name', 
@@ -141,9 +146,9 @@ def map_from_standard_concept_id(concept_id, vocabulary_id=None):
     params = {'concept_id': concept_id}
     if vocabulary_id is not None:
         params['vocabulary_id'] = vocabulary_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 7:
         # re-order the columns so that it displays in a more logical order
         df = df[['concept_id', 'concept_name', 'domain_id', 'concept_class_id', 
@@ -162,9 +167,9 @@ def xref_to_omop(curie, distance=None, local=False, recommend=False):
     }
     if distance is not None:
         params['distance'] = distance
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 10:
         # re-order the columns so that it displays in a more logical order
         df = df[['source_oxo_id', 'source_oxo_label', 'intermediate_oxo_id', 'intermediate_oxo_label', 
@@ -185,9 +190,9 @@ def xref_from_omop(concept_id, mapping_targets=None, distance=None, local=False,
         params['mapping_targets'] = mapping_targets
     if distance is not None:
         params['distance'] = distance
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 15:
         # re-order the columns so that it displays in a more logical order
         df = df[['source_omop_concept_id', 'source_omop_concept_name', 'source_omop_vocabulary_id', 
@@ -204,8 +209,8 @@ def xref_from_omop(concept_id, mapping_targets=None, distance=None, local=False,
 # Get descriptions of the available data sets
 def datasets():
     url = f'{server}/metadata/datasets'
-    json = requests.get(url).json()
-    df = json_to_df(json)
+    response = requests.get(url)
+    df = _process_response(response)
     
     if len(df.columns) == 3:
         # re-order the columns so that it displays in a more logical order
@@ -220,9 +225,9 @@ def domain_counts(dataset_id=None):
     params = {}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 3:
         # re-order the columns so that it displays in a more logical order
         df = df[['dataset_id', 'domain_id', 'count']]
@@ -236,9 +241,9 @@ def domain_pair_counts(dataset_id=None):
     params = {}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 4:
         # re-order the columns so that it displays in a more logical order
         df = df[['dataset_id', 'domain_id_1', 'domain_id_2', 'count']]
@@ -252,9 +257,9 @@ def patient_count(dataset_id=None):
     params = {}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-    
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 2:
         # re-order the columns so that it displays in a more logical order
         df = df[['dataset_id', 'count']]
@@ -275,9 +280,9 @@ def concept_frequency(concept_ids, dataset_id=None):
     params = {'q': concept_ids_string}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 4:
         # re-order the columns so that it displays in a more logical order
         df = df[['dataset_id', 'concept_id', 'concept_count', 'concept_frequency']]
@@ -293,9 +298,9 @@ def most_frequent_concepts(limit, dataset_id=None, domain_id=None):
         params['dataset_id'] = dataset_id
     if domain_id is not None:
         params['domain'] = domain_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 6:
         df = df[['dataset_id', 'concept_id', 'concept_name', 'domain_id', 'concept_count', 'concept_frequency']]
     return df
@@ -308,9 +313,9 @@ def paired_concepts_frequency(concept_id_1, concept_id_2, dataset_id=None):
     params = {'q': f'{concept_id_1!s},{concept_id_2!s}'}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 5:
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'concept_count', 'concept_frequency']]
     return df
@@ -323,9 +328,9 @@ def associated_concepts_freq(concept_id, dataset_id=None):
     params = {'q': concept_id}
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 7:
         df = df[['dataset_id', 'concept_id', 'associated_concept_id', 'associated_concept_name',
                 'associated_domain_id', 'concept_count', 'concept_frequency']]
@@ -342,9 +347,9 @@ def associated_concept_domain_freq(concept_id, domain_id, dataset_id=None):
     }
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 7:
         df = df[['dataset_id', 'concept_id', 'associated_concept_id', 'associated_concept_name',
                 'associated_domain_id', 'concept_count', 'concept_frequency']]
@@ -369,9 +374,9 @@ def chi_square(concept_id_1, concept_id_2=None, domain_id=None, dataset_id=None)
         params['domain'] = domain_id
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 5:
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'chi_square', 'p-value']]
     elif len(df.columns) == 7:
@@ -394,9 +399,9 @@ def obs_exp_ratio(concept_id_1, concept_id_2=None, domain_id=None, dataset_id=No
         params['domain'] = domain_id
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 6:
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'observed_count', 'expected_count', 'ln_ratio']]
     elif len(df.columns) == 8:
@@ -419,9 +424,9 @@ def relative_frequency(concept_id_1, concept_id_2=None, domain_id=None, dataset_
         params['domain'] = domain_id
     if dataset_id is not None:
         params['dataset_id'] = dataset_id
-        
-    json = requests.get(url, params).json()
-    df = json_to_df(json)
+
+    response = requests.get(url, params)
+    df = _process_response(response)
     if len(df.columns) == 6:
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'concept_pair_count', 
                  'concept_2_count', 'relative_frequency']]
@@ -429,3 +434,90 @@ def relative_frequency(concept_id_1, concept_id_2=None, domain_id=None, dataset_
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'concept_2_name', 'concept_2_domain', 
                  'concept_pair_count', 'concept_2_count', 'relative_frequency']]
     return df
+
+# ######################################################################
+# Translator API
+# ######################################################################
+def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_results=500,
+                     confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
+                     min_cooccurrence=None, ontology_targets=None, threshold=None):
+    """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
+
+    Parameters
+    ----------
+    node_1_curie - CURIE of node 1, e.g., "DOID:9053"
+    node_2_curie - [Optional] CURIE of node 2, e.g., "DOID:9053". One of node_2_curie or node_2_type is required.
+    node_2_type - [Optional] node 2 semantic type, e.g., "procedure". One of node_2_curie or node_2_type is required.
+    max_results - Maximum number of results. Default: 500
+    confidence_interval - [Optional] Confidence interval for associations
+    dataset_id - COHD dataset ID. See datasets function. Default: 3
+    local_oxo - True to use COHD's local implementation of OxO (faster, but not up to date). Default: True
+    method - Association metric. One of: 'obsExpRatio' (default), 'relativeFrequency', or 'chiSquare'
+    min_cooccurrence - [Optional] Criteria that the results have a minimum co-occurrence count
+    threshold - [Optional] Criteria threshold to apply to the association metric. chiSquare: p-value < threshold.
+                obsExpRatio: abs(ln_ratio) >= threshold. relativeFrequency: relative_frequency >= threshold.
+    ontology_targets - [Optional] Desired ontologies for results to be mapped to
+
+    Returns
+    -------
+    Translator Reasoner Standard API Message JSON
+    """
+    url = f'{server}/translator/query'
+
+    # Node 1
+    node_1 = {
+        "node_id": "n00",
+        "curie": node_1_curie
+    }
+
+    # Node 2
+    node_2 = {
+        "node_id": "n01",
+    }
+    if node_2_curie is not None:
+        node_2["curie"] = node_2_curie
+    if node_2_type is not None:
+        node_2["type"] = node_2_type
+
+    # Query options
+    query_options = {
+                        "method": method,
+                        "dataset_id": dataset_id,
+                        "local_oxo": local_oxo,
+                        "ontology_targets": {
+                          "_DEFAULT": []
+                        }
+                    }
+    if confidence_interval is not None:
+        query_options["confidence_interval"] = confidence_interval
+    if min_cooccurrence is not None:
+        query_options["min_cooccurrence"] = min_cooccurrence
+    if threshold is not None:
+        query_options["threshold"] = threshold
+    if ontology_targets is not None:
+        query_options["ontology_targets"] = ontology_targets
+
+    query = {
+              "max_results": max_results,
+              "query_message": {
+                "query_graph": {
+                  "nodes": [node_1, node_2],
+                  "edges": [
+                    {
+                      "edge_id": "e00",
+                      "type": "association",
+                      "source_id": "n00",
+                      "target_id": "n01"
+                    }
+                  ]
+                }
+              },
+              "query_options": query_options
+            }
+
+    response = requests.post(url, json=query)
+    if response.status_code == requests.status_codes.codes.OK:
+        return response.json()
+    else:
+        response.raise_for_status()
+
