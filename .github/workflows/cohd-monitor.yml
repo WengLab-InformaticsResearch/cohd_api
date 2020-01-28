@@ -3,8 +3,8 @@ name: COHD API Monitoring Workflow
 
 on:
   schedule:
-    # Schedule this workflow to run at every 15 minute mark
-    - cron: '0,50 * * * *'
+    # Schedule this workflow to run at every 10 minute mark
+    - cron: '0/10 * * * *'
 
 jobs:
   build:
