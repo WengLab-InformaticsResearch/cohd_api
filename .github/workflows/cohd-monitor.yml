@@ -4,7 +4,7 @@ name: COHD API Monitoring Workflow
 on:
   schedule:
     # Schedule this workflow to run at every 10 minute mark
-    - cron: '0/10 * * * *'
+    - cron: '1/10 * * * *'
 
 jobs:
   build:
@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v2
     - name: Set up Python 3.8
       uses: actions/setup-python@v1
       with:
