@@ -25,6 +25,7 @@ jobs:
         pip install requests pandas
     - name: Test cohd.io
       # Test cohd.io by running pytest on test_cohd_io.py
+      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
       run: |
         pip install pytest
-        pytest test_cohd_io.py
+        pytest -s test_cohd_io.py

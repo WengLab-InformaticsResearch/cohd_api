@@ -102,7 +102,7 @@ def query_db(service, method, args):
             dataset_id = _get_arg_datset_id(args)
 
             sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
-                    IFNULL(concept_count, 0E0) AS concept_count
+                    IFNULL(concept_count, 0) AS concept_count
                 FROM cohd.concept c
                 LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
                 WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C') 
@@ -747,13 +747,13 @@ def query_db(service, method, args):
                     u'dataset_id': r[u'dataset_id'],
                     u'concept_id_1': r[u'concept_id_1'],
                     u'concept_id_2': r[u'concept_id_2'],
-                    u'n': pts,
-                    u'n_c1': c1,
-                    u'n_c2': c2,
-                    u'n_~c1_~c2': neg,
-                    u'n_c1_~c2': c1 - cpc,
-                    u'n_~c1_c2': c2 - cpc,
-                    u'n_c1_c2': cpc,
+                    u'n': int(pts),
+                    u'n_c1': int(c1),
+                    u'n_c2': int(c2),
+                    u'n_~c1_~c2': int(neg),
+                    u'n_c1_~c2': int(c1 - cpc),
+                    u'n_~c1_c2': int(c2 - cpc),
+                    u'n_c1_c2': int(cpc),
                     u'chi_square': cs.statistic,
                     u'p-value': cs.pvalue
                 }
