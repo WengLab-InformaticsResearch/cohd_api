@@ -1,5 +1,4 @@
 import requests
-import query_cohd_mysql
 from numpy import argsort
 
 # OXO API configuration
@@ -929,16 +928,18 @@ class ConceptMapper:
         }
         or None
         """
+        from query_cohd_mysql import sql_connection, omop_concept_definition
+
         mapping = None
 
         # Connection to MySQL database
-        conn = query_cohd_mysql.sql_connection()
+        conn = sql_connection()
         cur = conn.cursor()
 
         prefix, concept_code = curie.split(u':')
         if prefix == u'OMOP':
             # Already an OMOP concept
-            concept_def = query_cohd_mysql.omop_concept_definition(concept_code)
+            concept_def = omop_concept_definition(concept_code)
             if concept_def:
                 mapping = {
                     u'omop_concept_id': concept_code,
@@ -993,6 +994,8 @@ class ConceptMapper:
         }]
         or None
         """
+        from query_cohd_mysql import sql_connection, omop_concept_definition
+
         mappings = []
 
         if self.domain_targets is None:
@@ -1001,12 +1004,12 @@ class ConceptMapper:
 
         # If the domain wasn't provided, look it up
         if domain_id is None:
-            concept_def = query_cohd_mysql.omop_concept_definition(concept_id)
+            concept_def = omop_concept_definition(concept_id)
             if not concept_def:
                 return None
             domain_id = concept_def[u'domain_id']
 
-        conn = query_cohd_mysql.sql_connection()
+        conn = sql_connection()
         cur = conn.cursor()
 
         # Get OMOP mapping targets

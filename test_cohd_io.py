@@ -1,5 +1,6 @@
 """
-This test module tests cohd.io
+This test module tests the COHD API by making requests to cohd.io/api and checking the schema of the response JSONs and
+checking the results against known values.
 """
 from notebooks.cohd_requests import *
 from collections import namedtuple

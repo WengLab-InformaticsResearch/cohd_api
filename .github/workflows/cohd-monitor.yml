@@ -2,7 +2,7 @@
 name: COHD API Monitoring Workflow
 
 on:
-  # Run this workflow on a push to verify that the tests themselves are working properly
+  # Run this workflow when new code is pushed to the repo
   push:
   # Schedule this workflow to run twice a day (at 0300 and 1500 UTC)
   schedule:

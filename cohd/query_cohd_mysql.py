@@ -102,7 +102,7 @@ def query_db(service, method, args):
             dataset_id = _get_arg_datset_id(args)
 
             sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
-                    IFNULL(concept_count, 0) AS concept_count
+                    CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
                 FROM cohd.concept c
                 LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
                 WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C') 
