@@ -1449,11 +1449,9 @@ paths:
     post:
       tags:
         - Translator
-      summary: 'IN DEVELOPMENT: Query COHD following NCATS Translator Reasoner Standard API'
+      summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
-        IN DEVELOPMENT    
-            
-        Query the COHD API following the [NCATS Translator Reasoner Standard API] (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the example query_graph.    
+        Query the COHD API following the [NCATS Translator Reasoner Standard API] (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the example query_graph.
             
         For the source node, the curie must be specified (type is ignored).    
             
