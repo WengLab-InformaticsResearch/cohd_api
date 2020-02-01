@@ -491,13 +491,13 @@ def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_resu
 
     # Node 1
     node_1 = {
-        "node_id": "n00",
+        "id": "n00",
         "curie": node_1_curie
     }
 
     # Node 2
     node_2 = {
-        "node_id": "n01",
+        "id": "n01",
     }
     if node_2_curie is not None:
         node_2["curie"] = node_2_curie
@@ -524,12 +524,12 @@ def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_resu
 
     query = {
               "max_results": max_results,
-              "query_message": {
+              "message": {
                 "query_graph": {
                   "nodes": [node_1, node_2],
                   "edges": [
                     {
-                      "edge_id": "e00",
+                      "id": "e00",
                       "type": "association",
                       "source_id": "n00",
                       "target_id": "n01"
