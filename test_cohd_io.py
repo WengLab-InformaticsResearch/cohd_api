@@ -4,6 +4,7 @@ checking the results against known values.
 """
 from notebooks.cohd_requests import *
 from collections import namedtuple
+import requests
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -962,36 +963,16 @@ def test_translator_query():
     json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
                             confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10)
 
-    # Check that the response adheres to the expected schema
-    mesage_schema = [_s('code_description', str),
-              _s('context', str),
-              _s('datetime', str),
-              _s('knowledge_graph', dict),
-              _s('message_code', str),
-              _s('n_results', int),
-              _s('query_graph', dict),
-              _s('query_options', dict),
-              _s('reasoner_id', str),
-              _s('results', list),
-              _s('schema_version', str),
-              _s('tool_version', str),
-              _s('type', str),
-              ]
-    check_schema(json, mesage_schema)
-
-    # Check that the graphs adhere to the graph schema
-    graph_schema = [_s('edges', list),
-                 _s('nodes', list)]
-    check_schema(json['knowledge_graph'], graph_schema)
-    check_schema(json['query_graph'], graph_schema)
+    # Check that the JSON response adheres to the 'message' schema by using the Translator ReasonerStdAPI Validator
+    url_validate_message = u'http://transltr.io:7071/validate_message'
+    validation_response = requests.post(url_validate_message, json=json)
+    # If the response is properly formatted, we should have received a 200 (OK) status code and "Successfully validated"
+    # in the response body
+    assert validation_response.status_code == requests.status_codes.codes.OK and \
+        validation_response.text.strip().lower() == '"successfully validated"'
 
     # There should be 10 results
     assert len(json['results']) == 10
-
-    # Check that the results adhere to the results schema
-    results_schema = [_s('edge_bindings', dict),
-                      _s('node_bindings', dict)]
-    check_results_schema(json, results_schema)
 
     print('...passed')
 

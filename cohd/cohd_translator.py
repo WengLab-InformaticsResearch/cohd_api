@@ -63,10 +63,10 @@ class COHDTranslatorReasoner:
             self._invalid_query_response = (u'Missing JSON request body', 400)
             return self._valid_query, self._invalid_query_response
 
-        # Check for query_message
-        query_message = self._json_data.get(u'query_message')
+        # Check for the query message
+        query_message = self._json_data.get(u'message')
         if query_message is None or not query_message:
-            return False, (u'query_message missing from JSON data or empty', 400)
+            return False, (u'message missing from JSON data or empty', 400)
 
         query_graph = query_message.get(u'query_graph')
         if query_graph is None or not query_graph:
@@ -110,7 +110,7 @@ class COHDTranslatorReasoner:
             'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes()'
 
         for query_node in self._query_graph[u'nodes']:
-            if query_node[u'node_id'] == query_node_id:
+            if query_node[u'id'] == query_node_id:
                 return query_node
 
         return None
@@ -150,7 +150,7 @@ class COHDTranslatorReasoner:
         self._dataset_id = self._query_options.get(u'dataset_id')
 
         # Get query information from query_graph
-        self._query_graph = self._json_data[u'query_message'][u'query_graph']
+        self._query_graph = self._json_data[u'message'][u'query_graph']
         edge = self._query_graph[u'edges'][0]
 
         # Get concept_id_1
@@ -400,7 +400,7 @@ class TranslatorResponseMessage:
 
         Parameters
         ----------
-        query_graph: query_graph from query_message
+        query_graph: query_graph from query message
         query_options: query_options from query
         criteria: List of required criteria for cohd_results to be added to list of results
         cohd_results: COHD results
@@ -422,7 +422,7 @@ class TranslatorResponseMessage:
 
         # Save info from query graph
         self.query_graph = query_graph
-        self.query_edge_id = query_graph[u'edges'][0][u'edge_id']
+        self.query_edge_id = query_graph[u'edges'][0][u'id']
         self.query_source_node_id = query_graph[u'edges'][0][u'source_id']
         self.query_target_node_id = query_graph[u'edges'][0][u'target_id']
 
@@ -481,13 +481,20 @@ class TranslatorResponseMessage:
         result
         """
         result = {
-            u'node_bindings': {
-                self.query_source_node_id: kg_node_1[u'id'],
-                self.query_target_node_id: kg_node_2[u'id'],
-            },
-            u'edge_bindings': {
-                self.query_edge_id: kg_edge[u'id']
-            }
+            u'node_bindings': [
+                {
+                    u'qg_id': self.query_source_node_id,
+                    u'kg_id': kg_node_1[u'id']
+                },
+                {
+                    u'qg_id': self.query_target_node_id,
+                    u'kg_id': kg_node_2[u'id']
+                }
+            ],
+            u'edge_bindings': [{
+                u'qg_id': self.query_edge_id,
+                u'kg_id': kg_edge[u'id']
+            }]
         }
         self.results.append(result)
         return result

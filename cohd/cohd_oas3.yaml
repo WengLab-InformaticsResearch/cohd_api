@@ -1469,22 +1469,22 @@ paths:
             example: >-
               {
                 "max_results": 50,
-                "query_message": {
+                "message": {
                   "query_graph": {
                     "nodes": [
                       {
-                        "node_id": "n00",
+                        "id": "n00",
                         "curie": "DOID:9053",
                         "type": "disease"
                       },
                       {
-                        "node_id": "n01",
+                        "id": "n01",
                         "type": "procedure"
                       }
                     ],
                     "edges": [
                       {
-                        "edge_id": "e00",
+                        "id": "e00",
                         "type": "association",
                         "source_id": "n00",
                         "target_id": "n01"
@@ -1519,18 +1519,6 @@ paths:
       x-swagger-router-controller: swagger_server.controllers.query_controller
 components:
   schemas:
-    Query:
-      x-body-name: request_body
-      type: object
-      properties:
-        max_results:
-          type: integer
-          description: Maximum number of results to return (default and system maximum is 500)
-        query_message:
-          $ref: '#/components/schemas/Message'
-        query_options:
-          $ref: '#/components/schemas/QueryOptions'
-      additionalProperties: true
     QueryOptions:
       description: Additional query options that apply to COHD
       type: object
@@ -1569,8 +1557,16 @@ components:
           description: "Whether to use the local implementation of OxO or the real implementation of OxO. Note, the local OxO implementation may contain outdated definitions and xrefs but runs faster. The real OxO has the most updated definitions and xrefs, but is slower (~1-2 seconds/concept). Default: true"
           type: boolean
           example: false
+    Query:
+      x-body-name: request_body
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/Message'
+      additionalProperties: true
+      required:
+        - message
     Message:
-      description: Message object that represents the query to be answered (input) or the answer to the query (response)
       type: object
       properties:
         results:
@@ -1579,6 +1575,10 @@ components:
           items:
             $ref: '#/components/schemas/Result'
         query_graph:
+          type: object
+          description: >-
+            QueryGraph object that contains a serialization of a query in the form
+            of a graph
           $ref: '#/components/schemas/QueryGraph'
         knowledge_graph:
           type: object
@@ -1595,27 +1595,50 @@ components:
       description: One of potentially several results or answers for a query
       properties:
         node_bindings:
-          type: object
-          description: >-
-            Lookup dict that maps QNode identifiers in the QueryGraph to
-            Node identifiers in the KnowledgeGraph
-          additionalProperties:
-            oneOf:
-              - type: string
-              - type: array
-                items:
-                  type: string
+          type: array
+          description: List of QNode-KNode bindings.
+          items:
+            $ref: '#/components/schemas/NodeBinding'
         edge_bindings:
-          type: object
-          description: >-
-            Lookup dict that maps QEdge identifiers in the QueryGraph to
-            Edge identifiers in the KnowledgeGraph
-          additionalProperties:
-            oneOf:
-              - type: string
-              - type: array
-                items:
-                  type: string
+          type: array
+          description: List of QEdge-KEdge bindings.
+          items:
+            $ref: '#/components/schemas/EdgeBinding'
+      required:
+        - node_bindings
+        - edge_bindings
+    NodeBinding:
+      type: object
+      properties:
+        qg_id:
+          type: string
+          description: Query-graph node id, i.e. the `node_id` of a QNode
+        kg_id:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          description: One or more knowledge-graph node ids, i.e. the `id` of a KNode
+      required:
+        - qg_id
+        - kg_id
+    EdgeBinding:
+      type: object
+      properties:
+        qg_id:
+          type: string
+          description: Query-graph edge id, i.e. the `edge_id` of a QEdge
+        kg_id:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+          description: One or more knowledge-graph edge ids, i.e. the `id` of a KEdge
+      required:
+        - qg_id
+        - kg_id
     KnowledgeGraph:
       type: object
       description: >-
@@ -1655,7 +1678,11 @@ components:
             graph
           items:
             $ref: '#/components/schemas/Credentials'
-      additionalProperties: true
+        protocol:
+          type: string
+          default: neo4j
+      required:
+        - url
     Credentials:
       description: Credentials needed for programmatic access to the remote knowledge graph
       type: object
@@ -1694,35 +1721,45 @@ components:
       type: object
       description: A node in the QueryGraph
       properties:
-        node_id:
+        id:
           type: string
           example: n00
           description: >-
             QueryGraph internal identifier for this QNode. Recommended form: n00,
             n01, n02, etc.
         curie:
-          type: string
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
           example: 'OMIM:603903'
           description: CURIE identifier for this node
         type:
-          type: string
-          description: 'Entity type of this node (e.g., protein, disease, etc.)'
-          example: disease
+          oneOf:
+            - $ref: '#/components/schemas/BiolinkEntity'
+            - type: array
+              items:
+                $ref: '#/components/schemas/BiolinkEntity'
       additionalProperties: true
+      required:
+        - id
     QEdge:
       type: object
       description: An edge in the QueryGraph
       properties:
-        edge_id:
+        id:
           type: string
           example: e00
           description: >-
             QueryGraph internal identifier for this QEdge. Recommended form: e00,
             e01, e02, etc.
         type:
-          type: string
-          example: affects
-          description: Higher-level relationship type of this edge
+          oneOf:
+            - $ref: '#/components/schemas/BiolinkRelation'
+            - type: array
+              items:
+                $ref: '#/components/schemas/BiolinkRelation'
         source_id:
           type: string
           example: 'https://omim.org/entry/603903'
@@ -1733,6 +1770,7 @@ components:
           description: Corresponds to the @id of target node of this edge
       additionalProperties: true
       required:
+        - id
         - source_id
         - target_id
     Node:
@@ -1748,12 +1786,11 @@ components:
           example: Haptoglobin
           description: Formal name of the entity
         type:
-          type: array
-          description: 'Entity type of this node (e.g., protein, disease, etc.)'
-          example:
-            - protein
-          items:
-            type: string
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: '#/components/schemas/BiolinkEntity'
       additionalProperties: true
       required:
         - id
@@ -1765,13 +1802,11 @@ components:
           type: string
           example: '553903'
           description: >-
-            Local identifier for this node which is unique within this
+            Local identifier for this edge which is unique within this
             KnowledgeGraph, and perhaps within the source reasoner's knowledge
             graph
         type:
-          type: string
-          example: affects
-          description: Higher-level relationship type of this edge
+          $ref: '#/components/schemas/BiolinkRelation'
         source_id:
           type: string
           example: 'https://omim.org/entry/603903'
@@ -1785,6 +1820,20 @@ components:
         - id
         - source_id
         - target_id
+    BiolinkEntity:
+      description: A subclass of category named_thing (snake_case)
+      type: string
+      externalDocs:
+        description: Biolink model entities
+        url: https://biolink.github.io/biolink-model/docs/NamedThing.html
+      example: disease
+    BiolinkRelation:
+      description: A relation, i.e. child of related_to (snake_case)
+      type: string
+      externalDocs:
+        description: Biolink model relations
+        url: https://biolink.github.io/biolink-model/docs/related_to.html
+      example: affects
   responses: {}
   parameters: {}
   examples: {}
