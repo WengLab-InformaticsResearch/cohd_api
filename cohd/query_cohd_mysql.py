@@ -10,6 +10,7 @@ from cohd_utilities import ln_ratio_ci, rel_freq_ci
 CONFIG_FILE = u"cohd_mysql.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
+DEFAULT_CONFIDENCE = 0.99
 
 # OXO API configuration
 URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -911,8 +912,17 @@ def query_db(service, method, args):
             json_return = cur.fetchall()
 
             # Add confidence interval to results
+            confidence_level = args.get(u'confidence', DEFAULT_CONFIDENCE)
+            try:
+                confidence_level = float(confidence_level)
+            except ValueError:
+                return u'Confidence is not a number 0-1', 400
+            if confidence_level < 0 or confidence_level >= 1:
+                return u'Confidence should be a number between 0-1'
             for row in json_return:
-                row[u'confidence_interval'] = ln_ratio_ci(row[u'observed_count'], row[u'ln_ratio'])
+                ci = ln_ratio_ci(row[u'observed_count'], row[u'ln_ratio'], confidence_level)
+                # The lower bound may hit -Inf which causes issues with JSON serialization. Limit it to -999
+                row[u'confidence_interval'] = max(ci[0], -999), ci[1]
 
 
         # Returns relative frequency between pairs of concepts
@@ -1019,8 +1029,16 @@ def query_db(service, method, args):
             json_return = cur.fetchall()
 
             # Add confidence interval to results
+            confidence_level = args.get(u'confidence', DEFAULT_CONFIDENCE)
+            try:
+                confidence_level = float(confidence_level)
+            except ValueError:
+                return u'Confidence is not a number 0-1', 400
+            if confidence_level < 0 or confidence_level >= 1:
+                return u'Confidence should be a number between 0-1'
             for row in json_return:
-                row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'])
+                row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'],
+                                                          confidence_level)
 
     # print cur._executed
     # print(json_return)
@@ -1091,7 +1109,7 @@ def query_concept_pair_count(concept_id_1, concept_id_2, dataset_id=None):
     return response.get_json()
 
 
-def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None):
+def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, confidence=None):
     """ Calls the desired association method and returns the results
 
     Parameters
@@ -1101,6 +1119,7 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
     concept_id_2: (optional) String - OMOP concept ID
     dataset_id: (optional) String - COHD dataset ID
     domain_id: (optional) String - OMOP domain ID
+    confidence: (optional) String - Confidence level
 
     Returns
     -------
@@ -1120,6 +1139,8 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
         args[u'dataset_id'] = str(dataset_id)
     if domain_id is not None and domain_id:
         args[u'domain'] = domain_id
+    if confidence is not None:
+        args[u'confidence'] = str(confidence)
 
     response = query_db(service=u'association', method=method, args=args)
     return response.get_json()

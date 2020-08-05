@@ -3,7 +3,7 @@
 import requests
 import pandas as pd
 import numpy as np
-from cohd_temporal_analysis import AgeCounts, DeltaCounts
+from .cohd_temporal_analysis import AgeCounts, DeltaCounts
 
 
 # COHD API server

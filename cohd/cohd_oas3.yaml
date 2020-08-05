@@ -1317,6 +1317,14 @@ paths:
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict the associated concept (concept_id_2) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
           example: Procedure
+        - name: confidence
+          in: query
+          required: false
+          schema:
+            type: number
+          description: >-
+            The confidence level used for calculating confidence intervals (default 0.99).
+          example: 0.99
       operationId: obsExpRatio
       responses:
         default:
@@ -1409,6 +1417,14 @@ paths:
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict concept_id_2 (the base concept) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
           example: Procedure
+        - name: confidence
+          in: query
+          required: false
+          schema:
+            type: number
+          description: >-
+            The confidence level used for calculating confidence intervals (default 0.99).
+          example: 0.99
       operationId: relativeFrequency
       responses:
         default:
