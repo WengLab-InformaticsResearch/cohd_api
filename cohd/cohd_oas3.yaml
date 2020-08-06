@@ -1,17 +1,19 @@
 openapi: 3.0.0
 servers:
+  - url: 'http://tr-kp-clinical.ncats.io/api/'
   - url: 'http://cohd.io/api/'
 info:
   description: |
-    The Columbia Open Health Data (COHD) API provides access to counts and frequencies (i.e., EHR prevalence) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the [Columbia University Medical Center's](http://www.cumc.columbia.edu/) [OHDSI](https://www.ohdsi.org/) database including inpatient and outpatient data. Counts are the number of patients associated with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of unique patients associated with the concept divided by the total number of patients in the dataset, i.e., prevalence in the electronic health records. To protect patient privacy, all concepts and pairs of concepts where the count <= 10 were excluded, and counts were randomized by the Poisson distribution. 
+    The Columbia Open Health Data (COHD) API provides access to counts and frequencies (i.e., EHR prevalence) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the [Columbia University Medical Center's](http://www.cumc.columbia.edu/) [OHDSI](https://www.ohdsi.org/) database including inpatient and outpatient data. Counts are the number of patients associated with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of unique patients associated with the concept divided by the total number of patients in the dataset, i.e., prevalence in the electronic health records. To protect patient privacy, all concepts and pairs of concepts where the count <= 10 were excluded, and counts were randomized by the Poisson distribution.         
     
-    A beta release of the 5-year hierarchical data set is now available. In this data, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc. 
-    
-    Two datasets are available: 
+    Four datasets are available: 
     1) 5-year non-hierarchical dataset: Includes clinical data from 2013-2017  
     2) lifetime non-hierarchical dataset: Includes clinical data from all dates  
-    3) BETA! 5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.
+    3) 5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.
+    4) BETA! Temporal co-occurrence data
     
+    In the 5-year hierarchical data set, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc. 
+
     While the lifetime dataset captures a larger patient population and range of concepts, the 5-year dataset has better underlying data consistency. 
     
     Clinical concepts (e.g., conditions, procedures, drugs) are coded by their standard concept ID in the [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki). API methods are provided to map to/from other vocabularies supported in OMOP and other ontologies using the EMBL-EBI Ontology Xref Service (OxO). 
@@ -42,7 +44,7 @@ info:
     [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)  
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
-  version: 2.2.0
+  version: 3.0.0
   termsOfService: 'http://cohd.nsides.io/terms/'
   title: Columbia Open Health Data (COHD)
   contact:
@@ -64,6 +66,8 @@ tags:
     description: Clinical frequency data
   - name: Concept Associations
     description: Estimated association between concepts
+  - name: Temporal Clinical Data
+    description: Concept-age distributions, concept-pair delta distributions, and temporal analyses
 x-externalResources:
   - x-url: 'https://www.dbmi.columbia.edu/'
     x-type: website
@@ -1313,6 +1317,14 @@ paths:
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict the associated concept (concept_id_2) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
           example: Procedure
+        - name: confidence
+          in: query
+          required: false
+          schema:
+            type: number
+          description: >-
+            The confidence level used for calculating confidence intervals (default 0.99).
+          example: 0.99
       operationId: obsExpRatio
       responses:
         default:
@@ -1352,14 +1364,14 @@ paths:
                           example: 7.561698473261244
                         observed_count: 
                           type: integer
-                          example: 117                      
+                          example: 117
   /association/relativeFrequency:
     get:
       tags:
         - Concept Associations
       summary: Relative frequency between pairs of concepts
       description: >
-        Calculates the relative frequency (i.e., conditional probability) between pairs of concepts. Results are returned in descending order of relative frequency. Note that due to the randomization of the counts, the calculated relative frequencies can exceed the limit of 1.0. 
+        Calculates the relative frequency (i.e., conditional probability) between pairs of concepts. Results are returned in descending order of relative frequency. Note that due to the randomization of the counts, the calculated relative frequencies can exceed the limit of 1.0.
 
 
         Relative Frequency = Count_1_and_2 / Count_2
@@ -1405,46 +1417,339 @@ paths:
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict concept_id_2 (the base concept) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
           example: Procedure
+        - name: confidence
+          in: query
+          required: false
+          schema:
+            type: number
+          description: >-
+            The confidence level used for calculating confidence intervals (default 0.99).
+          example: 0.99
       operationId: relativeFrequency
       responses:
         default:
           description: Unexpected error
         '200':
           description: An array of paired concepts and relative frequency.
-          content: 
-            application/json: 
+          content:
+            application/json:
               schema:
                 type: object
                 properties:
                   results:
                     type: array
-                    items: 
+                    items:
                       type: object
                       properties:
-                        concept_2_count: 
+                        concept_2_count:
                           type: integer
                           example: 82
-                        concept_2_domain: 
+                        concept_2_domain:
                           type: string
                           example: "Procedure"
-                        concept_2_name: 
+                        concept_2_name:
                           type: string
                           example: "Radical cystectomy"
-                        concept_id_1: 
+                        concept_id_1:
                           type: integer
                           example: 192855
-                        concept_id_2: 
+                        concept_id_2:
                           type: integer
                           example: 2003805
-                        concept_pair_count: 
+                        concept_pair_count:
                           type: integer
                           example: 29
-                        dataset_id: 
+                        dataset_id:
                           type: integer
                           example: 1
-                        relative_frequency: 
+                        relative_frequency:
                           type: integer
                           example: 0.35365853658536583
+  /temporal/conceptAgeCounts:
+    get:
+      tags:
+        - Temporal Clinical Data
+      summary: Counts of ages when concepts were first observed in a patient
+      description: >
+        Counts of ages when concepts were first observed in a patient. Different concepts will have different bin_widths.
+        All binning schemes start with age 0, and no bin starts with an age > 90. The largest age bin includes all ages
+        greater or equal to the starting age of the bin. For example, with a bin_width of 4, the ages of each bin are
+        [0-3, 4-7, 8-11, ..., 84-87, 88+]. Counts in each bin are independently perturbed with a Poisson distribution.
+        Counts < 10 are suppressed, represented by the value 1. Counts of 0 are reported as 0.
+      parameters:
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: >-
+            The dataset_id of the data set to query. Default data set is the Temporal Beta data set.
+          example: 4
+        - name: concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "313217"'
+          example: 313217
+      operationId: conceptAgeCounts
+      responses:
+        default:
+          description: Unexpected error
+        '200':
+          description: The concept's age distribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 4
+                        concept_id:
+                          type: integer
+                          example: 313217
+                        concept_name:
+                          type: string
+                          example: "Atrial fibrillation"
+                        bin_width:
+                          type: integer
+                          example: 2
+                        counts:
+                          type: array
+                          description: Array of counts ordered from 0 to the largest bin. 
+                          items:
+                            type: integer
+                            example: 9000
+  /temporal/findSimilarAgeDistributions:
+    get:
+      tags:
+        - Temporal Clinical Data
+      summary: Find concepts with a similar concept-age distribution
+      description: >
+        Finds concepts with a similar concept-age distribution as with the desired concept_id.
+
+        Uses Jaccard similarity to compare concept-age distributions
+      parameters:
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: >-
+            The dataset_id of the data set to query. Default data set is the Temporal Beta data set.
+          example: 4
+        - name: concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "313217"'
+          example: 313217
+        - name: exclude_related
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: 'True: excludes concepts that frequently co-occur (0-day delta) with concept_id. False: do not exclude. Default is True.'
+          example: true 
+        - name: restrict_type
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: >
+            (Optional) True: restricts potentially similar concepts to the same type of concept as concept_id, e.g., 
+            the same domain_id for Conditions, Drugs, and Procedures. For drugs, if the concept is an ingredient, also
+            restricts concept_class_id to 'Ingredient'.
+          example: true   
+        - name: threshold
+          in: query
+          required: false
+          schema:
+            type: number
+          description: Minimum threshold for similarity. Range is 0-1, higher is more similar. Default 0.7.
+          example: 0.7  
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of concepts to return at each bin width. Default 20.
+          example: 20
+      operationId: findSimilarAgeDistributions
+      responses:
+        default:
+          description: Unexpected error
+        '200':
+          description: The concept's age distribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 4
+                        concept_id:
+                          type: integer
+                          example: 313217
+                        concept_name:
+                          type: string
+                          example: "Atrial fibrillation"
+                        bin_width:
+                          type: integer
+                          example: 2
+                        counts:
+                          type: array
+                          description: Array of counts ordered from 0 to the largest bin. 
+                          items:
+                            type: integer
+                            example: 9000                            
+  /temporal/conceptPairDeltaCounts:
+    get:
+      tags:
+        - Temporal Clinical Data
+      summary: Counts of time deltas between
+      description: >
+        Counts of time differences (deltas) between when a pair of concepts were first observed in a patient. given
+        a pair of concepts (source_concept and target_concept), a positive delta indicates that source_concept was 
+        observed before target_concept. Likewise, a negaitve delta indicates that source_concept was observed after
+        target_concept. Performing this query with the two concepts swapped will produce a mirrored distribution.   
+          
+        Bin widths grow exponentially, and different concept pairs will have different bin_widths. The binning schemes
+        are as follows (delta bins with negative values mirror the positive delta bins):  
+          bin_width=1: [0 day, 1 day, 2-3 days, 4-7 days, 8-15 days, ..., 2048-4095 days (5.6-11.2y), and 4096+ days
+          (11.2+ years)].  
+          bin_width=2: [0 day, 1-3 days, 4-15 days, 16-63 days, ..., 256-1023 days, 1024+ days (2.8+ years)]  
+          bin_width=4: [0 day, 1-15 days, 16-255 days, 256+ days]  
+          bin_width=8: [0 day, 1-255 days, 256+ days]  
+          bin_width=16: [0 day, 1+ days]  
+          The 0-day bin never gets incorporated into larger bins.
+            
+        Counts in each bin are independently perturbed with a Poisson distribution. Counts < 10 are suppressed,
+        represented by the value 1. Counts of 0 are reported as 0.
+      parameters:
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: >-
+            The dataset_id of the data set to query. Default data set is the Temporal Beta data set. 
+          example: 4
+        - name: source_concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "312327"'
+          example: 312327
+        - name: target_concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "313217"'
+          example: 313217          
+      operationId: conceptPairDeltaCounts
+      responses:
+        default:
+          description: Unexpected error
+        '200':
+          description: The concept pair's delta distribution
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        dataset_id:
+                          type: integer
+                          example: 4
+                        source_concept_id:
+                          type: integer
+                          example: 312327
+                        source_concept_name:
+                          type: string
+                          example: "Acute myocardial infarction"
+                        target_concept_id:
+                          type: integer
+                          example: 313217
+                        target_concept_name:
+                          type: string
+                          example: "Atrial fibrillation"
+                        bin_width:
+                          type: integer
+                          example: 2
+                        n:
+                          type: integer
+                          example: 6
+                        counts:
+                          type: array
+                          description: Array of counts ordered from the most negative bin to the largest positive bin. 
+                          items:
+                            type: integer
+                            example: 9000
+  /temporal/sourceToTarget:
+    get:
+      tags:
+        - Temporal Clinical Data
+      summary: Temporal relationship between source_concept and target_concept.
+      description: >
+        Analysis to determine if there's a temporal relationship between the source_concept and the target_concept.  
+
+        Compares the delta distribution between source_concept and target_concept against delta distributions from
+        other concepts to the target_concept. Find comparable concepts by measuring similarity of the age distributions
+        to the age distribution of the source_concept.
+
+      parameters:
+        - name: dataset_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: >-
+            The dataset_id of the data set to query. Default data set is the Temporal Beta data set.
+          example: 4
+        - name: source_concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "312327"'
+          example: 312327
+        - name: target_concept_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: 'An OMOP concept id, e.g., "313217"'
+          example: 313217          
+      operationId: sourceToTarget
+      responses:
+        default:
+          description: Unexpected error
+        '200':
+          description: The concept pair's delta distribution
+          content:
+            application/json:
+              schema:
+                type: object                          
   /translator/query:
     post:
       tags:

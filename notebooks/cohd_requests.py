@@ -2,10 +2,13 @@
 
 import requests
 import pandas as pd
+import numpy as np
+from .cohd_temporal_analysis import AgeCounts, DeltaCounts
 
 
 # COHD API server
-server = 'http://cohd.io/api'  
+server = 'http://tr-kp-clinical.ncats.io/api'
+# server = 'http://cohd.io/api'
 
 # ######################################################################
 # Utility functions
@@ -459,6 +462,207 @@ def relative_frequency(concept_id_1, concept_id_2=None, domain_id=None, dataset_
         df = df[['dataset_id', 'concept_id_1', 'concept_id_2', 'concept_2_name', 'concept_2_domain', 
                  'concept_pair_count', 'concept_2_count', 'relative_frequency']]
     return json, df
+
+
+# ######################################################################
+# Temporal Clinical Data
+# ######################################################################
+
+def temporal_concept_age_counts(concept_id, dataset_id=None):
+    """ Get concept-age distribution for concept_id 
+    
+    Params
+    ------
+    concept_id (int) - OMOP concept ID
+    dataset_id (int) - COHD dataset ID
+    
+    Returns 
+    -------
+    List of AgeCounts objects
+    """
+    url = f'{server}/temporal/conceptAgeCounts'
+    params = {'concept_id': concept_id}
+    if dataset_id is not None:
+        params['dataset_id'] = dataset_id
+        
+    response = requests.get(url, params)
+    json = _process_response(response)
+    cads = list()
+    if 'results' in json:
+        for r in json[u'results']:
+            cad = AgeCounts(dataset_id = r['dataset_id'], concept_id = r['concept_id'], concept_name = r['concept_name'], 
+                            concept_count=r['concept_count'],counts = r['counts'], confidence = np.array(r['confidence_interval']).T, 
+                            bin_width = r['bin_width'])
+            cads.append(cad)
+    return cads
+
+
+def temporal_pair_delta_counts(source_concept_id, target_concept_id, dataset_id=None):
+    """ Get concept-age distribution for concept_id 
+    
+    Params
+    ------
+    source_concept_id (int) - OMOP concept ID of the source concept
+    target_concept_id (int) - OMOP concept ID of the target concept
+    dataset_id (int) - COHD dataset ID
+    
+    Returns 
+    -------
+    List of DeltaCounts objects
+    """
+    url = f'{server}/temporal/conceptPairDeltaCounts'
+    params = {
+        'source_concept_id': source_concept_id,
+        'target_concept_id': target_concept_id
+        }
+    if dataset_id is not None:
+        params['dataset_id'] = dataset_id
+        
+    response = requests.get(url, params)
+    json = _process_response(response)
+    deltas = list()
+    if 'results' in json:
+        for r in json[u'results']:
+            dc = DeltaCounts(dataset_id = r['dataset_id'], source_concept_id = r['source_concept_id'], 
+                             target_concept_id = r['target_concept_id'], source_concept_name = r['source_concept_name'],
+                             target_concept_name = r['target_concept_name'], source_concept_count = r['source_concept_count'],
+                             target_concept_count = r['target_concept_count'], concept_pair_count = r['concept_pair_count'], 
+                             counts = r['counts'], confidence = np.array(r['confidence_interval']).T, 
+                             bin_width = r['bin_width'], n = r['n'])            
+            deltas.append(dc)                        
+            
+    return deltas
+
+
+def temporal_find_similar_age_distributions(concept_id, dataset_id=None, exclude_related=None, restrict_type=None,
+                                   threshold=None, limit=None):
+    url = f'{server}/temporal/findSimilarAgeDistributions'
+    params = {
+        'concept_id': concept_id
+    }
+    if dataset_id is not None:
+        params['dataset_id'] = dataset_id
+    if exclude_related is not None:
+        params['exclude_related'] = exclude_related
+    if restrict_type is not None:
+        params['restrict_type'] = restrict_type
+    if threshold is not None:
+        params['threshold'] = threshold
+    if limit is not None:
+        params['limit'] = limit
+    response = requests.get(url, params)
+    json = _process_response(response)
+    
+    if 'results' not in json:
+        return None
+    
+    similarities_binned = dict()
+    cads_binned = dict()
+    for result_set in json['results']:
+        bin_width = result_set['bin_width']
+        cads = list()
+        sims = list()
+        for r in result_set['concept_age_counts']:
+            cad = AgeCounts(dataset_id = r['dataset_id'], concept_id = r['concept_id'], 
+                            concept_name = r['concept_name'], concept_count=r['concept_count'],
+                            counts = r['counts'], confidence = np.array(r['confidence_interval']).T, 
+                            bin_width = r['bin_width'])
+            cads.append(cad)
+            sims.append(r['similarity'])
+            
+        cads_binned[bin_width] = cads
+        similarities_binned[bin_width] = sims
+     
+    return cads_binned, similarities_binned
+
+
+def temporal_source_to_target(source_concept_id, target_concept_id, dataset_id=None):
+    """ Get concept-age distribution for concept_id 
+    
+    Params
+    ------
+    source_concept_id (int) - OMOP concept ID of the source concept
+    target_concept_id (int) - OMOP concept ID of the target concept
+    dataset_id (int) - COHD dataset ID
+    
+    Returns 
+    -------
+    Results from comparing the queried concept pair against similar source and target concepts
+    """
+    url = f'{server}/temporal/sourceToTarget'
+    params = {
+        'source_concept_id': source_concept_id,
+        'target_concept_id': target_concept_id
+        }
+    if dataset_id is not None:
+        params['dataset_id'] = dataset_id
+        
+    response = requests.get(url, params)
+    json = _process_response(response)
+    if u'results' not in json or len(json[u'results']) != 1:
+        return None
+    
+    result = json[u'results'][0]
+    
+    queried_pair = dict()
+    for x in result[u'queried_pair']:
+        d = x[u'delta']
+        queried_pair[x[u'bin_width']] = DeltaCounts(dataset_id = d[u'dataset_id'], source_concept_id = d[u'source_concept_id'], 
+                                                    target_concept_id = d[u'target_concept_id'],
+                                                    source_concept_name = d[u'source_concept_name'],                            
+                                                    target_concept_name = d[u'target_concept_name'], 
+                                                    source_concept_count = d[u'source_concept_count'],
+                                                    concept_pair_count = d[u'concept_pair_count'],
+                                                    target_concept_count = d[u'target_concept_count'],
+                                                    counts = d[u'counts'], confidence = np.array(d[u'confidence_interval']).T,
+                                                    bin_width = d[u'bin_width'], n = d[u'n'])      
+        
+    source_comparison = dict()
+    for x in result[u'source_comparison']:
+        source_comparison[x[u'bin_width']] = {
+            u'cad_similarities': x[u'cad_similarities'],
+            u'deltas': [DeltaCounts(dataset_id = d[u'dataset_id'], source_concept_id = d[u'source_concept_id'], 
+                                    target_concept_id = d[u'target_concept_id'],
+                                    source_concept_name = d[u'source_concept_name'],                            
+                                    target_concept_name = d[u'target_concept_name'], 
+                                    source_concept_count = d[u'source_concept_count'],
+                                    concept_pair_count = d[u'concept_pair_count'],
+                                    target_concept_count = d[u'target_concept_count'],
+                                    counts = d[u'counts'], confidence = np.array(d[u'confidence_interval']).T,
+                                    bin_width = d[u'bin_width'], n = d[u'n']) 
+                        for d in x[u'deltas']],
+            u'distribution': np.array(x[u'distribution']) if x[u'distribution'] is not None else None,
+            u'significance': x[u'significance'] if x[u'significance'] is not None else None
+        }
+            
+    target_comparison = dict()
+    for x in result[u'target_comparison']:
+        target_comparison[x[u'bin_width']] = {
+            u'cad_similarities': x[u'cad_similarities'],
+            u'deltas': [DeltaCounts(dataset_id = d[u'dataset_id'], source_concept_id = d[u'source_concept_id'], 
+                                    target_concept_id = d[u'target_concept_id'],
+                                    source_concept_name = d[u'source_concept_name'],                            
+                                    target_concept_name = d[u'target_concept_name'], 
+                                    source_concept_count = d[u'source_concept_count'],
+                                    concept_pair_count = d[u'concept_pair_count'],
+                                    target_concept_count = d[u'target_concept_count'],
+                                    counts = d[u'counts'], confidence = np.array(d[u'confidence_interval']).T,
+                                    bin_width = d[u'bin_width'], n = d[u'n']) 
+                        for d in x[u'deltas']],
+            u'distribution': np.array(x[u'distribution']) if x[u'distribution'] is not None else None,
+            u'significance': x[u'significance'] if x[u'significance'] is not None else None
+        }    
+        
+    combined_comparison = dict()
+    for x in result[u'combined_comparison']:
+        combined_comparison[x[u'bin_width']] = {
+            u'distribution': np.array(x[u'distribution']) if x[u'distribution'] is not None else None,
+            u'significance': x[u'significance'] if x[u'significance'] is not None else None
+        }    
+            
+    return queried_pair, source_comparison, target_comparison, combined_comparison
+
+
 
 # ######################################################################
 # Translator API

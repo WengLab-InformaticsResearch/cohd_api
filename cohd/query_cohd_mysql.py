@@ -10,6 +10,7 @@ from cohd_utilities import ln_ratio_ci, rel_freq_ci
 CONFIG_FILE = u"cohd_mysql.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
+DEFAULT_CONFIDENCE = 0.99
 
 # OXO API configuration
 URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -25,7 +26,7 @@ def sql_connection():
                            cursorclass=pymysql.cursors.DictCursor)
 
 
-def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
+def get_arg_dataset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
     dataset_id = args.get(u'dataset_id')
     if dataset_id is None or dataset_id.isspace() or not dataset_id.strip().isdigit():
         dataset_id = default_dataset_id
@@ -33,6 +34,48 @@ def _get_arg_datset_id(args, default_dataset_id=DATASET_ID_DEFAULT):
         dataset_id = int(dataset_id.strip())
 
     return dataset_id
+
+
+def get_arg_concept_id(args, param_name=u'concept_id'):
+    concept_id = args.get(param_name)
+    if concept_id is None or concept_id == [u''] or not concept_id.strip().isdigit():
+        return None
+    else:
+        return int(concept_id)
+
+
+def get_arg_int(args, param_name):
+    param = args.get(param_name)
+    if param is None or param == [u''] or not param.strip().isnumeric():
+        return None
+    else:
+        try:
+            return int(param.strip())
+        except ValueError:
+            return None
+
+
+def get_arg_float(args, param_name):
+    param = args.get(param_name)
+    if param is None or param == [u'']:
+        return None
+    else:
+        try:
+            return float(param.strip())
+        except ValueError:
+            return None
+
+
+def get_arg_boolean(args, param_name):
+    param = args.get(param_name)
+    if param is None or param == [u'']:
+        return None
+    else:
+        try:
+            return param.strip().lower() in ['true', '1', 't']
+        except AttributeError:
+            return None
+    return None
 
 
 def query_db(service, method, args):
@@ -61,7 +104,7 @@ def query_db(service, method, args):
         # The number of concepts in each domain
         # endpoint: /api/v1/query?service=metadata&meta=domainCounts&dataset_id=1
         elif method == u'domainCounts':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
                 FROM cohd.domain_concept_counts 
                 WHERE dataset_id=%(dataset_id)s;'''
@@ -72,7 +115,7 @@ def query_db(service, method, args):
         # The number of pairs of concepts in each pair of domains
         # endpoint: /api/v1/query?service=metadata&meta=domainPairCounts&dataset_id=1
         elif method == u'domainPairCounts':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
                 FROM cohd.domain_pair_concept_counts 
                 WHERE dataset_id=%(dataset_id)s;'''
@@ -83,7 +126,7 @@ def query_db(service, method, args):
         # The number of patients in the dataset
         # endpoint: /api/v1/query?service=metadata&meta=patientCount&dataset_id=1
         elif method == u'patientCount':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
                 FROM cohd.patient_count 
                 WHERE dataset_id=%(dataset_id)s;'''
@@ -99,7 +142,7 @@ def query_db(service, method, args):
             if query is None or query == [u''] or query.isspace():
                 return 'q parameter is missing', 400
 
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
 
             sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
                     CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
@@ -169,7 +212,7 @@ def query_db(service, method, args):
         # e.g. /api/query?service=omop&meta=conceptAncestors&concept_id=313217
         elif method == u'conceptAncestors':
             # Get non-required parameters
-            dataset_id = _get_arg_datset_id(args, DATASET_ID_DEFAULT_HIER)
+            dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_HIER)
 
             # concept_id is required
             concept_id = args.get(u'concept_id')
@@ -221,7 +264,7 @@ def query_db(service, method, args):
         # e.g. /api/query?service=omop&meta=conceptDescendants&concept_id=313217
         elif method == u'conceptDescendants':
             # Get non-required parameters
-            dataset_id = _get_arg_datset_id(args, DATASET_ID_DEFAULT_HIER)
+            dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_HIER)
 
             # concept_id is required
             concept_id = args.get(u'concept_id')
@@ -380,7 +423,7 @@ def query_db(service, method, args):
         # Looks up observed clinical frequencies for a comma separated list of concepts
         # e.g. /api/v1/query?service=frequencies&meta=singleConceptFreq&dataset_id=1&q=4196636,437643
         if method == u'singleConceptFreq':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
 
             # Check concept_ids parameter
             if query is None or query == [u''] or query.isspace():
@@ -410,7 +453,7 @@ def query_db(service, method, args):
         # Looks up observed clinical frequencies for a comma separated list of concepts
         # e.g. /api/v1/query?service=frequencies&meta=pairedConceptFreq&dataset_id=1&q=4196636,437643
         elif method == u'pairedConceptFreq':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
 
             # Check q parameter
             if query is None or query == [u''] or query.isspace():
@@ -446,7 +489,7 @@ def query_db(service, method, args):
         # Looks up observed clinical frequencies of all pairs of concepts given a concept id
         # e.g. /api/v1/query?service=frequencies&meta=associatedConceptFreq&dataset_id=1&q=4196636
         elif method == u'associatedConceptFreq':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
 
             # Check q parameter
             if query is None or query == [u''] or query.isspace():
@@ -497,7 +540,7 @@ def query_db(service, method, args):
         # associated concept_id
         # e.g. /api/v1/query?service=frequencies&meta=associatedConceptDomainFreq&dataset_id=1&concept_id=4196636&domain=Procedure
         elif method == u'associatedConceptDomainFreq':
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             concept_id = args.get(u'concept_id')
             domain_id = args.get(u'domain')
 
@@ -572,7 +615,7 @@ def query_db(service, method, args):
                     '''
 
             # Get dataset_id
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             params = {
                 'dataset_id': dataset_id
             }
@@ -632,7 +675,7 @@ def query_db(service, method, args):
         # e.g. /api/v1/query?service=association&meta=chiSquare&dataset_id=1&concept_id_1=192855&concept_id_2=2008271
         if method == u'chiSquare':
             # Get non-required parameters
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             concept_id_2 = args.get(u'concept_id_2')
             domain_id = args.get(u'domain')
 
@@ -771,17 +814,20 @@ def query_db(service, method, args):
         # e.g. /api/v1/query?service=association&meta=obsExpRatio&dataset_id=1&concept_id_1=192855&concept_id_2=2008271
         elif method == u'obsExpRatio':
             # Get non-required parameters
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             concept_id_2 = args.get(u'concept_id_2')
             domain_id = args.get(u'domain')
 
             # concept_id_1 is required
-            concept_id_1 = args.get(u'concept_id_1')
-            if concept_id_1 is None or concept_id_1 == [u''] or not concept_id_1.strip().isdigit():
+            concept_id_1 = get_arg_concept_id(args, u'concept_id_1')
+            if concept_id_1 is None:
                 return u'No concept_id_1 selected', 400
 
-            if concept_id_2 is not None and concept_id_2.strip().isdigit():
+            concept_id_2 = get_arg_concept_id(args, u'concept_id_2')
+            if concept_id_2 is not None:
                 # concept_id_2 is specified, only return the results for the pair (concept_id_1, concept_id_2)
+                concept_id_2 = int(concept_id_2)
+                order = concept_id_1 < concept_id_2
                 sql = '''SELECT 
                         cp.dataset_id, 
                         cp.concept_id_1, 
@@ -796,12 +842,12 @@ def query_db(service, method, args):
                     WHERE cp.dataset_id = %(dataset_id)s 
                         AND c1.dataset_id = %(dataset_id)s 
                         AND c2.dataset_id = %(dataset_id)s
-                        AND cp.concept_id_1 IN (%(concept_id_1)s, %(concept_id_2)s)
-                        AND cp.concept_id_2 IN (%(concept_id_1)s, %(concept_id_2)s);'''
+                        AND cp.concept_id_1 = %(concept_id_1)s
+                        AND cp.concept_id_2 = %(concept_id_2)s;'''
                 params = {
                     'dataset_id': dataset_id,
-                    'concept_id_1': concept_id_1,
-                    'concept_id_2': int(concept_id_2)
+                    'concept_id_1': concept_id_1 if order else concept_id_2,
+                    'concept_id_2': concept_id_2 if order else concept_id_1
                 }
 
             else:
@@ -865,16 +911,25 @@ def query_db(service, method, args):
             cur.execute(sql, params)
             json_return = cur.fetchall()
 
-            # # Add confidence interval to results
-            # for row in json_return:
-            #     row[u'confidence_interval'] = ln_ratio_ci(row[u'observed_count'], row[u'ln_ratio'])
+            # Add confidence interval to results
+            confidence_level = args.get(u'confidence', DEFAULT_CONFIDENCE)
+            try:
+                confidence_level = float(confidence_level)
+            except ValueError:
+                return u'Confidence is not a number 0-1', 400
+            if confidence_level < 0 or confidence_level >= 1:
+                return u'Confidence should be a number between 0-1'
+            for row in json_return:
+                ci = ln_ratio_ci(row[u'observed_count'], row[u'ln_ratio'], confidence_level)
+                # The lower bound may hit -Inf which causes issues with JSON serialization. Limit it to -999
+                row[u'confidence_interval'] = max(ci[0], -999), ci[1]
 
 
         # Returns relative frequency between pairs of concepts
         # e.g. /api/v1/query?service=association&meta=relativeFrequency&dataset_id=1&concept_id_1=192855&concept_id_2=2008271
         elif method == u'relativeFrequency':
             # Get non-required parameters
-            dataset_id = _get_arg_datset_id(args)
+            dataset_id = get_arg_dataset_id(args)
             concept_id_2 = args.get(u'concept_id_2')
             domain_id = args.get(u'domain')
 
@@ -973,9 +1028,17 @@ def query_db(service, method, args):
             cur.execute(sql, params)
             json_return = cur.fetchall()
 
-            # # Add confidence interval to results
-            # for row in json_return:
-            #     row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'])
+            # Add confidence interval to results
+            confidence_level = args.get(u'confidence', DEFAULT_CONFIDENCE)
+            try:
+                confidence_level = float(confidence_level)
+            except ValueError:
+                return u'Confidence is not a number 0-1', 400
+            if confidence_level < 0 or confidence_level >= 1:
+                return u'Confidence should be a number between 0-1'
+            for row in json_return:
+                row[u'confidence_interval'] = rel_freq_ci(row[u'concept_pair_count'], row[u'concept_2_count'],
+                                                          confidence_level)
 
     # print cur._executed
     # print(json_return)
@@ -989,7 +1052,64 @@ def query_db(service, method, args):
     return json_return
 
 
-def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None):
+def query_count(concept_ids, dataset_id=None):
+    """ Gets the single concept count of a list of concept_ids
+
+    Parameters
+    ----------
+    concept_ids: list of concept IDs (string or int)
+    dataset_id: (optional) String - COHD dataset ID
+
+    Returns
+    -------
+    dict[concept_id (int)] -> singeConceptFreq result
+    """
+    # Make sure concept_ids is an iterable list of strings
+    try:
+        concept_ids = [str(x) for x in concept_ids]
+    except TypeError:
+        concept_ids = [str(concept_ids)]
+
+    args = {u'q': u','.join(concept_ids)}
+    if dataset_id is not None and str(dataset_id):
+        args[u'dataset_id'] = str(dataset_id)
+
+    response = query_db(service=u'frequencies', method=u'singleConceptFreq', args=args)
+
+    counts = dict()
+    for result in response.get_json()[u'results']:
+        counts[result[u'concept_id']] = result
+
+    return counts
+
+
+def query_concept_pair_count(concept_id_1, concept_id_2, dataset_id=None):
+    """ Calls the desired association method and returns the results
+
+    Parameters
+    ----------
+    concept_id_1: OMOP concept ID (String or int)
+    concept_id_2: OMOP concept ID (String or int)
+    dataset_id: COHD dataset ID (String or int)
+
+    Returns
+    -------
+    result
+    """
+    assert concept_id_1 is not None and str(concept_id_1) and concept_id_2 is not None and str(concept_id_2), \
+        'query_cohd_mysql.py::query_concept_pair_count()'
+
+    args = {
+        u'q': str(concept_id_1) + ',' + str(concept_id_2)
+    }
+    if dataset_id is not None and str(dataset_id):
+        args[u'dataset_id'] = str(dataset_id)
+
+    response = query_db(service=u'frequencies', method=u'pairedConceptFreq', args=args)
+    return response.get_json()
+
+
+def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, confidence=None):
     """ Calls the desired association method and returns the results
 
     Parameters
@@ -999,6 +1119,7 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
     concept_id_2: (optional) String - OMOP concept ID
     dataset_id: (optional) String - COHD dataset ID
     domain_id: (optional) String - OMOP domain ID
+    confidence: (optional) String - Confidence level
 
     Returns
     -------
@@ -1018,6 +1139,8 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
         args[u'dataset_id'] = str(dataset_id)
     if domain_id is not None and domain_id:
         args[u'domain'] = domain_id
+    if confidence is not None:
+        args[u'confidence'] = str(confidence)
 
     response = query_db(service=u'association', method=method, args=args)
     return response.get_json()
@@ -1028,14 +1151,39 @@ def omop_concept_definition(concept_id):
 
     Parameters
     ----------
-    concept_id: String - OMOP concept ID
+    concept_id: OMOP concept ID (String or int)
 
     Returns
     -------
     Concept definition, or None
     """
     response = query_db(service=u'omop', method=u'concepts', args={u'q': str(concept_id)})
+
     concept_result = response.get_json()
     if concept_result is None or 'results' not in concept_result or len(concept_result[u'results']) != 1:
         return None
     return concept_result[u'results'][0]
+
+
+def omop_concept_definitions(concept_ids):
+    """ Get the OMOP concept definition
+
+    Parameters
+    ----------
+    concept_ids: iterable of OMOP concept IDs (String or int)
+
+    Returns
+    -------
+    dict[concept_ids] = concept definition row
+    """
+    response = query_db(service=u'omop', method=u'concepts', args={u'q': ','.join(str(c) for c in concept_ids)})
+
+    concept_defs = dict()
+    concept_results = response.get_json()
+    if concept_results is None or 'results' not in concept_results:
+        return concept_defs
+
+    for r in concept_results[u'results']:
+        concept_defs[r[u'concept_id']] = r
+
+    return concept_defs

@@ -2,6 +2,23 @@ import numpy as np
 from scipy.stats import poisson
 
 
+def poisson_ci(freq, alpha=0.99):
+    """ Assuming two Poisson processes (1 for the event rate and 1 for randomization), calculate the confidence interval
+    for the true rate
+
+    Parameters
+    ----------
+    freq: float - co-occurrence frequency
+    alpha: float - desired confidence. range: [0, 1]
+
+    Returns
+    -------
+    (lower bound, upper bound)
+    """
+    # Adjust the interval for each individual poisson to achieve overall confidence interval
+    return poisson.interval(alpha, freq)
+
+
 def double_poisson_ci(freq, alpha=0.99):
     """ Assuming two Poisson processes (1 for the event rate and 1 for randomization), calculate the confidence interval
     for the true rate
@@ -9,7 +26,7 @@ def double_poisson_ci(freq, alpha=0.99):
     Parameters
     ----------
     freq: float - co-occurrence frequency
-    alpha: float - desired confidence. range: [0,
+    alpha: float - desired confidence. range: [0, 1]
 
     Returns
     -------

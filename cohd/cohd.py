@@ -15,8 +15,8 @@ from flask import Flask, request, redirect, jsonify
 from flask_cors import CORS
 import query_cohd_mysql
 from google_analytics import GoogleAnalytics
+import cohd_temporal
 import cohd_translator
-
 
 #########
 # INITS #
@@ -25,6 +25,7 @@ import cohd_translator
 app = Flask(__name__)
 CORS(app)
 app.config.from_pyfile(u'cohd_flask.conf')
+
 
 ##########
 # ROUTES #
@@ -151,6 +152,26 @@ def api_association_relativeFrequency():
     return api_call(u'association', u'relativeFrequency')
 
 
+@app.route(u'/api/temporal/conceptAgeCounts')
+def api_temporal_conceptAgeCounts():
+    return api_call(u'temporal', u'conceptAgeCounts')
+
+
+@app.route(u'/api/temporal/conceptPairDeltaCounts')
+def api_temporal_conceptPairDeltaCounts():
+    return api_call(u'temporal', u'conceptPairDeltaCounts')
+
+
+@app.route(u'/api/temporal/findSimilarAgeDistributions')
+def api_temporal_findSimilarAgeDistributions():
+    return api_call(u'temporal', u'findSimilarAgeDistributions')
+
+
+@app.route(u'/api/temporal/sourceToTarget')
+def api_temporal_sourceToTarget():
+    return api_call(u'temporal', u'sourceToTarget')
+
+
 @app.route(u'/api/translator/query', methods=['POST'])
 def api_translator_query():
     return api_call(u'translator', u'query')
@@ -223,6 +244,14 @@ def api_call(service=None, meta=None, query=None):
                 meta == u'obsExpRatio' or \
                 meta == u'relativeFrequency':
             result = query_cohd_mysql.query_db(service, meta, request.args)
+        else:
+            result = u'meta not recognized', 400
+    elif service == u'temporal':
+        if meta == u'conceptAgeCounts' or \
+                meta == u'conceptPairDeltaCounts' or \
+                meta == u'findSimilarAgeDistributions' or \
+                meta == u'sourceToTarget':
+            result = cohd_temporal.query_cohd_temporal(service, meta, request.args)
         else:
             result = u'meta not recognized', 400
     elif service == u'translator':

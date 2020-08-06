@@ -1,10 +1,13 @@
 """
 This test module tests the COHD API by making requests to cohd.io/api and checking the schema of the response JSONs and
 checking the results against known values.
+
+Intended to be run with pytest: pytest -s test_cohd_io.py
 """
 from notebooks.cohd_requests import *
 from collections import namedtuple
 import requests
+from reasoner_validator import validate_Message, ValidationError
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -963,13 +966,17 @@ def test_translator_query():
     json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
                             confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10)
 
-    # Check that the JSON response adheres to the 'message' schema by using the Translator ReasonerStdAPI Validator
-    url_validate_message = u'http://transltr.io:7071/validate_message'
-    validation_response = requests.post(url_validate_message, json=json)
-    # If the response is properly formatted, we should have received a 200 (OK) status code and "Successfully validated"
-    # in the response body
-    assert validation_response.status_code == requests.status_codes.codes.OK and \
-        validation_response.text.strip().lower() == '"successfully validated"'
+    # Replace call to Validator Web API with Reasoner Validator Python package to control Reasoner API version
+    # # Check that the JSON response adheres to the 'message' schema by using the Translator ReasonerStdAPI Validator
+    # url_validate_message = u'http://transltr.io:7071/validate_message'
+    # validation_response = requests.post(url_validate_message, json=json)
+    # # If the response is properly formatted, we should have received a 200 (OK) status code and "Successfully validated"
+    # # in the response body
+    # assert validation_response.status_code == requests.status_codes.codes.OK and \
+    #     validation_response.text.strip().lower() == '"successfully validated"'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API v0.9.2
+    validate_Message(json)
 
     # There should be 10 results
     assert len(json['results']) == 10
