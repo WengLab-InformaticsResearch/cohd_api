@@ -4,7 +4,7 @@ checking the results against known values.
 
 Intended to be run with pytest: pytest -s test_cohd_io.py
 """
-from notebooks.cohd_requests import *
+from notebooks.cohd_helpers.cohd_requests import *
 from collections import namedtuple
 import requests
 from reasoner_validator import validate_Message, ValidationError

@@ -350,6 +350,9 @@ def query_delta_counts(dataset_id, concept_pairs):
     for r in cur.fetchall():
         binning_scheme_rows[(r[u'concept_id_1'], r[u'concept_id_2'])] = r
 
+    # If no binning schemes were found, that means no deltas will be found for the requested pair(s). Return empty
+    return [None for _ in concept_pairs]
+
     # Get rid of any database pairs that were not found in the binning schemes since they shouldn't be found in deltas
     # Also keep track of unique concepts to retrieve their concept definitions
     unique_concept_ids = set()
@@ -750,7 +753,7 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
     """
     # Get the deltas between the source and target concepts
     delta_primary = query_delta_counts(dataset_id, [(source_concept_id, target_concept_id)])
-    if len(delta_primary) != 1:
+    if delta_primary[0] is None:
         # No delta found for this concept pair
         return dict()
     delta_primary = delta_primary[0]
@@ -1020,7 +1023,7 @@ def query_cohd_temporal(service, method, args):
             return u'target_concept_id parameter is missing', 400
 
         deltas = query_delta_counts(dataset_id, [(source_concept_id, target_concept_id)])
-        json_return = [delta.convert_to_dict_results() for delta in deltas]
+        json_return = [delta.convert_to_dict_results() for delta in deltas if delta is not None]
 
     # Returns ratio of observed to expected frequency between pairs of concepts
     # e.g. /api/temporal/sourceToTarget?dataset_id=4&source_concept_id=312327&target_concept_id=313217
