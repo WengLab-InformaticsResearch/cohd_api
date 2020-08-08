@@ -351,7 +351,8 @@ def query_delta_counts(dataset_id, concept_pairs):
         binning_scheme_rows[(r[u'concept_id_1'], r[u'concept_id_2'])] = r
 
     # If no binning schemes were found, that means no deltas will be found for the requested pair(s). Return empty
-    return [None for _ in concept_pairs]
+    if len(binning_scheme_rows) == 0:
+        return [None for _ in concept_pairs]
 
     # Get rid of any database pairs that were not found in the binning schemes since they shouldn't be found in deltas
     # Also keep track of unique concepts to retrieve their concept definitions
