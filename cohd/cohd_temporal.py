@@ -668,6 +668,7 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
 
             for i, cac in enumerate(cac_list):
                 # First check the ln_ratio of the concepts
+                concept_pair_count = None
                 assoc_results = query_association('obsExpRatio', concept_id, cac.concept_id, dataset_id)
                 if assoc_results is not None and u'results' in assoc_results and len(assoc_results[u'results']) == 1:
                     assoc_result = assoc_results[u'results'][0]
@@ -679,16 +680,16 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
                     # Grab the concept pair count for use in the co-occurrence check
                     concept_pair_count = assoc_result[u'observed_count']
 
-                # Next, check the co-occurrence
-                related = concepts_cooccur(concept_id, cac.concept_id, dataset_id,
-                                           concept_pair_count=concept_pair_count)
-                if not related:
-                    unrelated_cacs.append(cac)
-                    unrelated_similarities.append(similarity_list[i])
+                    # Next, check the co-occurrence
+                    related = concepts_cooccur(concept_id, cac.concept_id, dataset_id,
+                                               concept_pair_count=concept_pair_count)
+                    if not related:
+                        unrelated_cacs.append(cac)
+                        unrelated_similarities.append(similarity_list[i])
 
-                    # Keep a limited number of results per bin
-                    if len(unrelated_cacs) >= limit:
-                        break
+                        # Keep a limited number of results per bin
+                        if len(unrelated_cacs) >= limit:
+                            break
 
             cacs_binned[bin_width] = unrelated_cacs
             similarities_binned[bin_width] = unrelated_similarities
@@ -818,7 +819,8 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
 
     # Group the comparison deltas by bin_width
     for sim, delta in zip(similarity_source_list, deltas_source):
-        if delta is not None:
+        # Check that the delta bin_width isn't a higher resolution than the bin width captured by the delta_primary
+        if delta is not None and delta.bin_width >= delta_primary.bin_width:
             source_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
             source_results_binned[delta.bin_width][u'deltas'].append(delta)
 
@@ -834,7 +836,8 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
 
     # Group the comparison deltas by bin_width
     for sim, delta in zip(similarity_target_list, deltas_target):
-        if delta is not None:
+        # Check that the delta bin_width isn't a higher resolution than the bin width captured by the delta_primary
+        if delta is not None and delta.bin_width >= delta_primary.bin_width:
             target_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
             target_results_binned[delta.bin_width][u'deltas'].append(delta)
 
