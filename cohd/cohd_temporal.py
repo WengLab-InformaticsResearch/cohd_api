@@ -503,6 +503,24 @@ def concepts_cooccur(concept_id_1, concept_id_2, dataset_id=DATASET_ID_DEFAULT_T
 
 def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TEMPORAL, exclude_related=True,
                                     restrict_type=True, threshold=0.7, limit=20):
+    """ Finds concepts with similar age distributions to the given concept_id
+
+    Parameters
+    ----------
+    concept_id (int) - concept ID to find similar concepts for
+    dataset_id (int) - data set ID
+    exclude_related (bool) - True: exclude concepts that are considered to be related to the search concept
+    restrict_type (bool) - True: restrict similar concepts to the same domain as the search concept
+    threshold (float) - threshold for similarity score to be included
+    limit (int) - maximum number of similar concepts to return
+
+    Returns
+    -------
+    (coi_cacs, cacs_binned, similarities_binned)
+    coi_cacs: dict[bin_width] -> concept age counts of the concept of interest
+    cacs_binned: defaultdict[bin_width] -> list of concept age counts of similar concepts
+    similarities_binned: defaultdict[bin_width] -> list of similarity scores of similar concepts
+    """
     def _process_comparison_concept():
         """ This inner function helps add simmilar concepts to the lists
 
@@ -824,6 +842,13 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
             source_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
             source_results_binned[delta.bin_width][u'deltas'].append(delta)
 
+            # Also convert the delta to larger bin_widths to add them to the comparison in the larger bin_width groups
+            for bin_width, n in settings:
+                if bin_width > delta.bin_width:
+                    delta_downconverted = delta.convert_bin_scheme(bin_width, n)
+                    source_results_binned[bin_width][u'cad_similarities'].append(sim)
+                    source_results_binned[bin_width][u'deltas'].append(delta_downconverted)
+
     # Build a list of concept pairs between source_concept_id -> [concepts similar to target]
     similar_target_pairs = []
     similarity_target_list = []
@@ -840,6 +865,13 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
         if delta is not None and delta.bin_width >= delta_primary.bin_width:
             target_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
             target_results_binned[delta.bin_width][u'deltas'].append(delta)
+
+            # Also convert the delta to larger bin_widths to add them to the comparison in the larger bin_width groups
+            for bin_width, n in settings:
+                if bin_width > delta.bin_width:
+                    delta_downconverted = delta.convert_bin_scheme(bin_width, n)
+                    target_results_binned[bin_width][u'cad_similarities'].append(sim)
+                    target_results_binned[bin_width][u'deltas'].append(delta_downconverted)
 
     # Run simulations on the source comparisons to generate a distribution
     for bin_width, srb in source_results_binned.items():
