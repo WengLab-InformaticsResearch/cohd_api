@@ -1809,7 +1809,8 @@ paths:
                     "Drug": ["RxNorm"],
                     "Procedure": ["ICD10PCS", "SNOMEDCT"],
                     "_DEFAULT": []
-                  }
+                  },
+                  "biolink_only": true
                 }
               }
       responses:
@@ -1849,7 +1850,7 @@ components:
           type: number
           example: 0.5      
         ontology_targets:
-          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each OMOP domain. They keys should be OMOP domains, e.g. 'Condition', 'Drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes can come from the OMOP Vocabulary (e.g., 'ICD9CM', 'RxNorm') or OxO (e.g., 'DOID', 'EFO')"
+          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each OMOP domain. The keys should be OMOP domains, e.g. 'Condition', 'Drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes can come from the OMOP Vocabulary (e.g., 'ICD9CM', 'RxNorm') or OxO (e.g., 'DOID', 'EFO')"
           type: object
           example:
             {
@@ -1862,6 +1863,10 @@ components:
           description: "Whether to use the local implementation of OxO or the real implementation of OxO. Note, the local OxO implementation may contain outdated definitions and xrefs but runs faster. The real OxO has the most updated definitions and xrefs, but is slower (~1-2 seconds/concept). Default: true"
           type: boolean
           example: false
+        biolink_only:
+          description: "Whether to only include nodes in the knowledge graph and results that are Biolink compliant (as defined by ontology_targets). Default: true"
+          type: boolean
+          example: true
     Query:
       x-body-name: request_body
       type: object
