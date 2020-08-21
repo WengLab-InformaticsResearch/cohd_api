@@ -1850,7 +1850,17 @@ components:
           type: number
           example: 0.5      
         ontology_targets:
-          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each Biolink node type. The keys should be Biolink node types, e.g. 'disease', 'drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes should match the Biolink yaml but may include prefixes outside of Biolink."
+          description: >
+            COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each
+            Biolink node type. The keys should be Biolink node types, e.g. 'disease', 'drug', etc. The values should be
+            lists of target ontology prefixes, e.g., ['ICD9', 'UMLS', 'DOID']. An emtpy list indicates not to perform
+            mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies
+            for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology
+            prefixes should match the Biolink yaml but may include prefixes outside of Biolink.
+            
+            
+            If ontology_targets is not provided, COHD API will attempt mappings based on the prefixes defined in the
+            Biolink yaml.
           type: object
           example:
             {
