@@ -133,6 +133,7 @@ class COHDTranslatorReasoner:
         default_dataset_id = 3
         default_local_oxo = True
         default_mapping_distance = 3
+        default_biolink_only = True
 
         # Check that the query input has the correct structure
         input_check = self._check_query_input()
@@ -187,12 +188,17 @@ class COHDTranslatorReasoner:
 
         # Get query_option for ontology_targets
         ontology_map = self._query_options.get(u'ontology_targets')
-        if ontology_map:
+        if ontology_map and isinstance(ontology_map, dict):
             self._concept_mapper = BiolinkConceptMapper(ontology_map, distance=self._mapping_distance,
                                                         local_oxo=self._local_oxo)
         else:
             # Use default ontology map
             self._concept_mapper = BiolinkConceptMapper(distance=self._mapping_distance, local_oxo=self._local_oxo)
+
+        # Get query_option for including only Biolink nodes
+        self._biolink_only = self._query_options.get(u'biolink_only')
+        if self._biolink_only is None or not isinstance(self._biolink_only, bool):
+            self._biolink_only = default_biolink_only
 
         # Get query information from query_graph
         self._query_graph = self._json_data[u'message'][u'query_graph']
@@ -304,7 +310,7 @@ class COHDTranslatorReasoner:
 
             # Convert results from COHD format to Translator Reasoner standard
             trm = TranslatorResponseMessage(self._query_graph, self._query_options, self._criteria,
-                                            results, self._concept_mapper, self._max_results)
+                                            results, self._concept_mapper, self._max_results, self._biolink_only)
             return trm.serialize()
         else:
             # Invalid query. Return the invalid query response
@@ -436,7 +442,7 @@ class TranslatorResponseMessage:
     query_target_node_id = None
 
     def __init__(self, query_graph, query_options, criteria=None, cohd_results=None, concept_mapper=None,
-                 max_results=500):
+                 max_results=500, biolink_only=True):
         """ Constructor
 
         Parameters
@@ -447,6 +453,7 @@ class TranslatorResponseMessage:
         cohd_results: COHD results
         concept_mapper: ConceptMapper object
         max_results: maximum number of results to add
+        biolink_only: True to only allow nodes that map to biolink
         """
         self.edges = {}
         self.nodes = {}
@@ -457,6 +464,7 @@ class TranslatorResponseMessage:
         }
         self.query_options = query_options
         self.max_results = max_results
+        self.biolink_only = biolink_only
 
         # Mappings from OMOP to other vocabularies / ontologies
         self.concept_mapper = concept_mapper
@@ -492,17 +500,25 @@ class TranslatorResponseMessage:
             if not all([c.check(cohd_result) for c in criteria]):
                 return
 
-        # Add node for concept 1
+        # Get node for concept 1
         concept_1_id = cohd_result[u'concept_id_1']
         node_1 = self.get_node(concept_1_id)
 
-        # Add node for concept 2
+        if self.biolink_only and not node_1.get(u'biolink_compliant', False):
+            # Only include results when node_1 maps to biolink
+            return
+
+        # Get node for concept 2
         concept_2_id = cohd_result[u'concept_id_2']
         concept_2_name = cohd_result.get(u'concept_2_name')
         concept_2_domain = cohd_result.get(u'concept_2_domain')
         node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain)
 
-        # Add to knowledge graph
+        if self.biolink_only and not node_2.get(u'biolink_compliant', False):
+            # Only include results when node_2 maps to biolink
+            return
+
+        # Add nodes and edge to knowledge graph
         kg_node_1, kg_node_2, kg_edge = self.add_kg_edge(node_1, node_2, cohd_result)
 
         # Add to results
@@ -570,17 +586,17 @@ class TranslatorResponseMessage:
                     domain = concept_def[u'domain_id']
 
             # Map to Biolink Model or other target ontologies
+            blm_type = map_omop_domain_to_blm_class(domain)
             mappings = []
             if self.concept_mapper:
-                mappings = self.concept_mapper.map_from_omop(concept_id, domain)
-            blm_type = map_omop_domain_to_blm_class(domain)
+                mappings = self.concept_mapper.map_from_omop(concept_id, blm_type)
 
             # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
-            # choose by the order of prefixes listed in the Concept Mapper. If none biolink prefix found, use OMOP
+            # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
             omop_curie = omop_concept_curie(concept_id)
             primary_curie = omop_curie
             primary_label = concept_name
-            blm_prefixes = self.concept_mapper.biolink_mappings.get(domain, [])
+            blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_type, [])
             found = False
             for d in range(self.concept_mapper.distance + 1):
                 if found:
@@ -639,7 +655,8 @@ class TranslatorResponseMessage:
                         }
                     ]
                 },
-                u'in_kgraph': False
+                u'in_kgraph': False,
+                u'biolink_compliant': found
             }
             self.nodes[concept_id] = node
 
@@ -839,7 +856,7 @@ def map_omop_domain_to_blm_class(domain):
     return mappings.get(domain, default_type)
 
 
-class BiolinkConceptMapper():
+class BiolinkConceptMapper:
     """ Maps between OMOP concepts and Biolink Model
 
     When mapping from OMOP conditions to Biolink Model diseases, since SNOMED-CT, ICD10CM, ICD9CM, and MedDRA are now
@@ -907,13 +924,13 @@ class BiolinkConceptMapper():
     }
 
     _default_ontology_map = {
-        u'Condition': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
+        u'disease': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
                        u'NCIT', u'SNOMEDCT', u'medgen', u'ICD10', u'ICD9', u'ICD0', u'HP', u'MP'],
         # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
-        u'Drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
+        u'drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
                   u'HMDB', u'INCHI', u'UNII', u'KEGG', u'gtpo'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        u'Procedure': [u'ICD10PCS', u'SNOMEDCT'],
+        u'procedure': [u'ICD10PCS', u'SNOMEDCT'],
         u'_DEFAULT': []
     }
 
@@ -934,11 +951,12 @@ class BiolinkConceptMapper():
         if len(split) == 2:
             # Assume s is a curie. Replace the prefix
             prefix, suffix = split
-            prefix = BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(prefix, prefix)
+            prefix = BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(prefix, prefix)
             curie = u'{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
             return curie
         else:
-            return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
+            # Assume s is a prefix
+            return BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(s, s)
 
     @staticmethod
     def map_oxo_prefixes_to_blm_prefixes(s):
@@ -956,13 +974,14 @@ class BiolinkConceptMapper():
         """
         split = s.split(u':')
         if len(split) == 2:
-            # Assume s is a curie. Replace the prefix
+            # Assume s is a curie. Replace the prefix only
             prefix, suffix = split
-            prefix = BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(prefix, prefix)
+            prefix = BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(prefix, prefix)
             curie = u'{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
             return curie
         else:
-            return BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(s, s)
+            # Assume s is a prefix
+            return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
 
     def __init__(self, biolink_mappings=_default_ontology_map, distance=2, local_oxo=True):
         """ Constructor
@@ -971,6 +990,7 @@ class BiolinkConceptMapper():
         ----------
         biolink_mappings: mappings between domain and ontology. See documentation for ConceptMapper.
         distance: maximum allowed total distance (as opposed to OxO distance)
+        local_oxo: use local implementation of OxO (default: True)
         """
         self.biolink_mappings = biolink_mappings
         self.distance = distance
