@@ -6,7 +6,6 @@ Intended to be run with pytest: pytest -s test_cohd_io.py
 """
 from notebooks.cohd_helpers.cohd_requests import *
 from collections import namedtuple
-import requests
 from reasoner_validator import validate_Message, ValidationError
 
 """ 
@@ -990,8 +989,8 @@ def test_translator_query_2():
     """
     print('test_cohd_io: testing /translator/query with ontology_targets..... ')
     ontology_targets = {
-        u'Condition': [u'SNOMEDCT'],
-        u'Procedure': [u'CPT4']
+        u'disease': [u'SNOMEDCT'],
+        u'procedure': [u'CPT4']
     }
     json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
                             confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,
@@ -1005,15 +1004,11 @@ def test_translator_query_2():
 
     # Check that each of the nodes are represented by the desired mapping type
     for node in json[u'knowledge_graph'][u'nodes']:
-        # Find the OMOP domain in attributes
-        omop_domain = None
-        for attribute in node[u'attributes']:
-            if attribute[u'name'] == u'omop_domain':
-                omop_domain = attribute[u'value']
-
         # Check that the prefix belongs to the desired list of ontology targets
-        assert omop_domain in ontology_targets
+        assert len(node[u'type']) > 0
+        blm_type = node[u'type'][0]
+        assert blm_type in ontology_targets
         prefix = node[u'id'].split(u':')[0]
-        assert prefix in ontology_targets[omop_domain]
+        assert prefix in ontology_targets[blm_type]
 
     print('...passed')

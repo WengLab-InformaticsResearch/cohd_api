@@ -1805,9 +1805,9 @@ paths:
                   "threshold": 0.5,
                   "local_oxo": true,
                   "ontology_targets": {
-                    "Condition": ["ICD9CM", "SNOMEDCT", "DOID"],
-                    "Drug": ["RxNorm"],
-                    "Procedure": ["ICD10PCS", "SNOMEDCT"],
+                    "disease": ["ICD9", "SNOMEDCT", "DOID"],
+                    "drug": ["RxNorm"],
+                    "procedure": ["ICD10PCS", "SNOMEDCT"],
                     "_DEFAULT": []
                   },
                   "biolink_only": true
@@ -1850,13 +1850,13 @@ components:
           type: number
           example: 0.5      
         ontology_targets:
-          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each OMOP domain. The keys should be OMOP domains, e.g. 'Condition', 'Drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes can come from the OMOP Vocabulary (e.g., 'ICD9CM', 'RxNorm') or OxO (e.g., 'DOID', 'EFO')"
+          description: "COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each Biolink node type. The keys should be Biolink node types, e.g. 'disease', 'drug', etc. The values should be lists of target ontology prefixes, e.g., ['ICD9CM', 'UMLS', 'DOID']. An emtpy list indicates not to perform mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology prefixes should match the Biolink yaml but may include prefixes outside of Biolink."
           type: object
           example:
             {
-              "Condition": ["ICD9CM", "SNOMEDCT", "DOID"],
-              "Drug": ["RxNorm"],
-              "Procedure": ["ICD10PCS", "SNOMEDCT"],
+              "disease": ["ICD9", "SNOMEDCT", "DOID"],
+              "drug": ["RxNorm"],
+              "procedure": ["ICD10PCS", "SNOMEDCT"],
               "_DEFAULT": []
             }
         local_oxo:

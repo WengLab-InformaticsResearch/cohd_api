@@ -586,17 +586,17 @@ class TranslatorResponseMessage:
                     domain = concept_def[u'domain_id']
 
             # Map to Biolink Model or other target ontologies
+            blm_type = map_omop_domain_to_blm_class(domain)
             mappings = []
             if self.concept_mapper:
-                mappings = self.concept_mapper.map_from_omop(concept_id, domain)
-            blm_type = map_omop_domain_to_blm_class(domain)
+                mappings = self.concept_mapper.map_from_omop(concept_id, blm_type)
 
             # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
             # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
             omop_curie = omop_concept_curie(concept_id)
             primary_curie = omop_curie
             primary_label = concept_name
-            blm_prefixes = self.concept_mapper.biolink_mappings.get(domain, [])
+            blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_type, [])
             found = False
             for d in range(self.concept_mapper.distance + 1):
                 if found:
@@ -856,7 +856,7 @@ def map_omop_domain_to_blm_class(domain):
     return mappings.get(domain, default_type)
 
 
-class BiolinkConceptMapper():
+class BiolinkConceptMapper:
     """ Maps between OMOP concepts and Biolink Model
 
     When mapping from OMOP conditions to Biolink Model diseases, since SNOMED-CT, ICD10CM, ICD9CM, and MedDRA are now
@@ -924,13 +924,13 @@ class BiolinkConceptMapper():
     }
 
     _default_ontology_map = {
-        u'Condition': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
+        u'disease': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
                        u'NCIT', u'SNOMEDCT', u'medgen', u'ICD10', u'ICD9', u'ICD0', u'HP', u'MP'],
         # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
-        u'Drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
+        u'drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
                   u'HMDB', u'INCHI', u'UNII', u'KEGG', u'gtpo'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        u'Procedure': [u'ICD10PCS', u'SNOMEDCT'],
+        u'procedure': [u'ICD10PCS', u'SNOMEDCT'],
         u'_DEFAULT': []
     }
 
@@ -956,7 +956,7 @@ class BiolinkConceptMapper():
             return curie
         else:
             # Assume s is a prefix
-            return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
+            return BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(s, s)
 
     @staticmethod
     def map_oxo_prefixes_to_blm_prefixes(s):
@@ -981,7 +981,7 @@ class BiolinkConceptMapper():
             return curie
         else:
             # Assume s is a prefix
-            return BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(s, s)
+            return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
 
     def __init__(self, biolink_mappings=_default_ontology_map, distance=2, local_oxo=True):
         """ Constructor
