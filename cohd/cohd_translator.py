@@ -188,7 +188,7 @@ class COHDTranslatorReasoner:
 
         # Get query_option for ontology_targets
         ontology_map = self._query_options.get(u'ontology_targets')
-        if ontology_map:
+        if ontology_map and isinstance(ontology_map, dict):
             self._concept_mapper = BiolinkConceptMapper(ontology_map, distance=self._mapping_distance,
                                                         local_oxo=self._local_oxo)
         else:

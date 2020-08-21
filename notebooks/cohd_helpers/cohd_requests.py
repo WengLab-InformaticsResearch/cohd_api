@@ -669,7 +669,7 @@ def temporal_source_to_target(source_concept_id, target_concept_id, dataset_id=N
 # ######################################################################
 def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_results=500,
                      confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
-                     min_cooccurrence=None, ontology_targets=None, threshold=None):
+                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None):
     """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
 
     Parameters
@@ -713,9 +713,8 @@ def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_resu
                         "method": method,
                         "dataset_id": dataset_id,
                         "local_oxo": local_oxo,
-                        "ontology_targets": {
-                          "_DEFAULT": []
-                        }
+                        "biolink_only": biolink_only,
+                        "ontology_targets": None
                     }
     if confidence_interval is not None:
         query_options["confidence_interval"] = confidence_interval
