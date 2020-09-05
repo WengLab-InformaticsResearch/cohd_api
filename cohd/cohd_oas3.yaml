@@ -68,6 +68,8 @@ tags:
     description: Estimated association between concepts
   - name: Temporal Clinical Data
     description: Concept-age distributions, concept-pair delta distributions, and temporal analyses
+  - name: translator
+    description: NCATS Biomedical Data Translator APIs
 x-externalResources:
   - x-url: 'https://www.dbmi.columbia.edu/'
     x-type: website
@@ -1750,10 +1752,36 @@ paths:
             application/json:
               schema:
                 type: object                          
+  /translator/predicates:
+    get:
+      tags:
+        - translator
+      summary: Get supported relationships by source and target
+      responses:
+        '200':
+          description: Predicates by source and target
+          content:
+            application/json:
+              schema:
+                description: Source map
+                type: object
+                additionalProperties:
+                  description: Target map
+                  type: object
+                  additionalProperties:
+                    description: Array of predicates
+                    type: array
+                    items:
+                      type: string
+                example:
+                  'biolink:ChemicalSubstance':
+                    'biolink:Gene':
+                      - biolink:directly_interacts_with
+                      - biolink:decreases_activity_of
   /translator/query:
     post:
       tags:
-        - Translator
+        - translator
       summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
         Query the COHD API following the [NCATS Translator Reasoner Standard API] (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the example query_graph.

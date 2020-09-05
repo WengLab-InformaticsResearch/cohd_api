@@ -176,6 +176,10 @@ def api_temporal_sourceToTarget():
 def api_translator_query():
     return api_call(u'translator', u'query')
 
+@app.route(u'/api/translator/predicates', methods=['GET'])
+def api_transator_predicates():
+    return api_call(u'translator', u'predicates')
+
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
@@ -258,6 +262,8 @@ def api_call(service=None, meta=None, query=None):
         if meta == u'query':
             reasoner = cohd_translator.COHDTranslatorReasoner(request)
             result = reasoner.reason()
+        elif meta == u'predicates':
+            result = cohd_translator.translator_predicates()
         else:
             result = u'meta not recognized', 400
     else:

@@ -13,6 +13,41 @@ from cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
 from omop_xref import ConceptMapper
 
 
+def translator_predicates():
+    """ Implementation of /translator/predicates for Translator Reasoner API
+
+    Returns
+    -------
+    json response object
+    """
+    return jsonify({
+        u'biolink:Disease': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:Drug': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:Procedure': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:PopulationOfIndividualOrganisms': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+    })
+
+
 class COHDTranslatorReasoner:
     """
     Pseudo-reasoner conforming to NCATS Biodmedical Data Translator Reasoner API Spec
