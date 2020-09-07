@@ -48,10 +48,10 @@ info:
   termsOfService: 'http://cohd.nsides.io/terms/'
   title: Columbia Open Health Data (COHD)
   contact:
-    name: Nicholas Tatonetti
-    email: nick.tatonetti@columbia.edu
+    name: Casey Ta
+    email: ct2865@cumc.columbia.edu
     x-role: responsible developer
-    url: 'http://tatonettilab.org/'
+    url: 'http://chunhualab.org/'
   license:
     name: Apache 2.0
     url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
