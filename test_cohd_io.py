@@ -989,8 +989,8 @@ def test_translator_query_2():
     """
     print('test_cohd_io: testing /translator/query with ontology_targets..... ')
     ontology_targets = {
-        u'disease': [u'SNOMEDCT'],
-        u'procedure': [u'CPT4']
+        u'biolink:Disease': [u'SNOMEDCT', u'DOID'],
+        u'biolink:Procedure': [u'CPT4']
     }
     json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
                             confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,

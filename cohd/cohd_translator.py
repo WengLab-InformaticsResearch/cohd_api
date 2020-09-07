@@ -13,6 +13,41 @@ from cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
 from omop_xref import ConceptMapper
 
 
+def translator_predicates():
+    """ Implementation of /translator/predicates for Translator Reasoner API
+
+    Returns
+    -------
+    json response object
+    """
+    return jsonify({
+        u'biolink:Disease': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:Drug': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:Procedure': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+        u'biolink:PopulationOfIndividualOrganisms': {
+            u'biolink:Disease': [u'biolink:correlated_with'],
+            u'biolink:Drug': [u'biolink:correlated_with'],
+            u'biolink:Procedure': [u'biolink:correlated_with'],
+            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        },
+    })
+
+
 class COHDTranslatorReasoner:
     """
     Pseudo-reasoner conforming to NCATS Biodmedical Data Translator Reasoner API Spec
@@ -42,6 +77,43 @@ class COHDTranslatorReasoner:
 
         # Determine how the query should be performed
         self._interpret_query()
+
+    @staticmethod
+    def _fix_blm_types(blm_type):
+        """ Checks and fixes blm_type.
+
+        Translator Reasoner API changed conventions for blm node types from snake case without 'biolink' prefix (e.g.,
+        biolink:population_of_individual_organisms) to camel case requiring prefix (e.g.,
+        biolink:PopulationOfIndividualOrganisms). This method attempts to correct the input if it matches the old spec.
+
+        Parameters
+        ----------
+        blm_type - (String)
+
+        Returns
+        -------
+        blm_type
+        """
+        # Don't process None or empty string
+        if blm_type is None or not blm_type:
+            return blm_type
+
+        # Remove any existing prefix and add biolink prefix
+        suffix = blm_type.split(u':')[-1]
+        blm_type = u'biolink:' + suffix
+
+        # Convert snake case to camel case. Keep the original input if not in this dictionary.
+        supported_type_conversions = {
+            u'biolink:device': u'biolink:Device',
+            u'biolink:disease': u'biolink:Disease',
+            u'biolink:drug': u'biolink:Drug',
+            u'biolink:phenomenon': u'biolink:Phenomenon',
+            u'biolink:population_of_individual_organisms': u'biolink:PopulationOfIndividualOrganisms',
+            u'biolink:procedure': u'biolink:Procedure'
+        }
+        blm_type = supported_type_conversions.get(blm_type, blm_type)
+
+        return blm_type
 
     def _check_query_input(self):
         """ Check that the input JSON data has the expected fields
@@ -135,6 +207,18 @@ class COHDTranslatorReasoner:
         default_mapping_distance = 3
         default_biolink_only = True
 
+        # set of edge types that are supported by the COHD Reasoner
+        supported_edge_types = {
+            u'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
+            u'biolink:related_to',  # Ancestor of biolink:correlated_with
+            # Allow edge without biolink prefix
+            u'correlated_with',
+            u'related_to',
+            # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
+            u'biolink:association',
+            u'association',
+        }
+
         # Check that the query input has the correct structure
         input_check = self._check_query_input()
         if not input_check[0]:
@@ -202,7 +286,30 @@ class COHDTranslatorReasoner:
 
         # Get query information from query_graph
         self._query_graph = self._json_data[u'message'][u'query_graph']
-        edge = self._query_graph[u'edges'][0]
+
+        # Check that the query_graph is supported by the COHD reasoner (1-hop query)
+        edges = self._query_graph[u'edges']
+        if len(edges) != 1:
+            self._valid_query = False
+            self._invalid_query_response = (u'COHD reasoner only supports 1-hop queries', 422)
+            return self._valid_query, self._invalid_query_response
+
+        # Check if the edge type is supported by COHD Reasoner
+        edge = edges[0]
+        edge_types = edge[u'type']
+        if not isinstance(edge_types, list):
+            # In TRAPI, QEdge type can be string or list. If it's not currently a list, convert to a list to simplify
+            # following processing
+            edge_types = [edge_types]
+        edge_supported = False
+        for edge_type in edge_types:
+            if edge_type in supported_edge_types:
+                edge_supported = True
+                break
+        if not edge_supported:
+            self._valid_query = False
+            self._invalid_query_response = (u'QEdge.type not supported by COHD Reasoner API', 422)
+            return self._valid_query, self._invalid_query_response
 
         # Get concept_id_1
         source_node = self._find_query_node(edge[u'source_id'])
@@ -216,6 +323,11 @@ class COHDTranslatorReasoner:
         else:
             self._valid_query = False
             self._invalid_query_response = (u'Could not map source node to OMOP concept', 422)
+            return self._valid_query, self._invalid_query_response
+
+        # Check the formatting of node 1's type (even though it's not used)
+        if u'type' in source_node:
+            source_node[u'type'] = COHDTranslatorReasoner._fix_blm_types(source_node[u'type'])
 
         # Get the desired association concept or type
         target_node = self._find_query_node(edge[u'target_id'])
@@ -234,7 +346,12 @@ class COHDTranslatorReasoner:
             else:
                 self._valid_query = False
                 self._invalid_query_response = (u'Could not map target node to OMOP concept', 422)
+                return self._valid_query, self._invalid_query_response
         elif node_type_2 is not None and node_type_2:
+            # Attempt to correct the node type if necessary
+            node_type_2 = COHDTranslatorReasoner._fix_blm_types(node_type_2)
+            target_node[u'type'] = node_type_2
+
             # If CURIE is not specified and target node's type is specified, then query the association between
             # concept_1 and all concepts in the domain
             self._concept_id_2 = None
@@ -471,9 +588,18 @@ class TranslatorResponseMessage:
 
         # Save info from query graph
         self.query_graph = query_graph
-        self.query_edge_id = query_graph[u'edges'][0][u'id']
+        query_edge = query_graph[u'edges'][0]
+        self.query_edge_id = query_edge[u'id']
+        self.query_edge_type = query_edge[u'type']
         self.query_source_node_id = query_graph[u'edges'][0][u'source_id']
         self.query_target_node_id = query_graph[u'edges'][0][u'target_id']
+
+        # Get the input CURIEs from the query graph
+        for qnode in self.query_graph[u'nodes']:
+            if qnode[u'id'] == self.query_source_node_id:
+                self.query_source_node_curie = qnode.get(u'curie', None)
+            elif qnode[u'id'] == self.query_target_node_id:
+                self.query_target_node_curie = qnode.get(u'curie', None)
 
         if cohd_results is not None:
             for result in cohd_results:
@@ -502,7 +628,7 @@ class TranslatorResponseMessage:
 
         # Get node for concept 1
         concept_1_id = cohd_result[u'concept_id_1']
-        node_1 = self.get_node(concept_1_id)
+        node_1 = self.get_node(concept_1_id, query_node_curie=self.query_source_node_curie)
 
         if self.biolink_only and not node_1.get(u'biolink_compliant', False):
             # Only include results when node_1 maps to biolink
@@ -512,7 +638,7 @@ class TranslatorResponseMessage:
         concept_2_id = cohd_result[u'concept_id_2']
         concept_2_name = cohd_result.get(u'concept_2_name')
         concept_2_domain = cohd_result.get(u'concept_2_domain')
-        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain)
+        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_target_node_curie)
 
         if self.biolink_only and not node_2.get(u'biolink_compliant', False):
             # Only include results when node_2 maps to biolink
@@ -556,7 +682,7 @@ class TranslatorResponseMessage:
         self.results.append(result)
         return result
 
-    def get_node(self, concept_id, concept_name=None, domain=None):
+    def get_node(self, concept_id, concept_name=None, domain=None, query_node_curie=None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
@@ -565,6 +691,7 @@ class TranslatorResponseMessage:
         concept_id: OMOP concept ID
         concept_name: OMOP concept name
         domain: OMOP concept domain
+        query_node_curie: CURIE used in the QNode corresponding to this KG Node
 
         Returns
         -------
@@ -589,33 +716,46 @@ class TranslatorResponseMessage:
             blm_type = map_omop_domain_to_blm_class(domain)
             mappings = []
             if self.concept_mapper:
-                mappings = self.concept_mapper.map_from_omop(concept_id, blm_type)
+                mappings = self.concept_mapper.map_from_omop(concept_id, domain)
 
-            # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
-            # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
+            # If we don't find better mappings (below) for this concept, default to OMOP CURIE and label
             omop_curie = omop_concept_curie(concept_id)
             primary_curie = omop_curie
             primary_label = concept_name
-            blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_type, [])
+
             found = False
-            for d in range(self.concept_mapper.distance + 1):
-                if found:
-                    break
+            if query_node_curie is not None and query_node_curie:
+                # The CURIE was specified for this node in the query_graph, use that CURIE to identify this node
+                found = True
+                primary_curie = query_node_curie
 
-                # Get all mappings with the current distance
-                m_d = [m for m in mappings if m[u'distance'] == d]
-
-                # Look for the first matching prefix in the list of biolink prefixes
-                for prefix in blm_prefixes:
+                # Find the label from the mappings
+                for mapping in mappings:
+                    if mapping[u'target_curie'] == query_node_curie:
+                        primary_label = mapping[u'target_label']
+                        break
+            else:
+                # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
+                # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
+                blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_type, [])
+                for d in range(self.concept_mapper.distance + 1):
                     if found:
                         break
 
-                    for m in m_d:
-                        if m[u'target_curie'].split(u':')[0] == prefix:
-                            primary_curie = m[u'target_curie']
-                            primary_label = m[u'target_label']
-                            found = True
+                    # Get all mappings with the current distance
+                    m_d = [m for m in mappings if m[u'distance'] == d]
+
+                    # Look for the first matching prefix in the list of biolink prefixes
+                    for prefix in blm_prefixes:
+                        if found:
                             break
+
+                        for m in m_d:
+                            if m[u'target_curie'].split(u':')[0] == prefix:
+                                primary_curie = m[u'target_curie']
+                                primary_label = m[u'target_label']
+                                found = True
+                                break
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
             internal_id = u'{id:06d}'.format(id=len(self.nodes))
@@ -755,7 +895,7 @@ class TranslatorResponseMessage:
         # Set the knowledge graph edge properties
         kg_edge = {
             u'id': ke_id,
-            u'type': 'association',
+            u'type': self.query_edge_type,
             u'source_id': omop_concept_curie(node_1[u'omop_id']),
             u'target_id': omop_concept_curie(node_2[u'omop_id']),
             u'attributes': attributes
@@ -796,42 +936,32 @@ mappings_domain_ontology = {
 
 
 def map_blm_class_to_omop_domain(node_type):
-    """ Maps the Biolink Model class to OMOP domain_id, e.g., 'disease' to 'Condition'
+    """ Maps the Biolink Model class to OMOP domain_id, e.g., 'biolink:Disease' to 'Condition'
 
-    Note, some classes may map to multiple domains, e.g., 'population of individual organisms' maps to ['Ethnicity',
-    'Gender', 'Race']
+    Note, some classes may map to multiple domains, e.g., 'biolink:PopulationOfIndividualOrganisms' maps to
+    ['Ethnicity', 'Gender', 'Race']
 
     Parameters
     ----------
-    concept_type - Biolink Model class, e.g., 'disease'
+    concept_type - Biolink Model class, e.g., 'biolink:Disease'
 
     Returns
     -------
     If normalized successfully: List of OMOP domains, e.g., ['Drug']; Otherwise: None
     """
     mappings = {
-        u'device': [u'Device'],
-        u'disease': [u'Condition'],
-        u'drug': [u'Drug'],
-        u'phenomenon': [u'Measurement', u'Observation'],
-        u'population_of_individual_organisms': [u'Ethnicity', u'Gender', u'Race'],
-        u'procedure': [u'Procedure'],
-        # Also map OMOP domains back to themselves
-        u'Condition': [u'Condition'],
-        u'Device': [u'Device'],
-        u'Drug': [u'Drug'],
-        u'Ethnicity': [u'Ethnicity'],
-        u'Gender': [u'Gender'],
-        u'Measurement': [u'Measurement'],
-        u'Observation': [u'Observation'],
-        u'Procedure': [u'Procedure'],
-        u'Race': [u'Race']
+        u'biolink:Device': [u'Device'],
+        u'biolink:Disease': [u'Condition'],
+        u'biolink:Drug': [u'Drug'],
+        u'biolink:Phenomenon': [u'Measurement', u'Observation'],
+        u'biolink:PopulationOfIndividualOrganisms': [u'Ethnicity', u'Gender', u'Race'],
+        u'biolink:Procedure': [u'Procedure']
     }
     return mappings.get(node_type)
 
 
 def map_omop_domain_to_blm_class(domain):
-    """ Maps the OMOP domain_id to Biolink Model class, e.g., 'Condition' to 'Disease'
+    """ Maps the OMOP domain_id to Biolink Model class, e.g., 'Condition' to 'biolink:Disease'
 
     Parameters
     ----------
@@ -842,15 +972,15 @@ def map_omop_domain_to_blm_class(domain):
     If normalized successfully: Biolink Model semantic type. If no mapping found, use NamedThing
     """
     mappings = {
-        u'Condition': u'disease',
-        u'Device': u'device',
-        u'Drug': u'drug',
-        u'Ethnicity': u'population_of_individual_organisms',
-        u'Gender': u'population_of_individual_organisms',
-        u'Measurement': u'phenomenon',
-        u'Observation': u'phenomenon',
-        u'Procedure': u'procedure',
-        u'Race': u'population_of_individual_organisms'
+        u'Condition': u'biolink:Disease',
+        u'Device': u'biolink:Device',
+        u'Drug': u'biolink:Drug',
+        u'Ethnicity': u'biolink:PopulationOfIndividualOrganisms',
+        u'Gender': u'biolink:PopulationOfIndividualOrganisms',
+        u'Measurement': u'biolink:Phenomenon',
+        u'Observation': u'biolink:Phenomenon',
+        u'Procedure': u'biolink:Procedure',
+        u'Race': u'biolink:PopulationOfIndividualOrganisms'
     }
     default_type = u'named_thing'
     return mappings.get(domain, default_type)
@@ -924,13 +1054,13 @@ class BiolinkConceptMapper:
     }
 
     _default_ontology_map = {
-        u'disease': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
+        u'biolink:Disease': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
                        u'NCIT', u'SNOMEDCT', u'medgen', u'ICD10', u'ICD9', u'ICD0', u'HP', u'MP'],
         # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
-        u'drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
+        u'biolink:Drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
                   u'HMDB', u'INCHI', u'UNII', u'KEGG', u'gtpo'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        u'procedure': [u'ICD10PCS', u'SNOMEDCT'],
+        u'biolink:Procedure': [u'ICD10PCS', u'SNOMEDCT'],
         u'_DEFAULT': []
     }
 
@@ -998,12 +1128,17 @@ class BiolinkConceptMapper:
 
         # Convert Biolink Model prefix conventions to OxO conventions
         oxo_mappings = dict()
-        for domain, prefixes in self.biolink_mappings.items():
+        for blm_type, prefixes in self.biolink_mappings.items():
+            omop_domains = map_blm_class_to_omop_domain(blm_type)
+            if omop_domains is None or not omop_domains:
+                continue
+
             # Map each prefix
             domain_mappings = [BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix) for prefix in prefixes]
             # Remove None from list
             domain_mappings = [m for m in domain_mappings if m is not None]
-            oxo_mappings[domain] = domain_mappings
+            for omop_domain in omop_domains:
+                oxo_mappings[omop_domain] = domain_mappings
 
         self._oxo_concept_mapper = ConceptMapper(oxo_mappings, self.distance, self.local_oxo)
 
