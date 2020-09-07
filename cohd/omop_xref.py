@@ -1003,7 +1003,7 @@ class ConceptMapper:
             return mappings
 
         # If the domain wasn't provided, look it up
-        if domain_id is None:
+        if domain_id is None or not domain_id:
             concept_def = omop_concept_definition(concept_id)
             if not concept_def:
                 return None

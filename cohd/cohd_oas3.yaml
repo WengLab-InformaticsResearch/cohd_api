@@ -70,6 +70,8 @@ tags:
     description: Concept-age distributions, concept-pair delta distributions, and temporal analyses
   - name: translator
     description: NCATS Biomedical Data Translator APIs
+  - name: reasoner
+    description: Implements the NCATS Translator Reasoner API standards
 x-externalResources:
   - x-url: 'https://www.dbmi.columbia.edu/'
     x-type: website
@@ -1752,7 +1754,7 @@ paths:
             application/json:
               schema:
                 type: object                          
-  /translator/predicates:
+  /predicates:
     get:
       tags:
         - translator
@@ -1778,17 +1780,22 @@ paths:
                     'biolink:Gene':
                       - biolink:directly_interacts_with
                       - biolink:decreases_activity_of
-  /translator/query:
+  /query:
     post:
       tags:
         - translator
       summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
-        Query the COHD API following the [NCATS Translator Reasoner Standard API] (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the example query_graph.
+        Query the COHD API following the [NCATS Translator Reasoner Standard API]
+        (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the
+        example query_graph.
             
         For the source node, the curie must be specified (type is ignored).    
             
-        For the target node, both the curie and type are optional. If curie is specified for the target node, then the association between the two identified concepts is returned. If curie is not specified and type is specified, the associations between the source node and all concepts with the specified type are returned. If neither are specified, then the associations between the source node and all concepts are returned.
+        For the target node, both the curie and type are optional. If curie is specified for the target node, then the
+        association between the two identified concepts is returned. If curie is not specified and type is specified,
+        the associations between the source node and all concepts with the specified type are returned. If neither are
+        specified, then the associations between the source node and all concepts are returned.
         
         COHD will attempt to map the CURIE to an OMOP concept and the node type to an OMOP domain. 
       operationId: query
@@ -1808,17 +1815,17 @@ paths:
                       {
                         "id": "n00",
                         "curie": "DOID:9053",
-                        "type": "disease"
+                        "type": "biolink:Disease"
                       },
                       {
                         "id": "n01",
-                        "type": "procedure"
+                        "type": "biolink:Procedure"
                       }
                     ],
                     "edges": [
                       {
                         "id": "e00",
-                        "type": "association",
+                        "type": "biolink:correlated_with",
                         "source_id": "n00",
                         "target_id": "n01"
                       }
@@ -1833,9 +1840,9 @@ paths:
                   "threshold": 0.5,
                   "local_oxo": true,
                   "ontology_targets": {
-                    "disease": ["ICD9", "SNOMEDCT", "DOID"],
-                    "drug": ["RxNorm"],
-                    "procedure": ["ICD10PCS", "SNOMEDCT"],
+                    "biolink:Disease": ["ICD9", "SNOMEDCT", "DOID"],
+                    "biolink:Drug": ["RxNorm"],
+                    "biolink:Procedure": ["ICD10PCS", "SNOMEDCT"],
                     "_DEFAULT": []
                   },
                   "biolink_only": true
@@ -1880,10 +1887,10 @@ components:
         ontology_targets:
           description: >
             COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each
-            Biolink node type. The keys should be Biolink node types, e.g. 'disease', 'drug', etc. The values should be
+            Biolink node type. The keys should be Biolink node types (e.g., 'biolink:Disease'). The values should be
             lists of target ontology prefixes, e.g., ['ICD9', 'UMLS', 'DOID']. An emtpy list indicates not to perform
-            mapping for the specified domain. Use the key '_DEFAULT' to indicate a default list of target ontologies
-            for any unspecified domain. If a domain is specified, it will override the '_DEFAULT' list. Target ontology
+            mapping for the specified type. Use the key '_DEFAULT' to indicate a default list of target ontologies for
+            any unspecified types. If a domain is specified, it will override the '_DEFAULT' list. Target ontology
             prefixes should match the Biolink yaml but may include prefixes outside of Biolink.
             
             
@@ -1892,9 +1899,9 @@ components:
           type: object
           example:
             {
-              "disease": ["ICD9", "SNOMEDCT", "DOID"],
-              "drug": ["RxNorm"],
-              "procedure": ["ICD10PCS", "SNOMEDCT"],
+              "biolink:Disease": ["ICD9", "SNOMEDCT", "DOID"],
+              "biolink:Drug": ["RxNorm"],
+              "biolink:Procedure": ["ICD10PCS", "SNOMEDCT"],
               "_DEFAULT": []
             }
         local_oxo:

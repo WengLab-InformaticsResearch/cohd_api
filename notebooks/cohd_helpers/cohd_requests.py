@@ -691,7 +691,7 @@ def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_resu
     -------
     Translator Reasoner Standard API Message JSON
     """
-    url = f'{server}/translator/query'
+    url = f'{server}/query'
 
     # Node 1
     node_1 = {

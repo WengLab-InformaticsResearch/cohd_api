@@ -172,10 +172,13 @@ def api_temporal_sourceToTarget():
     return api_call(u'temporal', u'sourceToTarget')
 
 
+@app.route(u'/api/query', methods=['POST'])
 @app.route(u'/api/translator/query', methods=['POST'])
 def api_translator_query():
     return api_call(u'translator', u'query')
 
+
+@app.route(u'/api/predicates', methods=['GET'])
 @app.route(u'/api/translator/predicates', methods=['GET'])
 def api_transator_predicates():
     return api_call(u'translator', u'predicates')
