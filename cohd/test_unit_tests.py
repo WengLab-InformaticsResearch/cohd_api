@@ -1,8 +1,8 @@
 """
 This test module tests some of the utility functions supporting the COHD API
 """
-import cohd_utilities
-import omop_xref
+from . import cohd_utilities
+from . import omop_xref
 import numpy as np
 import numbers
 import requests
@@ -193,21 +193,21 @@ def test_omop_concept_uri():
     # Check a valid OMOP concept ID
     x = cohd_utilities.omop_concept_uri('313217')
     # Check that the URI is formatted correctly
-    assert x == u'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217'
+    assert x == 'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217'
     # The URI should have a valid response
     assert requests.get(x).status_code == requests.status_codes.codes.OK
 
     # Check a valid OMOP concept ID passed in as an integer
     x = cohd_utilities.omop_concept_uri(313217)
     # Check that the URI is formatted correctly
-    assert x == u'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217'
+    assert x == 'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217'
     # The URI should have a valid response
     assert requests.get(x).status_code == requests.status_codes.codes.OK
 
     # Check an invalid OMOP concept ID
     x = cohd_utilities.omop_concept_uri('313217000000')
     # Check that the URI is formatted correctly
-    assert x == u'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217000000'
+    assert x == 'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217000000'
     # The URI should have a missing response
     assert requests.get(x).status_code == requests.status_codes.codes.NOT_FOUND
 
@@ -222,12 +222,12 @@ def test_omop_concept_curie():
     """
     # Check that a concept ID passed as a string is formatted properly
     x = cohd_utilities.omop_concept_curie('313217')
-    assert x == u'OMOP:313217'
+    assert x == 'OMOP:313217'
 
     # Check that a concept ID passed as an integer is formatted properly
     x = cohd_utilities.omop_concept_curie(313217)
     # Check that the URI is formatted correctly
-    assert x == u'OMOP:313217'
+    assert x == 'OMOP:313217'
 
 
 # ######################################################################################################################
@@ -242,10 +242,10 @@ def test_omop_vocab_to_oxo_prefix():
     -------
     No return value. Asserts will be triggered upon failure.
     """
-    assert omop_xref.omop_vocab_to_oxo_prefix(u'ICD9CM') == u'ICD9CM' and \
-           omop_xref.omop_vocab_to_oxo_prefix(u'ICD10CM') == u'ICD10CM' and \
-           omop_xref.omop_vocab_to_oxo_prefix(u'SNOMED') == u'SNOMEDCT' and \
-           omop_xref.omop_vocab_to_oxo_prefix(u'MeSH') == u'MeSH'
+    assert omop_xref.omop_vocab_to_oxo_prefix('ICD9CM') == 'ICD9CM' and \
+           omop_xref.omop_vocab_to_oxo_prefix('ICD10CM') == 'ICD10CM' and \
+           omop_xref.omop_vocab_to_oxo_prefix('SNOMED') == 'SNOMEDCT' and \
+           omop_xref.omop_vocab_to_oxo_prefix('MeSH') == 'MeSH'
 
 
 def test_oxo_search():
@@ -1046,9 +1046,9 @@ def test_xref_best_from():
     # Check that each target ontology only has one mapping
     target_ontology_count = defaultdict(lambda: 0)
     for best_mapping in best_mappings:
-        prefix, _ = best_mapping['target_curie'].split(u':')
+        prefix, _ = best_mapping['target_curie'].split(':')
         target_ontology_count[prefix] += 1
-    assert all(v == 1 for v in target_ontology_count.values())
+    assert all(v == 1 for v in list(target_ontology_count.values()))
 
     # Check that each of the best mappings was one of the original mappings
     assert all(bm in mappings for bm in best_mappings)

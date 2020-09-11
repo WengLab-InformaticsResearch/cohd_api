@@ -29,26 +29,26 @@ class GoogleAnalytics:
         if endpoint is None:
             if service is None or meta is None:
                 # Insufficient information.
-                print 'Insufficient endpoint information for cohd.py::google_analytics'
+                print('Insufficient endpoint information for cohd.py::google_analytics')
                 return
 
-            endpoint = u'/api/{service}/{meta}'.format(service=service, meta=meta)
+            endpoint = '/api/{service}/{meta}'.format(service=service, meta=meta)
 
         try:
             # Use a small timeout so that the Google Analytics request does not cause delays if there is an issue
-            endpoint_ga = u'http://www.google-analytics.com/collect'
+            endpoint_ga = 'http://www.google-analytics.com/collect'
             payload = {
-                u'v': 1,
-                u'tid': tid,
-                u'cid': GoogleAnalytics.uuids[request.remote_addr],
-                u't': u'pageview',
-                u'dh': u'cohd.nsides.io',
-                u'dp': endpoint,
-                u'uip': request.remote_addr,
-                u'ua': request.user_agent
+                'v': 1,
+                'tid': tid,
+                'cid': GoogleAnalytics.uuids[request.remote_addr],
+                't': 'pageview',
+                'dh': 'cohd.nsides.io',
+                'dp': endpoint,
+                'uip': request.remote_addr,
+                'ua': request.user_agent
             }
             requests.post(endpoint_ga, data=payload, timeout=0.1)
 
         except requests.exceptions.Timeout:
             # Log the timeout
-            print 'Google Analytics timeout: ' + endpoint
+            print('Google Analytics timeout: ' + endpoint)

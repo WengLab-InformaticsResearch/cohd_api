@@ -1,21 +1,22 @@
 import requests
 from numpy import argsort
+from difflib import SequenceMatcher
 
 # OXO API configuration
-_URL_OXO_SEARCH = u'https://www.ebi.ac.uk/spot/oxo/api/search'
-_OXO_OMOP_MAPPING_TARGETS = [u'ICD9CM', u'ICD10CM', u'SNOMEDCT', u'MeSH', u'UMLS']
-_OXO_OMOP_VOCABULARIES = [u'ICD9CM', u'ICD10CM', u'SNOMED', u'MeSH']
+_URL_OXO_SEARCH = 'https://www.ebi.ac.uk/spot/oxo/api/search'
+_OXO_OMOP_MAPPING_TARGETS = ['ICD9CM', 'ICD10CM', 'SNOMEDCT', 'MeSH', 'UMLS']
+_OXO_OMOP_VOCABULARIES = ['ICD9CM', 'ICD10CM', 'SNOMED', 'MeSH']
 _OXO_PREFIX_TO_OMOP_VOCAB = {
-    u'ICD9CM': u'ICD9CM',
-    u'ICD10CM': u'ICD10CM',
-    u'SNOMEDCT': u'SNOMED',
-    u'MeSH': u'MeSH'
+    'ICD9CM': 'ICD9CM',
+    'ICD10CM': 'ICD10CM',
+    'SNOMEDCT': 'SNOMED',
+    'MeSH': 'MeSH'
 }
 _OMOP_VOCAB_TO_OXO_PREFIX = {
-    u'ICD9CM': u'ICD9CM',
-    u'ICD10CM': u'ICD10CM',
-    u'SNOMED': u'SNOMEDCT',
-    u'MeSH': u'MeSH'
+    'ICD9CM': 'ICD9CM',
+    'ICD10CM': 'ICD10CM',
+    'SNOMED': 'SNOMEDCT',
+    'MeSH': 'MeSH'
 }
 _OMOP_VOCABULARIES = ['ABMS', 'AMT', 'APC', 'ATC', 'BDPM', 'CDT', 'CIEL', 'Cohort', 'Concept Class', 'Condition Type',
                       'Cost Type', 'CPT4', 'Currency', 'CVX', 'Death Type', 'Device Type', 'dm+d', 'Domain', 'DPD',
@@ -173,15 +174,15 @@ def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
 
     # Call OxO to map to a vocabulary that OMOP knows
     j = oxo_search([curie], mapping_targets=_OXO_OMOP_MAPPING_TARGETS, distance=distance)
-    search_result = j[u'_embedded'][u'searchResults'][0]
-    mrl = search_result[u'mappingResponseList']
+    search_result = j['_embedded']['searchResults'][0]
+    mrl = search_result['mappingResponseList']
 
     # Map each OxO mapping using OMOP concept_relationship 'Maps_to'
     for mr in mrl:
-        prefix, concept_code = mr[u'curie'].split(u':')
-        oxo_distance = mr[u'distance']
+        prefix, concept_code = mr['curie'].split(':')
+        oxo_distance = mr['distance']
 
-        if prefix == u'UMLS':
+        if prefix == 'UMLS':
             # Intermediate concept is UMLS, try using J. Banda's mappings
             umls_to_omop_mappings = banda_umls_to_omop(cur, concept_code)
 
@@ -189,16 +190,16 @@ def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
                 omop_distance = 1
                 total_distance = omop_distance + oxo_distance
                 mapping = {
-                    u'source_oxo_id': search_result[u'queryId'],
-                    u'source_oxo_label': search_result[u'label'],
-                    u'intermediate_oxo_id': mr[u'curie'],
-                    u'intermediate_oxo_label': mr[u'label'],
-                    u'oxo_distance': oxo_distance,
-                    u'omop_standard_concept_id': u2o_mapping[u'concept_id'],
-                    u'omop_concept_name': u2o_mapping[u'concept_name'],
-                    u'omop_domain_id': u2o_mapping[u'domain_id'],
-                    u'omop_distance': omop_distance,
-                    u'total_distance': total_distance
+                    'source_oxo_id': search_result['queryId'],
+                    'source_oxo_label': search_result['label'],
+                    'intermediate_oxo_id': mr['curie'],
+                    'intermediate_oxo_label': mr['label'],
+                    'oxo_distance': oxo_distance,
+                    'omop_standard_concept_id': u2o_mapping['concept_id'],
+                    'omop_concept_name': u2o_mapping['concept_name'],
+                    'omop_domain_id': u2o_mapping['domain_id'],
+                    'omop_distance': omop_distance,
+                    'total_distance': total_distance
                 }
                 mappings.append(mapping)
                 total_distances.append(total_distance)
@@ -214,19 +215,19 @@ def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
             # Map to the standard concept_id
             results = omop_map_to_standard(cur, concept_code, vocabulary_id)
             for result in results:
-                omop_distance = int(result[u'source_concept_id'] != result[u'standard_concept_id'])
+                omop_distance = int(result['source_concept_id'] != result['standard_concept_id'])
                 total_distance = omop_distance + oxo_distance
                 mapping = {
-                    u'source_oxo_id': search_result[u'queryId'],
-                    u'source_oxo_label': search_result[u'label'],
-                    u'intermediate_oxo_id': mr[u'curie'],
-                    u'intermediate_oxo_label': mr[u'label'],
-                    u'oxo_distance': oxo_distance,
-                    u'omop_standard_concept_id': result[u'standard_concept_id'],
-                    u'omop_concept_name': result[u'standard_concept_name'],
-                    u'omop_domain_id': result[u'standard_domain_id'],
-                    u'omop_distance': omop_distance,
-                    u'total_distance': total_distance
+                    'source_oxo_id': search_result['queryId'],
+                    'source_oxo_label': search_result['label'],
+                    'intermediate_oxo_id': mr['curie'],
+                    'intermediate_oxo_label': mr['label'],
+                    'oxo_distance': oxo_distance,
+                    'omop_standard_concept_id': result['standard_concept_id'],
+                    'omop_concept_name': result['standard_concept_name'],
+                    'omop_domain_id': result['standard_domain_id'],
+                    'omop_distance': omop_distance,
+                    'total_distance': total_distance
                 }
                 mappings.append(mapping)
                 total_distances.append(total_distance)
@@ -270,32 +271,32 @@ def xref_from_omop_standard_concept(cur, concept_id, mapping_targets=[], distanc
     omop_mappings = omop_map_from_standard(cur, concept_id, _OXO_OMOP_VOCABULARIES)
     found_source = False
     for omop_mapping in omop_mappings:
-        prefix = omop_vocab_to_oxo_prefix(omop_mapping[u'vocabulary_id'])
-        curie = prefix + ':' + omop_mapping[u'concept_code']
+        prefix = omop_vocab_to_oxo_prefix(omop_mapping['vocabulary_id'])
+        curie = prefix + ':' + omop_mapping['concept_code']
         curies.append(curie)
 
         # Check if the source concept is included in the mappings
-        found_source = found_source or (omop_mapping[u'concept_id'] == source_info[u'concept_id'])
+        found_source = found_source or (omop_mapping['concept_id'] == source_info['concept_id'])
 
         # If the intermediate vocab matches the target ontology, add it to the mappings
         if (mapping_targets is None) or (len(mapping_targets) == 0) or (prefix in mapping_targets):
-            omop_distance = int(omop_mapping[u'concept_id'] != concept_id)
+            omop_distance = int(omop_mapping['concept_id'] != concept_id)
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': omop_mapping[u'concept_id'],
-                u'intermediate_omop_vocabulary_id': omop_mapping[u'vocabulary_id'],
-                u'intermediate_omop_concept_code': omop_mapping[u'concept_code'],
-                u'intermediate_omop_concept_name': omop_mapping[u'concept_name'],
-                u'omop_distance': omop_distance,
-                u'intermediate_oxo_curie': u'N/A (OMOP mapping)',
-                u'intermediate_oxo_label': u'N/A (OMOP mapping)',
-                u'target_curie': u'{prefix}:{code}'.format(prefix=prefix, code=omop_mapping[u'concept_code']),
-                u'target_label': omop_mapping[u'concept_name'],
-                u'oxo_distance': 0,
-                u'total_distance': omop_distance
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': omop_mapping['concept_id'],
+                'intermediate_omop_vocabulary_id': omop_mapping['vocabulary_id'],
+                'intermediate_omop_concept_code': omop_mapping['concept_code'],
+                'intermediate_omop_concept_name': omop_mapping['concept_name'],
+                'omop_distance': omop_distance,
+                'intermediate_oxo_curie': 'N/A (OMOP mapping)',
+                'intermediate_oxo_label': 'N/A (OMOP mapping)',
+                'target_curie': '{prefix}:{code}'.format(prefix=prefix, code=omop_mapping['concept_code']),
+                'target_label': omop_mapping['concept_name'],
+                'oxo_distance': 0,
+                'total_distance': omop_distance
             }
             mappings.append(mapping)
             total_distances.append(omop_distance)
@@ -303,47 +304,47 @@ def xref_from_omop_standard_concept(cur, concept_id, mapping_targets=[], distanc
     # Map to UMLS CUIs using J. Banda's mappings
     umls_mappings = banda_omop_to_umls(cur, concept_id)
     for umls_mapping in umls_mappings:
-        cui = umls_mapping[u'cui']
-        curie = u'UMLS:{cui}'.format(cui=cui)
+        cui = umls_mapping['cui']
+        curie = 'UMLS:{cui}'.format(cui=cui)
         curies.append(curie)
 
         # If UMLS is in the target ontologies, add it to the mappings
-        if (mapping_targets is None) or (len(mapping_targets) == 0) or (u'UMLS' in mapping_targets):
+        if (mapping_targets is None) or (len(mapping_targets) == 0) or ('UMLS' in mapping_targets):
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_vocabulary_id': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_concept_code': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_concept_name': u'N/A (OMOP-UMLS mapping)',
-                u'omop_distance': 1,
-                u'intermediate_oxo_curie': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_oxo_label': u'N/A (OMOP-UMLS mapping)',
-                u'target_curie': curie,
-                u'target_label': umls_mapping[u'label'],
-                u'oxo_distance': 0,
-                u'total_distance': 1
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_vocabulary_id': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_concept_code': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_concept_name': 'N/A (OMOP-UMLS mapping)',
+                'omop_distance': 1,
+                'intermediate_oxo_curie': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_oxo_label': 'N/A (OMOP-UMLS mapping)',
+                'target_curie': curie,
+                'target_label': umls_mapping['label'],
+                'oxo_distance': 0,
+                'total_distance': 1
             }
             mappings.append(mapping)
             total_distances.append(1)
 
     # Add the source concept definition if not already in OMOP mappings (e.g., source concept is not a standard concept)
-    if not found_source and source_info[u'vocabulary_id'] in _OMOP_VOCAB_TO_OXO_PREFIX:
-        prefix = omop_vocab_to_oxo_prefix(source_info[u'vocabulary_id'])
-        curie = prefix + ':' + source_info[u'concept_code']
+    if not found_source and source_info['vocabulary_id'] in _OMOP_VOCAB_TO_OXO_PREFIX:
+        prefix = omop_vocab_to_oxo_prefix(source_info['vocabulary_id'])
+        curie = prefix + ':' + source_info['concept_code']
         curies.append(curie)
         omop_mappings.append(source_info)
 
     # Call OxO to map from these intermediate CURIEs to the external ontologies
     if len(curies) > 0:
         j = oxo_search(curies, mapping_targets=mapping_targets, distance=distance)
-        search_results = j[u'_embedded'][u'searchResults']
+        search_results = j['_embedded']['searchResults']
 
     # Combine OxO mappings with OMOP mappings
     for i, search_result in enumerate(search_results):
-        mrl = search_result[u'mappingResponseList']
+        mrl = search_result['mappingResponseList']
 
         if len(mrl) == 0:
             continue
@@ -351,39 +352,39 @@ def xref_from_omop_standard_concept(cur, concept_id, mapping_targets=[], distanc
         if i < len(omop_mappings):
             # The first intermediate CURIEs came from OMOP mappings. Add info from OMOP mapping to the search result
             omop_mapping = omop_mappings[i]
-            omop_distance = int(omop_mapping[u'concept_id'] != concept_id)
-            intermediate_omop_concept_id = omop_mapping[u'concept_id']
-            intermediate_omop_vocab_id = omop_mapping[u'vocabulary_id']
-            intermediate_omop_concept_code = omop_mapping[u'concept_code']
-            intermediate_omop_concept_name = omop_mapping[u'concept_name']
+            omop_distance = int(omop_mapping['concept_id'] != concept_id)
+            intermediate_omop_concept_id = omop_mapping['concept_id']
+            intermediate_omop_vocab_id = omop_mapping['vocabulary_id']
+            intermediate_omop_concept_code = omop_mapping['concept_code']
+            intermediate_omop_concept_name = omop_mapping['concept_name']
         else:
             # The following intermeidate CURIEs came from UMLS mappings. Add info from the UMLS mappings to the results
             cui = umls_mappings[i - len(omop_mappings)]
             omop_distance = 1
-            intermediate_omop_concept_id = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_vocab_id = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_concept_code = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_concept_name = u'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_id = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_vocab_id = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_code = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_name = 'N/A (OMOP-UMLS mapping)'
 
         for mr in mrl:
-            oxo_distance = mr[u'distance']
+            oxo_distance = mr['distance']
             total_distance = omop_distance + oxo_distance
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': intermediate_omop_concept_id,
-                u'intermediate_omop_vocabulary_id': intermediate_omop_vocab_id,
-                u'intermediate_omop_concept_code': intermediate_omop_concept_code,
-                u'intermediate_omop_concept_name': intermediate_omop_concept_name,
-                u'omop_distance': omop_distance,
-                u'intermediate_oxo_curie': search_result[u'curie'],
-                u'intermediate_oxo_label': search_result[u'label'],
-                u'target_curie': mr[u'curie'],
-                u'target_label': mr[u'label'],
-                u'oxo_distance': oxo_distance,
-                u'total_distance': total_distance
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': intermediate_omop_concept_id,
+                'intermediate_omop_vocabulary_id': intermediate_omop_vocab_id,
+                'intermediate_omop_concept_code': intermediate_omop_concept_code,
+                'intermediate_omop_concept_name': intermediate_omop_concept_name,
+                'omop_distance': omop_distance,
+                'intermediate_oxo_curie': search_result['curie'],
+                'intermediate_oxo_label': search_result['label'],
+                'target_curie': mr['curie'],
+                'target_label': mr['label'],
+                'oxo_distance': oxo_distance,
+                'total_distance': total_distance
             }
             mappings.append(mapping)
             total_distances.append(total_distance)
@@ -405,7 +406,7 @@ def banda_umls_to_omop(cur, cui):
         WHERE MATCH(cui) AGAINST(%(cui)s IN NATURAL LANGUAGE MODE) and c.standard_concept IS NOT NULL;
         '''
     params = {
-        u'cui': cui
+        'cui': cui
     }
 
     nrows = cur.execute(sql, params)
@@ -423,7 +424,7 @@ def banda_omop_to_umls(cur, concept_id):
         WHERE concept_id = %(concept_id)s;
         '''
     params = {
-        u'concept_id': concept_id
+        'concept_id': concept_id
     }
 
     nrows = cur.execute(sql, params)
@@ -438,7 +439,7 @@ def oxo_term(cur, curie):
     sql = '''SELECT *
         FROM oxo_term
         WHERE curie = %(curie)s;'''
-    params = {u'curie': curie}
+    params = {'curie': curie}
     cur.execute(sql, params)
     return cur.fetchall()
 
@@ -481,15 +482,15 @@ def oxo_local(cur, source_curie, distance=2, targets=None):
             WHERE mo1.curie_1 = %(source_curie)s)'''
     subquery_mapping += ''') x
             '''
-    params = {u'source_curie': source_curie}
+    params = {'source_curie': source_curie}
 
     # Add target ontologies
     if targets is None or len(targets) == 0:
         # No target ontologies specified, include all ontologies
         filter_targets = '''WHERE ott.prefix IS NULL OR ott.prefix != %(source_prefix)s
             '''
-        source_prefix = source_curie.split(u':')[0]
-        params[u'source_prefix'] = source_prefix
+        source_prefix = source_curie.split(':')[0]
+        params['source_prefix'] = source_prefix
     else:
         # Only include certain target ontologies
         filter_targets = '''WHERE ott.prefix IN ({targets})'''
@@ -531,14 +532,14 @@ def xref_to_omop_local(cur, curie, distance=2, best=False):
 
     # Map each OxO mapping using OMOP concept_relationship 'Maps_to'
     for oxo_mapping in oxo_mappings:
-        source_curie = oxo_mapping[u'source_curie']
-        source_label = oxo_mapping[u'source_label']
-        intermediate_curie = oxo_mapping[u'target_curie']
-        intermediate_label = oxo_mapping[u'target_label']
-        prefix, concept_code = intermediate_curie.split(u':')
-        oxo_distance = oxo_mapping[u'distance']
+        source_curie = oxo_mapping['source_curie']
+        source_label = oxo_mapping['source_label']
+        intermediate_curie = oxo_mapping['target_curie']
+        intermediate_label = oxo_mapping['target_label']
+        prefix, concept_code = intermediate_curie.split(':')
+        oxo_distance = oxo_mapping['distance']
 
-        if prefix == u'UMLS':
+        if prefix == 'UMLS':
             # Intermediate concept is UMLS, try using J. Banda's mappings
             umls_to_omop_mappings = banda_umls_to_omop(cur, concept_code)
 
@@ -546,16 +547,16 @@ def xref_to_omop_local(cur, curie, distance=2, best=False):
                 omop_distance = 1
                 total_distance = omop_distance + oxo_distance
                 mapping = {
-                    u'source_oxo_id': source_curie,
-                    u'source_oxo_label': source_label,
-                    u'intermediate_oxo_id': intermediate_curie,
-                    u'intermediate_oxo_label': intermediate_label,
-                    u'oxo_distance': oxo_distance,
-                    u'omop_standard_concept_id': u2o_mapping[u'concept_id'],
-                    u'omop_concept_name': u2o_mapping[u'concept_name'],
-                    u'omop_domain_id': u2o_mapping[u'domain_id'],
-                    u'omop_distance': omop_distance,
-                    u'total_distance': total_distance
+                    'source_oxo_id': source_curie,
+                    'source_oxo_label': source_label,
+                    'intermediate_oxo_id': intermediate_curie,
+                    'intermediate_oxo_label': intermediate_label,
+                    'oxo_distance': oxo_distance,
+                    'omop_standard_concept_id': u2o_mapping['concept_id'],
+                    'omop_concept_name': u2o_mapping['concept_name'],
+                    'omop_domain_id': u2o_mapping['domain_id'],
+                    'omop_distance': omop_distance,
+                    'total_distance': total_distance
                 }
                 mappings.append(mapping)
                 total_distances.append(total_distance)
@@ -571,19 +572,19 @@ def xref_to_omop_local(cur, curie, distance=2, best=False):
             # Map to the standard concept_id
             results = omop_map_to_standard(cur, concept_code, vocabulary_id)
             for result in results:
-                omop_distance = int(result[u'source_concept_id'] != result[u'standard_concept_id'])
+                omop_distance = int(result['source_concept_id'] != result['standard_concept_id'])
                 total_distance = omop_distance + oxo_distance
                 mapping = {
-                    u'source_oxo_id': source_curie,
-                    u'source_oxo_label': source_label,
-                    u'intermediate_oxo_id': intermediate_curie,
-                    u'intermediate_oxo_label': intermediate_label,
-                    u'oxo_distance': oxo_distance,
-                    u'omop_standard_concept_id': result[u'standard_concept_id'],
-                    u'omop_concept_name': result[u'standard_concept_name'],
-                    u'omop_domain_id': result[u'standard_domain_id'],
-                    u'omop_distance': omop_distance,
-                    u'total_distance': total_distance
+                    'source_oxo_id': source_curie,
+                    'source_oxo_label': source_label,
+                    'intermediate_oxo_id': intermediate_curie,
+                    'intermediate_oxo_label': intermediate_label,
+                    'oxo_distance': oxo_distance,
+                    'omop_standard_concept_id': result['standard_concept_id'],
+                    'omop_concept_name': result['standard_concept_name'],
+                    'omop_domain_id': result['standard_domain_id'],
+                    'omop_distance': omop_distance,
+                    'total_distance': total_distance
                 }
                 mappings.append(mapping)
                 total_distances.append(total_distance)
@@ -627,32 +628,32 @@ def xref_from_omop_local(cur, concept_id, mapping_targets=[], distance=2, best=F
     omop_mappings = omop_map_from_standard(cur, concept_id, _OXO_OMOP_VOCABULARIES)
     found_source = False
     for omop_mapping in omop_mappings:
-        prefix = omop_vocab_to_oxo_prefix(omop_mapping[u'vocabulary_id'])
-        curie = prefix + ':' + omop_mapping[u'concept_code']
+        prefix = omop_vocab_to_oxo_prefix(omop_mapping['vocabulary_id'])
+        curie = prefix + ':' + omop_mapping['concept_code']
         curies.append(curie)
 
         # Check if the source concept is included in the mappings
-        found_source = found_source or (omop_mapping[u'concept_id'] == source_info[u'concept_id'])
+        found_source = found_source or (omop_mapping['concept_id'] == source_info['concept_id'])
 
         # If the intermediate vocab matches the target ontology, add it to the mappings
         if (mapping_targets is None) or (len(mapping_targets) == 0) or (prefix in mapping_targets):
-            omop_distance = int(omop_mapping[u'concept_id'] != concept_id)
+            omop_distance = int(omop_mapping['concept_id'] != concept_id)
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': omop_mapping[u'concept_id'],
-                u'intermediate_omop_vocabulary_id': omop_mapping[u'vocabulary_id'],
-                u'intermediate_omop_concept_code': omop_mapping[u'concept_code'],
-                u'intermediate_omop_concept_name': omop_mapping[u'concept_name'],
-                u'omop_distance': omop_distance,
-                u'intermediate_oxo_curie': u'N/A (OMOP mapping)',
-                u'intermediate_oxo_label': u'N/A (OMOP mapping)',
-                u'target_curie': u'{prefix}:{code}'.format(prefix=prefix, code=omop_mapping[u'concept_code']),
-                u'target_label': omop_mapping[u'concept_name'],
-                u'oxo_distance': 0,
-                u'total_distance': omop_distance
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': omop_mapping['concept_id'],
+                'intermediate_omop_vocabulary_id': omop_mapping['vocabulary_id'],
+                'intermediate_omop_concept_code': omop_mapping['concept_code'],
+                'intermediate_omop_concept_name': omop_mapping['concept_name'],
+                'omop_distance': omop_distance,
+                'intermediate_oxo_curie': 'N/A (OMOP mapping)',
+                'intermediate_oxo_label': 'N/A (OMOP mapping)',
+                'target_curie': '{prefix}:{code}'.format(prefix=prefix, code=omop_mapping['concept_code']),
+                'target_label': omop_mapping['concept_name'],
+                'oxo_distance': 0,
+                'total_distance': omop_distance
             }
             mappings.append(mapping)
             total_distances.append(omop_distance)
@@ -660,36 +661,36 @@ def xref_from_omop_local(cur, concept_id, mapping_targets=[], distance=2, best=F
     # Map to UMLS CUIs using J. Banda's mappings
     umls_mappings = banda_omop_to_umls(cur, concept_id)
     for umls_mapping in umls_mappings:
-        cui = umls_mapping[u'cui']
-        curie = u'UMLS:{cui}'.format(cui=cui)
+        cui = umls_mapping['cui']
+        curie = 'UMLS:{cui}'.format(cui=cui)
         curies.append(curie)
 
         # If UMLS is in the target ontologies, add it to the mappings
-        if (mapping_targets is None) or (len(mapping_targets) == 0) or (u'UMLS' in mapping_targets):
+        if (mapping_targets is None) or (len(mapping_targets) == 0) or ('UMLS' in mapping_targets):
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_vocabulary_id': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_concept_code': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_omop_concept_name': u'N/A (OMOP-UMLS mapping)',
-                u'omop_distance': 1,
-                u'intermediate_oxo_curie': u'N/A (OMOP-UMLS mapping)',
-                u'intermediate_oxo_label': u'N/A (OMOP-UMLS mapping)',
-                u'target_curie': curie,
-                u'target_label': umls_mapping[u'label'],
-                u'oxo_distance': 0,
-                u'total_distance': 1
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_vocabulary_id': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_concept_code': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_omop_concept_name': 'N/A (OMOP-UMLS mapping)',
+                'omop_distance': 1,
+                'intermediate_oxo_curie': 'N/A (OMOP-UMLS mapping)',
+                'intermediate_oxo_label': 'N/A (OMOP-UMLS mapping)',
+                'target_curie': curie,
+                'target_label': umls_mapping['label'],
+                'oxo_distance': 0,
+                'total_distance': 1
             }
             mappings.append(mapping)
             total_distances.append(1)
 
     # Add the source concept definition if not already in OMOP mappings (e.g., source concept is not a standard concept)
-    if not found_source and source_info[u'vocabulary_id'] in _OMOP_VOCAB_TO_OXO_PREFIX:
-        prefix = omop_vocab_to_oxo_prefix(source_info[u'vocabulary_id'])
-        curie = prefix + ':' + source_info[u'concept_code']
+    if not found_source and source_info['vocabulary_id'] in _OMOP_VOCAB_TO_OXO_PREFIX:
+        prefix = omop_vocab_to_oxo_prefix(source_info['vocabulary_id'])
+        curie = prefix + ':' + source_info['concept_code']
         curies.append(curie)
         omop_mappings.append(source_info)
 
@@ -704,40 +705,40 @@ def xref_from_omop_local(cur, concept_id, mapping_targets=[], distance=2, best=F
         if i < len(omop_mappings):
             # The first intermediate CURIEs came from OMOP mappings. Add info from OMOP mapping to the search result
             omop_mapping = omop_mappings[i]
-            omop_distance = int(omop_mapping[u'concept_id'] != concept_id)
-            intermediate_omop_concept_id = omop_mapping[u'concept_id']
-            intermediate_omop_vocab_id = omop_mapping[u'vocabulary_id']
-            intermediate_omop_concept_code = omop_mapping[u'concept_code']
-            intermediate_omop_concept_name = omop_mapping[u'concept_name']
+            omop_distance = int(omop_mapping['concept_id'] != concept_id)
+            intermediate_omop_concept_id = omop_mapping['concept_id']
+            intermediate_omop_vocab_id = omop_mapping['vocabulary_id']
+            intermediate_omop_concept_code = omop_mapping['concept_code']
+            intermediate_omop_concept_name = omop_mapping['concept_name']
         else:
             # The following intermeidate CURIEs came from UMLS mappings. Add info from the UMLS mappings to the results
             cui = umls_mappings[i - len(omop_mappings)]
             omop_distance = 1
-            intermediate_omop_concept_id = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_vocab_id = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_concept_code = u'N/A (OMOP-UMLS mapping)'
-            intermediate_omop_concept_name = u'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_id = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_vocab_id = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_code = 'N/A (OMOP-UMLS mapping)'
+            intermediate_omop_concept_name = 'N/A (OMOP-UMLS mapping)'
 
         # Combine information from OxO mapping and OMOP
         for oxo_mapping in oxo_mappings:
-            oxo_distance = oxo_mapping[u'distance']
+            oxo_distance = oxo_mapping['distance']
             total_distance = omop_distance + oxo_distance
             mapping = {
-                u'source_omop_concept_id': concept_id,
-                u'source_omop_concept_name': source_info[u'concept_name'],
-                u'source_omop_vocabulary_id': source_info[u'vocabulary_id'],
-                u'source_omop_concept_code': source_info[u'concept_code'],
-                u'intermediate_omop_concept_id': intermediate_omop_concept_id,
-                u'intermediate_omop_vocabulary_id': intermediate_omop_vocab_id,
-                u'intermediate_omop_concept_code': intermediate_omop_concept_code,
-                u'intermediate_omop_concept_name': intermediate_omop_concept_name,
-                u'omop_distance': omop_distance,
-                u'intermediate_oxo_curie': oxo_mapping[u'source_curie'],
-                u'intermediate_oxo_label': oxo_mapping[u'source_label'],
-                u'target_curie': oxo_mapping[u'target_curie'],
-                u'target_label': oxo_mapping[u'target_label'],
-                u'oxo_distance': oxo_distance,
-                u'total_distance': total_distance
+                'source_omop_concept_id': concept_id,
+                'source_omop_concept_name': source_info['concept_name'],
+                'source_omop_vocabulary_id': source_info['vocabulary_id'],
+                'source_omop_concept_code': source_info['concept_code'],
+                'intermediate_omop_concept_id': intermediate_omop_concept_id,
+                'intermediate_omop_vocabulary_id': intermediate_omop_vocab_id,
+                'intermediate_omop_concept_code': intermediate_omop_concept_code,
+                'intermediate_omop_concept_name': intermediate_omop_concept_name,
+                'omop_distance': omop_distance,
+                'intermediate_oxo_curie': oxo_mapping['source_curie'],
+                'intermediate_oxo_label': oxo_mapping['source_label'],
+                'target_curie': oxo_mapping['target_curie'],
+                'target_label': oxo_mapping['target_label'],
+                'oxo_distance': oxo_distance,
+                'total_distance': total_distance
             }
             mappings.append(mapping)
             total_distances.append(total_distance)
@@ -773,19 +774,19 @@ def _xref_best_from(mappings):
 
     # Sum the scores for each target CURIE
     for mapping in mappings:
-        target_curie = mapping[u'target_curie']
-        prefix, code = target_curie.split(u':')
-        distance = int(mapping[u'total_distance'])
+        target_curie = mapping['target_curie']
+        prefix, code = target_curie.split(':')
+        distance = int(mapping['total_distance'])
 
         # Get the mappings for the current prefix
-        if mapping_scores.has_key(prefix):
+        if prefix in mapping_scores:
             scores_in_prefix = mapping_scores[prefix]
         else:
             scores_in_prefix = {}
             mapping_scores[prefix] = scores_in_prefix
 
         # Keep track of scores per CURIE
-        if scores_in_prefix.has_key(target_curie):
+        if target_curie in scores_in_prefix:
             # We've seen this CURIE before, add to the previous score sum
             scores_in_prefix[target_curie] += _mapping_score(distance)
         else:
@@ -798,17 +799,33 @@ def _xref_best_from(mappings):
     # Get the mappings with the best scores for each ontology
     best_mappings = []
     total_distances = []
-    for prefix, scores_in_prefix in mapping_scores.items():
+    for prefix, scores_in_prefix in list(mapping_scores.items()):
         best_score = -1
-        best_curie = None
-        for curie, curie_score in scores_in_prefix.items():
+        best_curies = None
+        for curie, curie_score in list(scores_in_prefix.items()):
             if curie_score > best_score:
                 best_score = curie_score
-                best_curie = curie
+                best_curies = [curie]
+            elif curie_score == best_score:
+                best_curies.append(curie)
+
+        # If there is more than one mapping with the same best score, use a basic string similarity
+        # algorithm (Ratcliff-Obershelp similarity) to choose the best
+        if len(best_curies) == 1:
+            best_curie = best_curies[0]
+        elif len(best_curies) > 1:
+            best_string_score = -1
+            omop_label = mappings[0][u'source_omop_concept_name']
+            for curie in best_curies:
+                oxo_label = mapping_representatives[curie][u'target_label']
+                string_score = SequenceMatcher(None, omop_label, oxo_label).ratio()
+                if string_score > best_string_score:
+                    best_string_score = string_score
+                    best_curie = curie
 
         best_mapping = mapping_representatives[best_curie]
         best_mappings.append(best_mapping)
-        total_distances.append(best_mapping[u'total_distance'])
+        total_distances.append(best_mapping['total_distance'])
 
     # Sort the total_distance to be consistent with previous behavior
     best_mappings_sorted = [best_mappings[i] for i in argsort(total_distances)]
@@ -835,13 +852,13 @@ def _xref_best_to(mappings):
     # Since each target_CURIE can have multiple pathways, keep track of a good representative pathway for each CURIE
     mapping_representatives = {}
 
-    # Sum the scores for each target CURIE
+    # Sum the scores for each target OMOP standard concept
     for mapping in mappings:
-        omop_id = mapping[u'omop_standard_concept_id']
-        distance = int(mapping[u'total_distance'])
+        omop_id = mapping['omop_standard_concept_id']
+        distance = int(mapping['total_distance'])
 
         # Get the mappings for the current prefix
-        if mapping_scores.has_key(omop_id):
+        if omop_id in mapping_scores:
             # We've seen this OMOP concept before, add to the previous score sum
             mapping_scores[omop_id] += _mapping_score(distance)
         else:
@@ -851,13 +868,29 @@ def _xref_best_to(mappings):
             # Use this pathway to represent the mapping to the target_curie
             mapping_representatives[omop_id] = mapping
 
-    # Get the mappings with the best scores for each ontology
+    # Get the mappings with the best scores
     best_score = -1
-    best_omop_id = None
-    for omop_id, score in mapping_scores.items():
+    best_omop_ids = None
+    for omop_id, score in list(mapping_scores.items()):
         if score > best_score:
             best_score = score
-            best_omop_id = omop_id
+            best_omop_ids = [omop_id]
+        elif score == best_score:
+            best_omop_ids.append(omop_id)
+
+    # If there is more than one mapping with the same best score, use a basic string similarity
+    # algorithm (Ratcliff-Obershelp similarity) to choose the best
+    if len(best_omop_ids) == 1:
+        best_omop_id = best_omop_ids[0]
+    elif len(best_omop_ids) > 1:
+        best_string_score = -1
+        oxo_label = mappings[0][u'source_oxo_label']
+        for omop_id in best_omop_ids:
+            concept_name = mapping_representatives[omop_id][u'omop_concept_name']
+            string_score = SequenceMatcher(None, oxo_label, concept_name).ratio()
+            if string_score > best_string_score:
+                best_string_score = string_score
+                best_omop_id = omop_id
 
     best_mapping = mapping_representatives[best_omop_id]
     return [best_mapping]
@@ -897,16 +930,16 @@ class ConceptMapper:
             self.domain_targets_omop = {}
             self.domain_targets_oxo = {}
             omop_vocabulary_set = set(_OMOP_VOCABULARIES)
-            for domain, targets in self.domain_targets.items():
+            for domain, targets in list(self.domain_targets.items()):
                 # Get any targets that can be supported by just OMOP mapping
                 targets_set = set(targets)
                 self.domain_targets_omop[domain] = list(omop_vocabulary_set & targets_set)
                 targets_set.difference_update(omop_vocabulary_set)
 
                 # SNOMED-CT is SNOMED-CT in OxO but SNOMED in OMOP
-                if u'SNOMED-CT' in targets_set:
-                    self.domain_targets_omop[domain].append(u'SNOMED')
-                    targets_set.remove(u'SNOMED-CT')
+                if 'SNOMED-CT' in targets_set:
+                    self.domain_targets_omop[domain].append('SNOMED')
+                    targets_set.remove('SNOMED-CT')
 
                 # OxO will be used for the remaining targets
                 self.domain_targets_oxo[domain] = list(targets_set)
@@ -936,25 +969,25 @@ class ConceptMapper:
         conn = sql_connection()
         cur = conn.cursor()
 
-        prefix, concept_code = curie.split(u':')
-        if prefix == u'OMOP':
+        prefix, concept_code = curie.split(':')
+        if prefix == 'OMOP':
             # Already an OMOP concept
             concept_def = omop_concept_definition(concept_code)
             if concept_def:
                 mapping = {
-                    u'omop_concept_id': concept_code,
-                    u'omop_concept_name': concept_def[u'concept_name'],
-                    u'distance': 0
+                    'omop_concept_id': concept_code,
+                    'omop_concept_name': concept_def['concept_name'],
+                    'distance': 0
                 }
         elif prefix in _OMOP_VOCABULARIES:
             # Source vocabulary is in OMOP vocab
             omop_mapping = omop_map_to_standard(cur, concept_code, prefix)
             if omop_mapping:
                 mapping = {
-                    u'omop_concept_id': omop_mapping[0][u'standard_concept_id'],
-                    u'omop_concept_name': omop_mapping[0][u'standard_concept_name'],
-                    u'distance': int(concept_code != omop_mapping[0][u'standard_concept_code'] or
-                                     prefix != omop_mapping[0][u'standard_vocabulary_id'])
+                    'omop_concept_id': omop_mapping[0]['standard_concept_id'],
+                    'omop_concept_name': omop_mapping[0]['standard_concept_name'],
+                    'distance': int(concept_code != omop_mapping[0]['standard_concept_code'] or
+                                     prefix != omop_mapping[0]['standard_vocabulary_id'])
                 }
         else:
             # Use OxO to map from external ontology
@@ -962,12 +995,12 @@ class ConceptMapper:
                 best_mapping = xref_to_omop_local(cur, curie, distance=self.distance, best=True)
             else:
                 best_mapping = xref_to_omop_standard_concept(cur, curie, distance=self.distance, best=True)
-            if best_mapping and best_mapping[0][u'total_distance'] <= self.distance:
+            if best_mapping and best_mapping[0]['total_distance'] <= self.distance:
                 # Simplify the returned information
                 mapping = {
-                    u'omop_concept_id': best_mapping[0][u'omop_standard_concept_id'],
-                    u'omop_concept_name': best_mapping[0][u'omop_concept_name'],
-                    u'distance': best_mapping[0][u'total_distance']
+                    'omop_concept_id': best_mapping[0]['omop_standard_concept_id'],
+                    'omop_concept_name': best_mapping[0]['omop_concept_name'],
+                    'distance': best_mapping[0]['total_distance']
                 }
 
         # Close MySQL connection
@@ -1007,50 +1040,50 @@ class ConceptMapper:
             concept_def = omop_concept_definition(concept_id)
             if not concept_def:
                 return None
-            domain_id = concept_def[u'domain_id']
+            domain_id = concept_def['domain_id']
 
         conn = sql_connection()
         cur = conn.cursor()
 
         # Get OMOP mapping targets
         omop_targets = self.domain_targets_omop.get(domain_id)
-        if omop_targets is None and u'_DEFAULT' in self.domain_targets_omop:
+        if omop_targets is None and '_DEFAULT' in self.domain_targets_omop:
             # No mapping for this domain, but default specified. Use the default mapping
-            omop_targets = self.domain_targets_omop[u'_DEFAULT']
+            omop_targets = self.domain_targets_omop['_DEFAULT']
 
         # Get OMOP mappings
         if omop_targets:
             omop_mappings = omop_map_from_standard(cur, concept_id, omop_targets)
             for omop_mapping in omop_mappings:
                 # Make the CURIE
-                prefix = omop_vocab_to_oxo_prefix(omop_mapping[u'vocabulary_id'])
-                curie = u'{prefix}:{id}'.format(prefix=prefix, id=omop_mapping[u'concept_code'])
+                prefix = omop_vocab_to_oxo_prefix(omop_mapping['vocabulary_id'])
+                curie = '{prefix}:{id}'.format(prefix=prefix, id=omop_mapping['concept_code'])
                 mappings.append({
-                    u'target_curie': curie,
-                    u'target_label': omop_mapping[u'concept_name'],
-                    u'distance': int(str(omop_mapping[u'concept_id']) != str(concept_id))
+                    'target_curie': curie,
+                    'target_label': omop_mapping['concept_name'],
+                    'distance': int(str(omop_mapping['concept_id']) != str(concept_id))
                 })
 
         # Determine the target ontology
         oxo_targets = self.domain_targets_oxo.get(domain_id)
-        if oxo_targets is None and u'_DEFAULT' in self.domain_targets:
+        if oxo_targets is None and '_DEFAULT' in self.domain_targets:
             # No mapping for this domain, but default specified. Use the default mapping
-            oxo_targets = self.domain_targets_oxo[u'_DEFAULT']
+            oxo_targets = self.domain_targets_oxo['_DEFAULT']
 
         # Get the OxO mappings
         if oxo_targets:
             if self.local_oxo:
                 oxo_mappings = xref_from_omop_local(cur, concept_id, oxo_targets, distance=self.distance, best=True)
             else:
-                print "USING REMOTE OXO"
+                print("USING REMOTE OXO")
                 oxo_mappings = xref_from_omop_standard_concept(cur, concept_id, oxo_targets, distance=self.distance,
                                                                best=True)
             for mapping in oxo_mappings:
-                if mapping[u'total_distance'] <= self.distance:
+                if mapping['total_distance'] <= self.distance:
                     mappings.append({
-                        u'target_curie': mapping[u'target_curie'],
-                        u'target_label': mapping[u'target_label'],
-                        u'distance': mapping[u'total_distance']
+                        'target_curie': mapping['target_curie'],
+                        'target_label': mapping['target_label'],
+                        'distance': mapping['total_distance']
                     })
 
         cur.close()

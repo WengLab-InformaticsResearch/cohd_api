@@ -6,11 +6,11 @@ A database of frequencies of clinical concepts observed at Columbia University M
 
 ## Requirements
 
-Python 2.7
+Python 3
 
-Python packages: flask, flask_cors, pymysql
+Python packages
 ```
-pip install flask flask_cors pymysql
+pip install flask flask_cors pymysql requests reasoner_validator numpy scipy
 ```
 
 ## Running the Application

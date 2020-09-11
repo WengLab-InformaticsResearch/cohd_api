@@ -7,6 +7,7 @@ Intended to be run with pytest: pytest -s test_cohd_io.py
 from notebooks.cohd_helpers.cohd_requests import *
 from collections import namedtuple
 from reasoner_validator import validate_Message, ValidationError
+from pprint import pformat
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -71,7 +72,8 @@ def check_result_values(json, expected_results):
     assert results is not None
     for er in expected_results:
         # Check that there is at least one result that is a superset of the expected result
-        assert any(er.items() <= r.items() for r in results)
+        assert any(er.items() <= r.items() for r in results), 'item in expected_results not found in json:\n\njson:\n' \
+                + pformat(results) + '\n\nexpected_results:\n' + pformat(er)
 
 
 def test_datasets():

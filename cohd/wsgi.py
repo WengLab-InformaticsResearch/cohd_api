@@ -1,4 +1,4 @@
-from cohd import app
+from .cohd import app
 
 if __name__ == "__main__":
 	app.run()

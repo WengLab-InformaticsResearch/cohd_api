@@ -104,7 +104,7 @@ def omop_concept_uri(concept_id):
     -------
     http://api.ohdsi.org/WebAPI/vocabulary/concept/{concept_id}
     """
-    return u'http://api.ohdsi.org/WebAPI/vocabulary/concept/{concept_id}'.format(concept_id=concept_id)
+    return 'http://api.ohdsi.org/WebAPI/vocabulary/concept/{concept_id}'.format(concept_id=concept_id)
 
 
 def omop_concept_curie(concept_id):
@@ -118,4 +118,4 @@ def omop_concept_curie(concept_id):
     -------
     OMOP:{concept_id}
     """
-    return u'OMOP:{concept_id}'.format(concept_id=concept_id)
+    return 'OMOP:{concept_id}'.format(concept_id=concept_id)
