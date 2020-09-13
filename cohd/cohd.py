@@ -1,4 +1,4 @@
-u"""
+"""
 Columbia Open Health Data (COHD) API
 
 implemented in Flask
@@ -11,12 +11,13 @@ implemented in Flask
 (c) 2017 Tatonetti Lab
 """
 
-from flask import Flask, request, redirect, jsonify
+from flask import Flask, request, redirect
 from flask_cors import CORS
-import query_cohd_mysql
-from google_analytics import GoogleAnalytics
-import cohd_temporal
-import cohd_translator
+
+from .google_analytics import GoogleAnalytics
+from . import query_cohd_mysql
+from . import cohd_temporal
+from . import cohd_translator
 
 #########
 # INITS #
@@ -24,7 +25,7 @@ import cohd_translator
 
 app = Flask(__name__)
 CORS(app)
-app.config.from_pyfile(u'cohd_flask.conf')
+app.config.from_pyfile('cohd_flask.conf')
 
 
 ##########
@@ -32,156 +33,156 @@ app.config.from_pyfile(u'cohd_flask.conf')
 ##########
 
 
-@app.route(u'/')
-@app.route(u'/api')
-@app.route(u'/api/')
+@app.route('/')
+@app.route('/api')
+@app.route('/api/')
 def api_cohd():
-    google_analytics(endpoint=u'/')
+    google_analytics(endpoint='/')
     return redirect("http://cohd.smart-api.info/", code=302)
 
 
-@app.route(u'/api/omop/findConceptIDs')
-@app.route(u'/api/v1/omop/findConceptIDs')
+@app.route('/api/omop/findConceptIDs')
+@app.route('/api/v1/omop/findConceptIDs')
 def api_omop_reference():
-    return api_call(u'omop', u'findConceptIDs')
+    return api_call('omop', 'findConceptIDs')
 
 
-@app.route(u'/api/omop/concepts')
-@app.route(u'/api/v1/omop/concepts')
+@app.route('/api/omop/concepts')
+@app.route('/api/v1/omop/concepts')
 def api_omop_concepts():
-    return api_call(u'omop', u'concepts')
+    return api_call('omop', 'concepts')
 
 
-@app.route(u'/api/omop/conceptAncestors')
+@app.route('/api/omop/conceptAncestors')
 def api_omop_conceptAncestors():
-    return api_call(u'omop', u'conceptAncestors')
+    return api_call('omop', 'conceptAncestors')
 
 
-@app.route(u'/api/omop/conceptDescendants')
+@app.route('/api/omop/conceptDescendants')
 def api_omop_conceptDescendants():
-    return api_call(u'omop', u'conceptDescendants')
+    return api_call('omop', 'conceptDescendants')
 
 
-@app.route(u'/api/omop/mapToStandardConceptID')
+@app.route('/api/omop/mapToStandardConceptID')
 def api_omop_mapToStandardConceptID():
-    return api_call(u'omop', u'mapToStandardConceptID')
+    return api_call('omop', 'mapToStandardConceptID')
 
 
-@app.route(u'/api/omop/mapFromStandardConceptID')
+@app.route('/api/omop/mapFromStandardConceptID')
 def api_omop_mapFromStandardConceptID():
-    return api_call(u'omop', u'mapFromStandardConceptID')
+    return api_call('omop', 'mapFromStandardConceptID')
 
 
-@app.route(u'/api/omop/vocabularies')
+@app.route('/api/omop/vocabularies')
 def api_omop_vocabularies():
-    return api_call(u'omop', u'vocabularies')
+    return api_call('omop', 'vocabularies')
 
 
-@app.route(u'/api/omop/xrefToOMOP')
+@app.route('/api/omop/xrefToOMOP')
 def api_omop_xrefToOMOP():
-    return api_call(u'omop', u'xrefToOMOP')
+    return api_call('omop', 'xrefToOMOP')
 
 
-@app.route(u'/api/omop/xrefFromOMOP')
+@app.route('/api/omop/xrefFromOMOP')
 def api_omop_xrefFromOMOP():
-    return api_call(u'omop', u'xrefFromOMOP')
+    return api_call('omop', 'xrefFromOMOP')
 
 
-@app.route(u'/api/metadata/datasets')
+@app.route('/api/metadata/datasets')
 def api_metadata_datasets():
-    return api_call(u'metadata', u'datasets')
+    return api_call('metadata', 'datasets')
 
 
-@app.route(u'/api/metadata/domainCounts')
+@app.route('/api/metadata/domainCounts')
 def api_metadata_domainCounts():
-    return api_call(u'metadata', u'domainCounts')
+    return api_call('metadata', 'domainCounts')
 
 
-@app.route(u'/api/metadata/domainPairCounts')
+@app.route('/api/metadata/domainPairCounts')
 def api_metadata_domainPairCounts():
-    return api_call(u'metadata', u'domainPairCounts')
+    return api_call('metadata', 'domainPairCounts')
 
 
-@app.route(u'/api/metadata/patientCount')
+@app.route('/api/metadata/patientCount')
 def api_metadata_patientCount():
-    return api_call(u'metadata', u'patientCount')
+    return api_call('metadata', 'patientCount')
 
 
-@app.route(u'/api/frequencies/singleConceptFreq')
-@app.route(u'/api/v1/frequencies/singleConceptFreq')
+@app.route('/api/frequencies/singleConceptFreq')
+@app.route('/api/v1/frequencies/singleConceptFreq')
 def api_frequencies_singleConceptFreq():
-    return api_call(u'frequencies', u'singleConceptFreq')
+    return api_call('frequencies', 'singleConceptFreq')
 
 
-@app.route(u'/api/frequencies/pairedConceptFreq')
-@app.route(u'/api/v1/frequencies/pairedConceptFreq')
+@app.route('/api/frequencies/pairedConceptFreq')
+@app.route('/api/v1/frequencies/pairedConceptFreq')
 def api_frequencies_pairedConceptFreq():
-    return api_call(u'frequencies', u'pairedConceptFreq')
+    return api_call('frequencies', 'pairedConceptFreq')
 
 
-@app.route(u'/api/frequencies/associatedConceptFreq')
-@app.route(u'/api/v1/frequencies/associatedConceptFreq')
+@app.route('/api/frequencies/associatedConceptFreq')
+@app.route('/api/v1/frequencies/associatedConceptFreq')
 def api_frequencies_associatedConceptFreq():
-    return api_call(u'frequencies', u'associatedConceptFreq')
+    return api_call('frequencies', 'associatedConceptFreq')
 
 
-@app.route(u'/api/frequencies/associatedConceptDomainFreq')
-@app.route(u'/api/v1/frequencies/associatedConceptDomainFreq')
+@app.route('/api/frequencies/associatedConceptDomainFreq')
+@app.route('/api/v1/frequencies/associatedConceptDomainFreq')
 def api_frequencies_associatedConceptDomainFreq():
-    return api_call(u'frequencies', u'associatedConceptDomainFreq')
+    return api_call('frequencies', 'associatedConceptDomainFreq')
 
 
-@app.route(u'/api/frequencies/mostFrequentConcepts')
-@app.route(u'/api/v1/frequencies/mostFrequentConcepts')
+@app.route('/api/frequencies/mostFrequentConcepts')
+@app.route('/api/v1/frequencies/mostFrequentConcepts')
 def api_frequencies_mostFrequentConcept():
-    return api_call(u'frequencies', u'mostFrequentConcepts')
+    return api_call('frequencies', 'mostFrequentConcepts')
 
 
-@app.route(u'/api/association/chiSquare')
+@app.route('/api/association/chiSquare')
 def api_association_chiSquare():
-    return api_call(u'association', u'chiSquare')
+    return api_call('association', 'chiSquare')
 
 
-@app.route(u'/api/association/obsExpRatio')
+@app.route('/api/association/obsExpRatio')
 def api_association_obsExpRatio():
-    return api_call(u'association', u'obsExpRatio')
+    return api_call('association', 'obsExpRatio')
 
 
-@app.route(u'/api/association/relativeFrequency')
+@app.route('/api/association/relativeFrequency')
 def api_association_relativeFrequency():
-    return api_call(u'association', u'relativeFrequency')
+    return api_call('association', 'relativeFrequency')
 
 
-@app.route(u'/api/temporal/conceptAgeCounts')
+@app.route('/api/temporal/conceptAgeCounts')
 def api_temporal_conceptAgeCounts():
-    return api_call(u'temporal', u'conceptAgeCounts')
+    return api_call('temporal', 'conceptAgeCounts')
 
 
-@app.route(u'/api/temporal/conceptPairDeltaCounts')
+@app.route('/api/temporal/conceptPairDeltaCounts')
 def api_temporal_conceptPairDeltaCounts():
-    return api_call(u'temporal', u'conceptPairDeltaCounts')
+    return api_call('temporal', 'conceptPairDeltaCounts')
 
 
-@app.route(u'/api/temporal/findSimilarAgeDistributions')
+@app.route('/api/temporal/findSimilarAgeDistributions')
 def api_temporal_findSimilarAgeDistributions():
-    return api_call(u'temporal', u'findSimilarAgeDistributions')
+    return api_call('temporal', 'findSimilarAgeDistributions')
 
 
-@app.route(u'/api/temporal/sourceToTarget')
+@app.route('/api/temporal/sourceToTarget')
 def api_temporal_sourceToTarget():
-    return api_call(u'temporal', u'sourceToTarget')
+    return api_call('temporal', 'sourceToTarget')
 
 
-@app.route(u'/api/query', methods=['POST'])
-@app.route(u'/api/translator/query', methods=['POST'])
+@app.route('/api/query', methods=['POST'])
+@app.route('/api/translator/query', methods=['POST'])
 def api_translator_query():
-    return api_call(u'translator', u'query')
+    return api_call('translator', 'query')
 
 
-@app.route(u'/api/predicates', methods=['GET'])
-@app.route(u'/api/translator/predicates', methods=['GET'])
+@app.route('/api/predicates', methods=['GET'])
+@app.route('/api/translator/predicates', methods=['GET'])
 def api_transator_predicates():
-    return api_call(u'translator', u'predicates')
+    return api_call('translator', 'predicates')
 
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
@@ -190,7 +191,7 @@ def args_to_query(args, arg_names):
     query = {}
     for arg_name in arg_names:
         arg_value = args[arg_name]
-        if arg_value is None or arg_value == [u'']:
+        if arg_value is None or arg_value == ['']:
             return None
         query[arg_name] = arg_value
     return query
@@ -198,79 +199,79 @@ def args_to_query(args, arg_names):
 
 def google_analytics(endpoint=None, service=None, meta=None):
     # Report to Google Analytics iff the tracking ID is specified in the configuration file
-    if u'GA_TID' in app.config:
-        tid = app.config[u'GA_TID']
+    if 'GA_TID' in app.config:
+        tid = app.config['GA_TID']
         GoogleAnalytics.google_analytics(request, tid, endpoint, service, meta)
 
 
-@app.route(u'/api/query')
-@app.route(u'/api/v1/query')
+@app.route('/api/query')
+@app.route('/api/v1/query')
 def api_call(service=None, meta=None, query=None):
     if service is None:
-        service = request.args.get(u'service')
+        service = request.args.get('service')
     if meta is None:
-        meta = request.args.get(u'meta')
+        meta = request.args.get('meta')
 
-    print u"Service: ", service
-    print u"Meta/Method: ", meta
+    print("Service: ", service)
+    print("Meta/Method: ", meta)
 
-    if service == [u''] or service is None:
-        result = u'No service selected', 400
-    elif service == u'metadata':
-        if meta == u'datasets' or \
-                meta == u'domainCounts' or \
-                meta == u'domainPairCounts' or \
-                meta == u'patientCount':
+    if service == [''] or service is None:
+        result = 'No service selected', 400
+    elif service == 'metadata':
+        if meta == 'datasets' or \
+                meta == 'domainCounts' or \
+                meta == 'domainPairCounts' or \
+                meta == 'patientCount':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
-            result = u'meta not recognized', 400
-    elif service == u'omop':
-        if meta == u'findConceptIDs' or \
-                meta == u'concepts' or \
-                meta == u'conceptAncestors' or \
-                meta == u'conceptDescendants' or \
-                meta == u'mapToStandardConceptID' or \
-                meta == u'mapFromStandardConceptID' or \
-                meta == u'vocabularies' or \
-                meta == u'xrefToOMOP' or \
-                meta == u'xrefFromOMOP':
+            result = 'meta not recognized', 400
+    elif service == 'omop':
+        if meta == 'findConceptIDs' or \
+                meta == 'concepts' or \
+                meta == 'conceptAncestors' or \
+                meta == 'conceptDescendants' or \
+                meta == 'mapToStandardConceptID' or \
+                meta == 'mapFromStandardConceptID' or \
+                meta == 'vocabularies' or \
+                meta == 'xrefToOMOP' or \
+                meta == 'xrefFromOMOP':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
-            result = u'meta not recognized', 400
-    elif service == u'frequencies':
-        if meta == u'singleConceptFreq' or \
-                meta == u'pairedConceptFreq' or \
-                meta == u'associatedConceptFreq' or \
-                meta == u'mostFrequentConcepts' or \
-                meta == u'associatedConceptDomainFreq':
+            result = 'meta not recognized', 400
+    elif service == 'frequencies':
+        if meta == 'singleConceptFreq' or \
+                meta == 'pairedConceptFreq' or \
+                meta == 'associatedConceptFreq' or \
+                meta == 'mostFrequentConcepts' or \
+                meta == 'associatedConceptDomainFreq':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
-            result = u'meta not recognized', 400
-    elif service == u'association':
-        if meta == u'chiSquare' or \
-                meta == u'obsExpRatio' or \
-                meta == u'relativeFrequency':
+            result = 'meta not recognized', 400
+    elif service == 'association':
+        if meta == 'chiSquare' or \
+                meta == 'obsExpRatio' or \
+                meta == 'relativeFrequency':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
-            result = u'meta not recognized', 400
-    elif service == u'temporal':
-        if meta == u'conceptAgeCounts' or \
-                meta == u'conceptPairDeltaCounts' or \
-                meta == u'findSimilarAgeDistributions' or \
-                meta == u'sourceToTarget':
+            result = 'meta not recognized', 400
+    elif service == 'temporal':
+        if meta == 'conceptAgeCounts' or \
+                meta == 'conceptPairDeltaCounts' or \
+                meta == 'findSimilarAgeDistributions' or \
+                meta == 'sourceToTarget':
             result = cohd_temporal.query_cohd_temporal(service, meta, request.args)
         else:
-            result = u'meta not recognized', 400
-    elif service == u'translator':
-        if meta == u'query':
+            result = 'meta not recognized', 400
+    elif service == 'translator':
+        if meta == 'query':
             reasoner = cohd_translator.COHDTranslatorReasoner(request)
             result = reasoner.reason()
-        elif meta == u'predicates':
+        elif meta == 'predicates':
             result = cohd_translator.translator_predicates()
         else:
-            result = u'meta not recognized', 400
+            result = 'meta not recognized', 400
     else:
-        result = u'service not recognized', 400
+        result = 'service not recognized', 400
 
     # Report the API call to Google Analytics
     google_analytics(service=service, meta=meta)
@@ -278,5 +279,5 @@ def api_call(service=None, meta=None, query=None):
     return result
 
 
-if __name__ == u"__main__":
-    app.run(host=u'localhost')
+if __name__ == "__main__":
+    app.run(host='localhost')

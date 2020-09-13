@@ -5,12 +5,14 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 Current version 0.9.1
 """
 
-import query_cohd_mysql
 from datetime import datetime
-from flask import jsonify
 from numbers import Number
-from cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
-from omop_xref import ConceptMapper
+
+from flask import jsonify
+
+from . import query_cohd_mysql
+from .cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
+from .omop_xref import ConceptMapper
 
 
 def translator_predicates():
@@ -21,29 +23,29 @@ def translator_predicates():
     json response object
     """
     return jsonify({
-        u'biolink:Disease': {
-            u'biolink:Disease': [u'biolink:correlated_with'],
-            u'biolink:Drug': [u'biolink:correlated_with'],
-            u'biolink:Procedure': [u'biolink:correlated_with'],
-            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        'biolink:Disease': {
+            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:Drug': ['biolink:correlated_with'],
+            'biolink:Procedure': ['biolink:correlated_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
-        u'biolink:Drug': {
-            u'biolink:Disease': [u'biolink:correlated_with'],
-            u'biolink:Drug': [u'biolink:correlated_with'],
-            u'biolink:Procedure': [u'biolink:correlated_with'],
-            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        'biolink:Drug': {
+            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:Drug': ['biolink:correlated_with'],
+            'biolink:Procedure': ['biolink:correlated_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
-        u'biolink:Procedure': {
-            u'biolink:Disease': [u'biolink:correlated_with'],
-            u'biolink:Drug': [u'biolink:correlated_with'],
-            u'biolink:Procedure': [u'biolink:correlated_with'],
-            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        'biolink:Procedure': {
+            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:Drug': ['biolink:correlated_with'],
+            'biolink:Procedure': ['biolink:correlated_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
-        u'biolink:PopulationOfIndividualOrganisms': {
-            u'biolink:Disease': [u'biolink:correlated_with'],
-            u'biolink:Drug': [u'biolink:correlated_with'],
-            u'biolink:Procedure': [u'biolink:correlated_with'],
-            u'biolink:PopulationOfIndividualOrganisms': [u'biolink:correlated_with']
+        'biolink:PopulationOfIndividualOrganisms': {
+            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:Drug': ['biolink:correlated_with'],
+            'biolink:Procedure': ['biolink:correlated_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
     })
 
@@ -99,17 +101,17 @@ class COHDTranslatorReasoner:
             return blm_type
 
         # Remove any existing prefix and add biolink prefix
-        suffix = blm_type.split(u':')[-1]
-        blm_type = u'biolink:' + suffix
+        suffix = blm_type.split(':')[-1]
+        blm_type = 'biolink:' + suffix
 
         # Convert snake case to camel case. Keep the original input if not in this dictionary.
         supported_type_conversions = {
-            u'biolink:device': u'biolink:Device',
-            u'biolink:disease': u'biolink:Disease',
-            u'biolink:drug': u'biolink:Drug',
-            u'biolink:phenomenon': u'biolink:Phenomenon',
-            u'biolink:population_of_individual_organisms': u'biolink:PopulationOfIndividualOrganisms',
-            u'biolink:procedure': u'biolink:Procedure'
+            'biolink:device': 'biolink:Device',
+            'biolink:disease': 'biolink:Disease',
+            'biolink:drug': 'biolink:Drug',
+            'biolink:phenomenon': 'biolink:Phenomenon',
+            'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
+            'biolink:procedure': 'biolink:Procedure'
         }
         blm_type = supported_type_conversions.get(blm_type, blm_type)
 
@@ -132,26 +134,26 @@ class COHDTranslatorReasoner:
         self._json_data = self._request.get_json()
         if self._json_data is None:
             self._valid_query = False
-            self._invalid_query_response = (u'Missing JSON request body', 400)
+            self._invalid_query_response = ('Missing JSON request body', 400)
             return self._valid_query, self._invalid_query_response
 
         # Check for the query message
-        query_message = self._json_data.get(u'message')
+        query_message = self._json_data.get('message')
         if query_message is None or not query_message:
-            return False, (u'message missing from JSON data or empty', 400)
+            return False, ('message missing from JSON data or empty', 400)
 
-        query_graph = query_message.get(u'query_graph')
+        query_graph = query_message.get('query_graph')
         if query_graph is None or not query_graph:
             self._valid_query = False
-            self._invalid_query_response = (u'query_graph missing from query_message or empty', 400)
+            self._invalid_query_response = ('query_graph missing from query_message or empty', 400)
             return self._valid_query, self._invalid_query_response
 
         # Check the structure of the query graph. Should have 2 nodes and 1 edge
-        nodes = query_graph.get(u'nodes')
-        edges = query_graph.get(u'edges')
+        nodes = query_graph.get('nodes')
+        edges = query_graph.get('edges')
         if nodes is None or len(nodes) != 2 or edges is None or len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = (u'Unsupported query', 400)
+            self._invalid_query_response = ('Unsupported query', 400)
             return self._valid_query, self._invalid_query_response
 
         # # Check query_options
@@ -181,8 +183,8 @@ class COHDTranslatorReasoner:
         assert self._query_graph is not None and query_node_id, \
             'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes()'
 
-        for query_node in self._query_graph[u'nodes']:
-            if query_node[u'id'] == query_node_id:
+        for query_node in self._query_graph['nodes']:
+            if query_node['id'] == query_node_id:
                 return query_node
 
         return None
@@ -199,7 +201,7 @@ class COHDTranslatorReasoner:
         True if input is valid, otherwise (False, message)
         """
         # Defaults when options are not specified in request body
-        default_method = u'obsExpRatio'
+        default_method = 'obsExpRatio'
         default_min_cooccurrence = 0
         default_confidence_interval = 0.99
         default_dataset_id = 3
@@ -209,14 +211,14 @@ class COHDTranslatorReasoner:
 
         # set of edge types that are supported by the COHD Reasoner
         supported_edge_types = {
-            u'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
-            u'biolink:related_to',  # Ancestor of biolink:correlated_with
+            'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
+            'biolink:related_to',  # Ancestor of biolink:correlated_with
             # Allow edge without biolink prefix
-            u'correlated_with',
-            u'related_to',
+            'correlated_with',
+            'related_to',
             # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
-            u'biolink:association',
-            u'association',
+            'biolink:association',
+            'association',
         }
 
         # Check that the query input has the correct structure
@@ -225,53 +227,53 @@ class COHDTranslatorReasoner:
             return input_check
 
         # Get options that don't fit into query_graph structure from query_options
-        self._query_options = self._json_data.get(u'query_options')
+        self._query_options = self._json_data.get('query_options')
         if self._query_options is None:
             # No query options provided. Get default options for all query options (below)
             self._query_options = dict()
 
         # Get the query method and check that it matches a supported type
-        self._method = self._query_options.get(u'method')
+        self._method = self._query_options.get('method')
         if self._method is None or not self._method or not isinstance(self._method, str):
             self._method = default_method
-            self._query_options[u'method'] = default_method
+            self._query_options['method'] = default_method
         else:
-            if self._method not in [u'relativeFrequency', u'obsExpRatio', u'chiSquare']:
+            if self._method not in ['relativeFrequency', 'obsExpRatio', 'chiSquare']:
                 self._valid_query = False
-                self._invalid_query_response = (u'Query method "{method}" not supported'.format(method=self._method),
+                self._invalid_query_response = ('Query method "{method}" not supported'.format(method=self._method),
                                                 400)
 
         # Get the query_option for dataset ID
-        self._dataset_id = self._query_options.get(u'dataset_id')
+        self._dataset_id = self._query_options.get('dataset_id')
         if self._dataset_id is None or not self._dataset_id or not isinstance(self._dataset_id, Number):
             self._dataset_id = default_dataset_id
-            self._query_options[u'dataset_id'] = default_dataset_id
+            self._query_options['dataset_id'] = default_dataset_id
 
         # Get the query_option for minimum co-occurrence
-        self._min_cooccurrence = self._query_options.get(u'min_cooccurrence')
+        self._min_cooccurrence = self._query_options.get('min_cooccurrence')
         if self._min_cooccurrence is None or not isinstance(self._min_cooccurrence, Number):
             self._min_cooccurrence = default_min_cooccurrence
-            self._query_options[u'min_cooccurrence'] = default_min_cooccurrence
+            self._query_options['min_cooccurrence'] = default_min_cooccurrence
 
         # Get the query_option for confidence_interval. Only used for obsExpRatio. If not specified, use default.
-        self._confidence_interval = self._query_options.get(u'confidence_interval')
+        self._confidence_interval = self._query_options.get('confidence_interval')
         if self._confidence_interval is None or not isinstance(self._confidence_interval, Number) or \
                 self._confidence_interval < 0 or self._confidence_interval >= 1:
             self._confidence_interval = default_confidence_interval
-            self._query_options[u'confidence_interval'] = default_confidence_interval
+            self._query_options['confidence_interval'] = default_confidence_interval
 
         # Get the query_option for local_oxo
-        self._local_oxo = self._query_options.get(u'local_oxo')
+        self._local_oxo = self._query_options.get('local_oxo')
         if self._local_oxo is None or not isinstance(self._local_oxo, bool):
             self._local_oxo = default_local_oxo
 
         # Get the query_option for maximum mapping distance
-        self._mapping_distance = self._query_options.get(u'mapping_distance')
+        self._mapping_distance = self._query_options.get('mapping_distance')
         if self._mapping_distance is None or not isinstance(self._mapping_distance, Number):
             self._mapping_distance = default_mapping_distance
 
         # Get query_option for ontology_targets
-        ontology_map = self._query_options.get(u'ontology_targets')
+        ontology_map = self._query_options.get('ontology_targets')
         if ontology_map and isinstance(ontology_map, dict):
             self._concept_mapper = BiolinkConceptMapper(ontology_map, distance=self._mapping_distance,
                                                         local_oxo=self._local_oxo)
@@ -280,23 +282,23 @@ class COHDTranslatorReasoner:
             self._concept_mapper = BiolinkConceptMapper(distance=self._mapping_distance, local_oxo=self._local_oxo)
 
         # Get query_option for including only Biolink nodes
-        self._biolink_only = self._query_options.get(u'biolink_only')
+        self._biolink_only = self._query_options.get('biolink_only')
         if self._biolink_only is None or not isinstance(self._biolink_only, bool):
             self._biolink_only = default_biolink_only
 
         # Get query information from query_graph
-        self._query_graph = self._json_data[u'message'][u'query_graph']
+        self._query_graph = self._json_data['message']['query_graph']
 
         # Check that the query_graph is supported by the COHD reasoner (1-hop query)
-        edges = self._query_graph[u'edges']
+        edges = self._query_graph['edges']
         if len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = (u'COHD reasoner only supports 1-hop queries', 422)
+            self._invalid_query_response = ('COHD reasoner only supports 1-hop queries', 422)
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner
         edge = edges[0]
-        edge_types = edge[u'type']
+        edge_types = edge['type']
         if not isinstance(edge_types, list):
             # In TRAPI, QEdge type can be string or list. If it's not currently a list, convert to a list to simplify
             # following processing
@@ -308,49 +310,49 @@ class COHDTranslatorReasoner:
                 break
         if not edge_supported:
             self._valid_query = False
-            self._invalid_query_response = (u'QEdge.type not supported by COHD Reasoner API', 422)
+            self._invalid_query_response = ('QEdge.type not supported by COHD Reasoner API', 422)
             return self._valid_query, self._invalid_query_response
 
         # Get concept_id_1
-        source_node = self._find_query_node(edge[u'source_id'])
-        curie_1 = source_node[u'curie']  # source node must contain a CURIE
+        source_node = self._find_query_node(edge['source_id'])
+        curie_1 = source_node['curie']  # source node must contain a CURIE
         self._source_concept_mapping = self._concept_mapper.map_to_omop(curie_1)
         if self._source_concept_mapping:
-            self._concept_id_1 = self._source_concept_mapping[u'omop_concept_id']
+            self._concept_id_1 = self._source_concept_mapping['omop_concept_id']
 
             # Keep track of this mapping in the query_graph for the response
-            source_node[u'mapped_omop_concept'] = self._source_concept_mapping
+            source_node['mapped_omop_concept'] = self._source_concept_mapping
         else:
             self._valid_query = False
-            self._invalid_query_response = (u'Could not map source node to OMOP concept', 422)
+            self._invalid_query_response = ('Could not map source node to OMOP concept', 422)
             return self._valid_query, self._invalid_query_response
 
         # Check the formatting of node 1's type (even though it's not used)
-        if u'type' in source_node:
-            source_node[u'type'] = COHDTranslatorReasoner._fix_blm_types(source_node[u'type'])
+        if 'type' in source_node:
+            source_node['type'] = COHDTranslatorReasoner._fix_blm_types(source_node['type'])
 
         # Get the desired association concept or type
-        target_node = self._find_query_node(edge[u'target_id'])
-        curie_2 = target_node.get(u'curie')
-        node_type_2 = target_node.get(u'type')
+        target_node = self._find_query_node(edge['target_id'])
+        curie_2 = target_node.get('curie')
+        node_type_2 = target_node.get('type')
         if curie_2 is not None and curie_2:
             # If CURIE of target node is specified, then query the association between concept_1 and concept_2
             self._domain_ids = None
             self._target_concept_mapping = self._concept_mapper.map_to_omop(curie_2)
 
             if self._target_concept_mapping:
-                self._concept_id_2 = self._target_concept_mapping[u'omop_concept_id']
+                self._concept_id_2 = self._target_concept_mapping['omop_concept_id']
 
                 # Keep track of this mapping in the query graph for the response
-                target_node[u'mapped_omop_concept'] = self._target_concept_mapping
+                target_node['mapped_omop_concept'] = self._target_concept_mapping
             else:
                 self._valid_query = False
-                self._invalid_query_response = (u'Could not map target node to OMOP concept', 422)
+                self._invalid_query_response = ('Could not map target node to OMOP concept', 422)
                 return self._valid_query, self._invalid_query_response
         elif node_type_2 is not None and node_type_2:
             # Attempt to correct the node type if necessary
             node_type_2 = COHDTranslatorReasoner._fix_blm_types(node_type_2)
-            target_node[u'type'] = node_type_2
+            target_node['type'] = node_type_2
 
             # If CURIE is not specified and target node's type is specified, then query the association between
             # concept_1 and all concepts in the domain
@@ -358,14 +360,14 @@ class COHDTranslatorReasoner:
             self._domain_ids = map_blm_class_to_omop_domain(node_type_2)
 
             # Keep track of this mapping in the query graph for the response
-            target_node[u'mapped_omop_domains'] = self._domain_ids
+            target_node['mapped_omop_domains'] = self._domain_ids
         else:
             # No CURIE or type specified, query for associations against all concepts
             self._concept_id_2 = None
             self._domain_ids = None
 
         # Get the desired maximum number of results
-        max_results = self._json_data.get(u'max_results')
+        max_results = self._json_data.get('max_results')
         if max_results:
             self._max_results = min(max_results, self._max_results)  # Don't allow user to specify more than default
 
@@ -378,13 +380,13 @@ class COHDTranslatorReasoner:
                                                  kargs={'cooccurrence': self._min_cooccurrence}))
 
         # Get query_option for threshold. Don't use filter if not specified (i.e., no default option for threshold)
-        self._threshold = self._query_options.get(u'threshold')
+        self._threshold = self._query_options.get('threshold')
         if self._threshold is not None and isinstance(self._threshold, Number):
             self._criteria.append(ResultCriteria(function=criteria_threshold,
                                                  kargs={'threshold': self._threshold}))
 
         # If the method is obsExpRatio, add a criteria for confidence interval
-        if self._method == u'obsexpratio' and self._confidence_interval > 0:
+        if self._method == 'obsexpratio' and self._confidence_interval > 0:
             self._criteria.append(ResultCriteria(function=criteria_confidence,
                                                  kargs={'alpha': self._confidence_interval}))
 
@@ -414,7 +416,7 @@ class COHDTranslatorReasoner:
                                                                      domain_id=domain_id,
                                                                      confidence=self._confidence_interval)
                     if new_results:
-                        results.extend(new_results[u'results'])
+                        results.extend(new_results['results'])
             else:
                 # Either Node 2 was specified by a CURIE or no type (domain) was specified for type 2. Query the
                 # associations between Node 1 and Node 2 or between Node 1 and all domains
@@ -423,7 +425,7 @@ class COHDTranslatorReasoner:
                                                                   dataset_id=self._dataset_id,
                                                                   domain_id=None,
                                                                   confidence=self._confidence_interval)
-                results = json_results[u'results']
+                results = json_results['results']
 
             # Convert results from COHD format to Translator Reasoner standard
             trm = TranslatorResponseMessage(self._query_graph, self._query_options, self._criteria,
@@ -476,15 +478,15 @@ def criteria_min_cooccurrence(cohd_result, cooccurrence):
     -------
     True if passes
     """
-    if u'n_c1_c2' in cohd_result:
+    if 'n_c1_c2' in cohd_result:
         # chi-square
-        return cohd_result[u'n_c1_c2'] >= cooccurrence
-    elif u'observed_count' in cohd_result:
+        return cohd_result['n_c1_c2'] >= cooccurrence
+    elif 'observed_count' in cohd_result:
         # obsExpRatio
-        return cohd_result[u'observed_count'] >= cooccurrence
-    elif u'concept_pair_count' in cohd_result:
+        return cohd_result['observed_count'] >= cooccurrence
+    elif 'concept_pair_count' in cohd_result:
         # relative frequency
-        return cohd_result[u'concept_pair_count'] >= cooccurrence
+        return cohd_result['concept_pair_count'] >= cooccurrence
     else:
         return False
 
@@ -505,18 +507,18 @@ def criteria_threshold(cohd_result, threshold):
     -------
     True if passes
     """
-    if u'p-value' in cohd_result:
+    if 'p-value' in cohd_result:
         # chi-square
-        return cohd_result[u'p-value'] < threshold
-    elif u'ln_ratio' in cohd_result:
+        return cohd_result['p-value'] < threshold
+    elif 'ln_ratio' in cohd_result:
         # obsExpRatio
         if threshold >= 0:
-            return cohd_result[u'ln_ratio'] >= threshold
+            return cohd_result['ln_ratio'] >= threshold
         else:
-            return cohd_result[u'ln_ratio'] <= threshold
-    elif u'relative_frequency' in cohd_result:
+            return cohd_result['ln_ratio'] <= threshold
+    elif 'relative_frequency' in cohd_result:
         # relative frequency
-        return cohd_result[u'relative_frequency'] >= threshold
+        return cohd_result['relative_frequency'] >= threshold
     else:
         return False
 
@@ -534,9 +536,9 @@ def criteria_confidence(cohd_result, alpha):
     -------
     True if significant
     """
-    if u'ln_ratio' in cohd_result:
+    if 'ln_ratio' in cohd_result:
         # obsExpFreq
-        ci = ln_ratio_ci(cohd_result[u'observed_count'], cohd_result[u'ln_ratio'], alpha)
+        ci = ln_ratio_ci(cohd_result['observed_count'], cohd_result['ln_ratio'], alpha)
         return ci_significance(ci)
     else:
         # relativeFrequency doesn't have a good cutoff for confidence interval, and chiSquare uses
@@ -576,8 +578,8 @@ class TranslatorResponseMessage:
         self.nodes = {}
         self.results = []
         self.knowledge_graph = {
-            u'nodes': [],
-            u'edges': []
+            'nodes': [],
+            'edges': []
         }
         self.query_options = query_options
         self.max_results = max_results
@@ -588,18 +590,18 @@ class TranslatorResponseMessage:
 
         # Save info from query graph
         self.query_graph = query_graph
-        query_edge = query_graph[u'edges'][0]
-        self.query_edge_id = query_edge[u'id']
-        self.query_edge_type = query_edge[u'type']
-        self.query_source_node_id = query_graph[u'edges'][0][u'source_id']
-        self.query_target_node_id = query_graph[u'edges'][0][u'target_id']
+        query_edge = query_graph['edges'][0]
+        self.query_edge_id = query_edge['id']
+        self.query_edge_type = query_edge['type']
+        self.query_source_node_id = query_graph['edges'][0]['source_id']
+        self.query_target_node_id = query_graph['edges'][0]['target_id']
 
         # Get the input CURIEs from the query graph
-        for qnode in self.query_graph[u'nodes']:
-            if qnode[u'id'] == self.query_source_node_id:
-                self.query_source_node_curie = qnode.get(u'curie', None)
-            elif qnode[u'id'] == self.query_target_node_id:
-                self.query_target_node_curie = qnode.get(u'curie', None)
+        for qnode in self.query_graph['nodes']:
+            if qnode['id'] == self.query_source_node_id:
+                self.query_source_node_curie = qnode.get('curie', None)
+            elif qnode['id'] == self.query_target_node_id:
+                self.query_target_node_curie = qnode.get('curie', None)
 
         if cohd_results is not None:
             for result in cohd_results:
@@ -627,20 +629,20 @@ class TranslatorResponseMessage:
                 return
 
         # Get node for concept 1
-        concept_1_id = cohd_result[u'concept_id_1']
+        concept_1_id = cohd_result['concept_id_1']
         node_1 = self.get_node(concept_1_id, query_node_curie=self.query_source_node_curie)
 
-        if self.biolink_only and not node_1.get(u'biolink_compliant', False):
+        if self.biolink_only and not node_1.get('biolink_compliant', False):
             # Only include results when node_1 maps to biolink
             return
 
         # Get node for concept 2
-        concept_2_id = cohd_result[u'concept_id_2']
-        concept_2_name = cohd_result.get(u'concept_2_name')
-        concept_2_domain = cohd_result.get(u'concept_2_domain')
+        concept_2_id = cohd_result['concept_id_2']
+        concept_2_name = cohd_result.get('concept_2_name')
+        concept_2_domain = cohd_result.get('concept_2_domain')
         node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_target_node_curie)
 
-        if self.biolink_only and not node_2.get(u'biolink_compliant', False):
+        if self.biolink_only and not node_2.get('biolink_compliant', False):
             # Only include results when node_2 maps to biolink
             return
 
@@ -664,19 +666,19 @@ class TranslatorResponseMessage:
         result
         """
         result = {
-            u'node_bindings': [
+            'node_bindings': [
                 {
-                    u'qg_id': self.query_source_node_id,
-                    u'kg_id': kg_node_1[u'id']
+                    'qg_id': self.query_source_node_id,
+                    'kg_id': kg_node_1['id']
                 },
                 {
-                    u'qg_id': self.query_target_node_id,
-                    u'kg_id': kg_node_2[u'id']
+                    'qg_id': self.query_target_node_id,
+                    'kg_id': kg_node_2['id']
                 }
             ],
-            u'edge_bindings': [{
-                u'qg_id': self.query_edge_id,
-                u'kg_id': kg_edge[u'id']
+            'edge_bindings': [{
+                'qg_id': self.query_edge_id,
+                'kg_id': kg_edge['id']
             }]
         }
         self.results.append(result)
@@ -703,14 +705,14 @@ class TranslatorResponseMessage:
             # Create the node
             if concept_name is None or domain is None:
                 # Concept information not specified, lookup concept definition
-                concept_name = concept_name if concept_name is not None else u''
-                domain = domain if domain is not None else u''
+                concept_name = concept_name if concept_name is not None else ''
+                domain = domain if domain is not None else ''
                 concept_def = query_cohd_mysql.omop_concept_definition(concept_id)
 
                 if concept_def is not None and not concept_name:
-                    concept_name = concept_def[u'concept_name']
+                    concept_name = concept_def['concept_name']
                 if concept_def is not None and not domain:
-                    domain = concept_def[u'domain_id']
+                    domain = concept_def['domain_id']
 
             # Map to Biolink Model or other target ontologies
             blm_type = map_omop_domain_to_blm_class(domain)
@@ -731,8 +733,8 @@ class TranslatorResponseMessage:
 
                 # Find the label from the mappings
                 for mapping in mappings:
-                    if mapping[u'target_curie'] == query_node_curie:
-                        primary_label = mapping[u'target_label']
+                    if mapping['target_curie'] == query_node_curie:
+                        primary_label = mapping['target_label']
                         break
             else:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
@@ -743,7 +745,7 @@ class TranslatorResponseMessage:
                         break
 
                     # Get all mappings with the current distance
-                    m_d = [m for m in mappings if m[u'distance'] == d]
+                    m_d = [m for m in mappings if m['distance'] == d]
 
                     # Look for the first matching prefix in the list of biolink prefixes
                     for prefix in blm_prefixes:
@@ -751,52 +753,52 @@ class TranslatorResponseMessage:
                             break
 
                         for m in m_d:
-                            if m[u'target_curie'].split(u':')[0] == prefix:
-                                primary_curie = m[u'target_curie']
-                                primary_label = m[u'target_label']
+                            if m['target_curie'].split(':')[0] == prefix:
+                                primary_curie = m['target_curie']
+                                primary_label = m['target_label']
                                 found = True
                                 break
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
-            internal_id = u'{id:06d}'.format(id=len(self.nodes))
+            internal_id = '{id:06d}'.format(id=len(self.nodes))
             node = {
-                u'omop_id': concept_id,
-                u'name': concept_name,
-                u'domain': domain,
-                u'internal_id': internal_id,
-                u'kg_node': {
-                    u'id': primary_curie,
-                    u'name': primary_label,
-                    u'type': [blm_type],
-                    u'attributes': [
+                'omop_id': concept_id,
+                'name': concept_name,
+                'domain': domain,
+                'internal_id': internal_id,
+                'kg_node': {
+                    'id': primary_curie,
+                    'name': primary_label,
+                    'type': [blm_type],
+                    'attributes': [
                         {
-                            u'name': u'omop_concept_id',
-                            u'value': omop_curie,
-                            u'type': u'EDAM:data_1087',  # Ontology concept ID
-                            u'source': u'OMOP',
+                            'name': 'omop_concept_id',
+                            'value': omop_curie,
+                            'type': 'EDAM:data_1087',  # Ontology concept ID
+                            'source': 'OMOP',
                         },
                         {
-                            u'name': u'omop_concept_name',
-                            u'value': concept_name,
-                            u'type': u'EDAM:data_2339',  # Ontology concept name
-                            u'source': u'OMOP',
+                            'name': 'omop_concept_name',
+                            'value': concept_name,
+                            'type': 'EDAM:data_2339',  # Ontology concept name
+                            'source': 'OMOP',
                         },
                         {
-                            u'name': u'omop_domain',
-                            u'value': domain,
-                            u'type': u'EDAM:data_0967',  # Ontology concept data
-                            u'source': u'OMOP',
+                            'name': 'omop_domain',
+                            'value': domain,
+                            'type': 'EDAM:data_0967',  # Ontology concept data
+                            'source': 'OMOP',
                         },
                         {
-                            u'name': u'synonyms',
-                            u'value': mappings,
-                            u'type': u'EDAM:data_3509',  # Ontology mapping
-                            u'source': u'COHD',
+                            'name': 'synonyms',
+                            'value': mappings,
+                            'type': 'EDAM:data_3509',  # Ontology mapping
+                            'source': 'COHD',
                         }
                     ]
                 },
-                u'in_kgraph': False,
-                u'biolink_compliant': found
+                'in_kgraph': False,
+                'biolink_compliant': found
             }
             self.nodes[concept_id] = node
 
@@ -813,10 +815,10 @@ class TranslatorResponseMessage:
         -------
         node
         """
-        kg_node = node[u'kg_node']
-        if not node[u'in_kgraph']:
-            self.knowledge_graph[u'nodes'].append(kg_node)
-            node[u'in_kgraph'] = True
+        kg_node = node['kg_node']
+        if not node['in_kgraph']:
+            self.knowledge_graph['nodes'].append(kg_node)
+            node['in_kgraph'] = True
 
         return kg_node
 
@@ -838,71 +840,71 @@ class TranslatorResponseMessage:
         kg_node_2 = self.add_kg_node(node_2)
 
         # Mint a new identifier
-        ke_id = 'ke{id:06d}'.format(id=len(self.knowledge_graph[u'edges']))
+        ke_id = 'ke{id:06d}'.format(id=len(self.knowledge_graph['edges']))
 
         # Add properties from COHD results to the edge attributes
         attributes = list()
-        if u'p-value' in cohd_result:
+        if 'p-value' in cohd_result:
             attributes.append({
-                u'name': u'p-value',
-                u'value': cohd_result[u'p-value'],
-                u'type': u'EDAM:data_1669',  # P-value
-                u'url': u'http://edamontology.org/data_1669',
-                u'source': u'COHD'
+                'name': 'p-value',
+                'value': cohd_result['p-value'],
+                'type': 'EDAM:data_1669',  # P-value
+                'url': 'http://edamontology.org/data_1669',
+                'source': 'COHD'
             })
-        if u'confidence_interval' in cohd_result:
+        if 'confidence_interval' in cohd_result:
             attributes.append({
-                u'name': u'confidence_interval',
-                u'value': cohd_result[u'confidence_interval'],
-                u'type': u'EDAM:data_0951',  # Statistical estimate score
-                u'source': u'COHD'
+                'name': 'confidence_interval',
+                'value': cohd_result['confidence_interval'],
+                'type': 'EDAM:data_0951',  # Statistical estimate score
+                'source': 'COHD'
             })
-        if u'dataset_id' in cohd_result:
+        if 'dataset_id' in cohd_result:
             attributes.append({
-                u'name': u'dataset_id',
-                u'value': cohd_result[u'dataset_id'],
-                u'type': u'EDAM:data_1048',  # Database ID
-                u'source': u'COHD'
+                'name': 'dataset_id',
+                'value': cohd_result['dataset_id'],
+                'type': 'EDAM:data_1048',  # Database ID
+                'source': 'COHD'
             })
-        if u'expected_count' in cohd_result:
+        if 'expected_count' in cohd_result:
             attributes.append({
-                u'name': u'expected_count',
-                u'value': cohd_result[u'expected_count'],
-                u'type': u'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                u'source': u'COHD'
+                'name': 'expected_count',
+                'value': cohd_result['expected_count'],
+                'type': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
+                'source': 'COHD'
             })
         # Some properties are handled together as a group based on their type
-        for key in [u'ln_ratio', u'relative_frequency']:
+        for key in ['ln_ratio', 'relative_frequency']:
             if key in cohd_result:
                 attributes.append({
-                    u'name': key,
-                    u'value': cohd_result[key],
-                    u'type': u'EDAM:data_1772',  # Score
-                    u'source': u'COHD'
+                    'name': key,
+                    'value': cohd_result[key],
+                    'type': 'EDAM:data_1772',  # Score
+                    'source': 'COHD'
                 })
-        for key in [u'observed_count',  # From ln_ratio
-                    u'concept_pair_count', u'concept_2_count',  # From relative_frequency
-                    u'n', u'n_c1', u'n_c1_c2', u'n_c1_~c2', u'n_c2', u'n_~c1_c2', u'n_~c1_~c2'  # From chi_square
+        for key in ['observed_count',  # From ln_ratio
+                    'concept_pair_count', 'concept_2_count',  # From relative_frequency
+                    'n', 'n_c1', 'n_c1_c2', 'n_c1_~c2', 'n_c2', 'n_~c1_c2', 'n_~c1_~c2'  # From chi_square
                     ]:
             if key in cohd_result:
                 attributes.append({
-                    u'name': key,
-                    u'value': cohd_result[key],
-                    u'type': u'EDAM:data_0006',  # Data
-                    u'source': u'COHD'
+                    'name': key,
+                    'value': cohd_result[key],
+                    'type': 'EDAM:data_0006',  # Data
+                    'source': 'COHD'
                 })
 
         # Set the knowledge graph edge properties
         kg_edge = {
-            u'id': ke_id,
-            u'type': self.query_edge_type,
-            u'source_id': omop_concept_curie(node_1[u'omop_id']),
-            u'target_id': omop_concept_curie(node_2[u'omop_id']),
-            u'attributes': attributes
+            'id': ke_id,
+            'type': self.query_edge_type,
+            'source_id': omop_concept_curie(node_1['omop_id']),
+            'target_id': omop_concept_curie(node_2['omop_id']),
+            'attributes': attributes
         }
 
         # Add the new edge
-        self.knowledge_graph[u'edges'].append(kg_edge)
+        self.knowledge_graph['edges'].append(kg_edge)
 
         return kg_node_1, kg_node_2, kg_edge
 
@@ -914,24 +916,24 @@ class TranslatorResponseMessage:
         Response message with JSON data in Reasoner Std API format
         """
         return jsonify({
-            u'context': u'https://biolink.github.io/biolink-model/context.jsonld',
-            u'type': u'translator_reasoner_message',
-            u'reasoner_id': u'COHD',
-            u'tool_version': u'COHD 2.2.0',
-            u'schema_version': u'0.9.2',
-            u'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            u'n_results': len(self.results),
-            u'message_code': u'OK',
-            u'code_description': u'{n} result(s) found'.format(n=len(self.results)),
-            u'query_options': self.query_options,
-            u'results': self.results,
-            u'query_graph': self.query_graph,
-            u'knowledge_graph': self.knowledge_graph
+            'context': 'https://biolink.github.io/biolink-model/context.jsonld',
+            'type': 'translator_reasoner_message',
+            'reasoner_id': 'COHD',
+            'tool_version': 'COHD 2.2.0',
+            'schema_version': '0.9.2',
+            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'n_results': len(self.results),
+            'message_code': 'OK',
+            'code_description': '{n} result(s) found'.format(n=len(self.results)),
+            'query_options': self.query_options,
+            'results': self.results,
+            'query_graph': self.query_graph,
+            'knowledge_graph': self.knowledge_graph
         })
 
 
 mappings_domain_ontology = {
-    u'_DEFAULT': [u'ICD9CM', u'RxNorm', u'UMLS', u'DOID', u'MONDO']
+    '_DEFAULT': ['ICD9CM', 'RxNorm', 'UMLS', 'DOID', 'MONDO']
 }
 
 
@@ -950,12 +952,12 @@ def map_blm_class_to_omop_domain(node_type):
     If normalized successfully: List of OMOP domains, e.g., ['Drug']; Otherwise: None
     """
     mappings = {
-        u'biolink:Device': [u'Device'],
-        u'biolink:Disease': [u'Condition'],
-        u'biolink:Drug': [u'Drug'],
-        u'biolink:Phenomenon': [u'Measurement', u'Observation'],
-        u'biolink:PopulationOfIndividualOrganisms': [u'Ethnicity', u'Gender', u'Race'],
-        u'biolink:Procedure': [u'Procedure']
+        'biolink:Device': ['Device'],
+        'biolink:Disease': ['Condition'],
+        'biolink:Drug': ['Drug'],
+        'biolink:Phenomenon': ['Measurement', 'Observation'],
+        'biolink:PopulationOfIndividualOrganisms': ['Ethnicity', 'Gender', 'Race'],
+        'biolink:Procedure': ['Procedure']
     }
     return mappings.get(node_type)
 
@@ -972,17 +974,17 @@ def map_omop_domain_to_blm_class(domain):
     If normalized successfully: Biolink Model semantic type. If no mapping found, use NamedThing
     """
     mappings = {
-        u'Condition': u'biolink:Disease',
-        u'Device': u'biolink:Device',
-        u'Drug': u'biolink:Drug',
-        u'Ethnicity': u'biolink:PopulationOfIndividualOrganisms',
-        u'Gender': u'biolink:PopulationOfIndividualOrganisms',
-        u'Measurement': u'biolink:Phenomenon',
-        u'Observation': u'biolink:Phenomenon',
-        u'Procedure': u'biolink:Procedure',
-        u'Race': u'biolink:PopulationOfIndividualOrganisms'
+        'Condition': 'biolink:Disease',
+        'Device': 'biolink:Device',
+        'Drug': 'biolink:Drug',
+        'Ethnicity': 'biolink:PopulationOfIndividualOrganisms',
+        'Gender': 'biolink:PopulationOfIndividualOrganisms',
+        'Measurement': 'biolink:Phenomenon',
+        'Observation': 'biolink:Phenomenon',
+        'Procedure': 'biolink:Procedure',
+        'Race': 'biolink:PopulationOfIndividualOrganisms'
     }
-    default_type = u'named_thing'
+    default_type = 'named_thing'
     return mappings.get(domain, default_type)
 
 
@@ -996,72 +998,72 @@ class BiolinkConceptMapper:
 
     _mappings_prefixes_blm_to_oxo = {
         # Disease prefixes
-        u'MONDO': u'MONDO',
-        u'DOID': u'DOID',
-        u'OMIM': u'OMIM',
-        u'ORPHANET': u'Orphanet',
-        u'ORPHA': None,
-        u'EFO': u'EFO',
-        u'UMLS': u'UMLS',
-        u'MESH': u'MeSH',
-        u'MEDDRA': u'MedDRA',
-        u'NCIT': u'NCIT',
-        u'SNOMEDCT': u'SNOMEDCT',
-        u'medgen': None,
-        u'ICD10': u'ICD10CM',
-        u'ICD9': u'ICD9CM',
-        u'ICD0': None,
-        u'HP': u'HP',
-        u'MP': u'MP',
+        'MONDO': 'MONDO',
+        'DOID': 'DOID',
+        'OMIM': 'OMIM',
+        'ORPHANET': 'Orphanet',
+        'ORPHA': None,
+        'EFO': 'EFO',
+        'UMLS': 'UMLS',
+        'MESH': 'MeSH',
+        'MEDDRA': 'MedDRA',
+        'NCIT': 'NCIT',
+        'SNOMEDCT': 'SNOMEDCT',
+        'medgen': None,
+        'ICD10': 'ICD10CM',
+        'ICD9': 'ICD9CM',
+        'ICD0': None,
+        'HP': 'HP',
+        'MP': 'MP',
         # Drug prefixes
-        u'PHARMGKB.DRUG': None,
-        u'CHEBI': u'CHEBI',
-        u'CHEMBL.COMPOUND': None,
-        u'DRUGBANK': u'DrugBank',
-        u'PUBCHEM.COMPOUND': u'PubChem_Compound',
-        u'HMDB': u'HMDB',
-        u'INCHI': None,
-        u'UNII': None,
-        u'KEGG': u'KEGG',
-        u'gtpo': None,
+        'PHARMGKB.DRUG': None,
+        'CHEBI': 'CHEBI',
+        'CHEMBL.COMPOUND': None,
+        'DRUGBANK': 'DrugBank',
+        'PUBCHEM.COMPOUND': 'PubChem_Compound',
+        'HMDB': 'HMDB',
+        'INCHI': None,
+        'UNII': None,
+        'KEGG': 'KEGG',
+        'gtpo': None,
         # Procedure prefixes
-        u'ICD10PCS': None
+        'ICD10PCS': None
     }
 
     _mappings_prefixes_oxo_to_blm = {
         # Disease prefixes
-        u'MONDO': u'MONDO',
-        u'DOID': u'DOID',
-        u'OMIM': u'OMIM',
-        u'Orphanet': u'ORPHANET',
-        u'EFO': u'EFO',
-        u'UMLS': u'UMLS',
-        u'MeSH': u'MESH',
-        u'MedDRA': u'MEDDRA',
-        u'NCIT': u'NCIT',
-        u'SNOMEDCT': u'SNOMEDCT',
-        u'ICD10CM': u'ICD10',
-        u'ICD9CM': u'ICD9',
-        u'HP': u'HP',
-        u'MP': u'MP',
+        'MONDO': 'MONDO',
+        'DOID': 'DOID',
+        'OMIM': 'OMIM',
+        'Orphanet': 'ORPHANET',
+        'EFO': 'EFO',
+        'UMLS': 'UMLS',
+        'MeSH': 'MESH',
+        'MedDRA': 'MEDDRA',
+        'NCIT': 'NCIT',
+        'SNOMEDCT': 'SNOMEDCT',
+        'ICD10CM': 'ICD10',
+        'ICD9CM': 'ICD9',
+        'HP': 'HP',
+        'MP': 'MP',
         # Drug prefixes
-        u'CHEBI': u'CHEBI',
-        u'DrugBank': u'DRUGBANK',
-        u'PubChem_Compound': u'PUBCHEM.COMPOUND',
-        u'HMDB': u'HMDB',
-        u'KEGG': u'KEGG',
+        'CHEBI': 'CHEBI',
+        'DrugBank': 'DRUGBANK',
+        'PubChem_Compound': 'PUBCHEM.COMPOUND',
+        'HMDB': 'HMDB',
+        'KEGG': 'KEGG',
         # Procedure prefixes
     }
 
     _default_ontology_map = {
-        u'biolink:Disease': [u'MONDO', u'DOID', u'OMIM', u'ORPHANET', u'ORPHA', u'EFO', u'UMLS', u'MESH', u'MEDDRA',
-                       u'NCIT', u'SNOMEDCT', u'medgen', u'ICD10', u'ICD9', u'ICD0', u'HP', u'MP'],
+        'biolink:Disease': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'ORPHA', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
+                       'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'HP', 'MP'],
         # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
-        u'biolink:Drug': [u'PHARMGKB.DRUG', u'CHEBI', u'CHEMBL.COMPOUND', u'DRUGBANK', u'PUBCHEM.COMPOUND', u'MESH',
-                  u'HMDB', u'INCHI', u'UNII', u'KEGG', u'gtpo'],
+        'biolink:Drug': ['PHARMGKB.DRUG', 'CHEBI', 'CHEMBL.COMPOUND', 'DRUGBANK', 'PUBCHEM.COMPOUND', 'MESH',
+                  'HMDB', 'INCHI', 'UNII', 'KEGG', 'gtpo'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        u'biolink:Procedure': [u'ICD10PCS', u'SNOMEDCT'],
-        u'_DEFAULT': []
+        'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT'],
+        '_DEFAULT': []
     }
 
     @staticmethod
@@ -1077,12 +1079,12 @@ class BiolinkConceptMapper:
         -------
         The OxO prefix/CURIE if it exists, else the original input is returned
         """
-        split = s.split(u':')
+        split = s.split(':')
         if len(split) == 2:
             # Assume s is a curie. Replace the prefix
             prefix, suffix = split
             prefix = BiolinkConceptMapper._mappings_prefixes_blm_to_oxo.get(prefix, prefix)
-            curie = u'{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
+            curie = '{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
             return curie
         else:
             # Assume s is a prefix
@@ -1102,12 +1104,12 @@ class BiolinkConceptMapper:
         The prefix or CURIE with the prefix converted to the Biolink Model convention if the mapping exists, otherwise
         the original prefix or CURIE is returned.
         """
-        split = s.split(u':')
+        split = s.split(':')
         if len(split) == 2:
             # Assume s is a curie. Replace the prefix only
             prefix, suffix = split
             prefix = BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(prefix, prefix)
-            curie = u'{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
+            curie = '{prefix}:{suffix}'.format(prefix=prefix, suffix=suffix)
             return curie
         else:
             # Assume s is a prefix
@@ -1128,7 +1130,7 @@ class BiolinkConceptMapper:
 
         # Convert Biolink Model prefix conventions to OxO conventions
         oxo_mappings = dict()
-        for blm_type, prefixes in self.biolink_mappings.items():
+        for blm_type, prefixes in list(self.biolink_mappings.items()):
             omop_domains = map_blm_class_to_omop_domain(blm_type)
             if omop_domains is None or not omop_domains:
                 continue
@@ -1191,6 +1193,6 @@ class BiolinkConceptMapper:
         for mapping in mappings:
             # Convert from OxO prefix to BLM prefix. If the prefix isn't in the mappings between BLM and OxO, keep the
             # OxO prefix
-            mapping[u'target_curie'] = BiolinkConceptMapper.map_oxo_prefixes_to_blm_prefixes(mapping[u'target_curie'])
+            mapping['target_curie'] = BiolinkConceptMapper.map_oxo_prefixes_to_blm_prefixes(mapping['target_curie'])
 
         return mappings

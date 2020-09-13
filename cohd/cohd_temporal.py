@@ -1,8 +1,10 @@
 from collections import defaultdict
 import random
+
 import numpy as np
 from scipy.stats import poisson
-from query_cohd_mysql import *
+
+from .query_cohd_mysql import *
 
 
 DATASET_ID_DEFAULT_TEMPORAL = 4
@@ -54,13 +56,13 @@ class AgeCounts:
         dict representation
         """
         return {
-            u'dataset_id': self.dataset_id,
-            u'concept_id': self.concept_id,
-            u'concept_name': self.concept_name,
-            u'concept_count': self.concept_count,
-            u'bin_width': self.bin_width,
-            u'counts': [int(x) for x in self.counts],
-            u'confidence_interval': [(int(x[0]), int(x[1])) for x in self.confidence_intervals()]
+            'dataset_id': self.dataset_id,
+            'concept_id': self.concept_id,
+            'concept_name': self.concept_name,
+            'concept_count': self.concept_count,
+            'bin_width': self.bin_width,
+            'counts': [int(x) for x in self.counts],
+            'confidence_interval': [(int(x[0]), int(x[1])) for x in self.confidence_intervals()]
         }
 
     def confidence_intervals(self, alpha=0.99):
@@ -160,18 +162,18 @@ class DeltaCounts:
         """
         # Make sure all counts are represented as ints (as opposed to numpy types) for JSON serialization
         return {
-            u'dataset_id': self.dataset_id,
-            u'source_concept_id': self.source_concept_id,
-            u'source_concept_name': self.source_concept_name,
-            u'source_concept_count': int(self.source_concept_count),
-            u'target_concept_id': self.target_concept_id,
-            u'target_concept_name': self.target_concept_name,
-            u'target_concept_count': int(self.target_concept_count),
-            u'concept_pair_count': int(self.concept_pair_count),
-            u'bin_width': int(self.bin_width),
-            u'n': int(self.n),
-            u'counts': [int(x) for x in self.counts],
-            u'confidence_interval': [(int(x[0]), int(x[1])) for x in self.confidence_intervals()]
+            'dataset_id': self.dataset_id,
+            'source_concept_id': self.source_concept_id,
+            'source_concept_name': self.source_concept_name,
+            'source_concept_count': int(self.source_concept_count),
+            'target_concept_id': self.target_concept_id,
+            'target_concept_name': self.target_concept_name,
+            'target_concept_count': int(self.target_concept_count),
+            'concept_pair_count': int(self.concept_pair_count),
+            'bin_width': int(self.bin_width),
+            'n': int(self.n),
+            'counts': [int(x) for x in self.counts],
+            'confidence_interval': [(int(x[0]), int(x[1])) for x in self.confidence_intervals()]
         }
 
     def confidence_intervals(self, alpha=0.99):
@@ -248,7 +250,7 @@ def query_concept_age_counts(dataset_id, concept_id):
         cur.execute(sql, params)
 
         # Create a list for the concept-age distribution
-        counts = [x[u'count'] for x in cur.fetchall()]
+        counts = [x['count'] for x in cur.fetchall()]
 
         # Retrieve the concept name as well
         concept_def = omop_concept_definition(concept_id)
@@ -257,12 +259,12 @@ def query_concept_age_counts(dataset_id, concept_id):
         concept_counts = query_count([concept_id], dataset_id=dataset_id)
 
         if len(counts) > 0 and concept_id in concept_counts:
-            concept_count = concept_counts[concept_id][u'concept_count']
-            concept_name = u''
+            concept_count = concept_counts[concept_id]['concept_count']
+            concept_name = ''
             if concept_def is not None:
-                concept_name = concept_def[u'concept_name']
+                concept_name = concept_def['concept_name']
 
-            cad = AgeCounts(dataset_id, concept_id, concept_name, concept_count, counts, binning_scheme[u'bin_width'])
+            cad = AgeCounts(dataset_id, concept_id, concept_name, concept_count, counts, binning_scheme['bin_width'])
             cads = [cad]
         else:
             cads = []
@@ -294,22 +296,22 @@ def query_delta_counts(dataset_id, concept_pairs):
                 current_concept_id_1 in concept_counts and current_concept_id_2 in concept_counts and \
                 current_pair in concept_pairs_counts and current_pair in binning_scheme_rows:
 
-            concept_1_name = u''
+            concept_1_name = ''
             if current_concept_id_1 in concept_defs:
-                concept_1_name = concept_defs[current_concept_id_1][u'concept_name']
+                concept_1_name = concept_defs[current_concept_id_1]['concept_name']
 
-            concept_2_name = u''
+            concept_2_name = ''
             if current_concept_id_2 in concept_defs:
-                concept_2_name = concept_defs[current_concept_id_2][u'concept_name']
+                concept_2_name = concept_defs[current_concept_id_2]['concept_name']
 
-            source_concept_count = concept_counts[current_concept_id_1][u'concept_count']
-            target_concept_count = concept_counts[current_concept_id_2][u'concept_count']
-            concept_pair_count = concept_pairs_counts[current_pair][u'results'][0][u'concept_count']
+            source_concept_count = concept_counts[current_concept_id_1]['concept_count']
+            target_concept_count = concept_counts[current_concept_id_2]['concept_count']
+            concept_pair_count = concept_pairs_counts[current_pair]['results'][0]['concept_count']
             binning_scheme = binning_scheme_rows[current_pair]
 
             dc = DeltaCounts(dataset_id, current_concept_id_1, current_concept_id_2, concept_1_name, concept_2_name,
                              source_concept_count, target_concept_count, concept_pair_count, current_counts,
-                             binning_scheme[u'bin_width'], binning_scheme[u'n'])
+                             binning_scheme['bin_width'], binning_scheme['n'])
             deltas_dict[current_pair] = dc
 
     cur = sql_connection().cursor()
@@ -348,7 +350,7 @@ def query_delta_counts(dataset_id, concept_pairs):
 
     binning_scheme_rows = dict()
     for r in cur.fetchall():
-        binning_scheme_rows[(r[u'concept_id_1'], r[u'concept_id_2'])] = r
+        binning_scheme_rows[(r['concept_id_1'], r['concept_id_2'])] = r
 
     # If no binning schemes were found, that means no deltas will be found for the requested pair(s). Return empty
     if len(binning_scheme_rows) == 0:
@@ -396,8 +398,8 @@ def query_delta_counts(dataset_id, concept_pairs):
     current_counts = list()
 
     for r in cur.fetchall():
-        concept_id_1 = r[u'concept_id_1']
-        concept_id_2 = r[u'concept_id_2']
+        concept_id_1 = r['concept_id_1']
+        concept_id_2 = r['concept_id_2']
         if (current_concept_id_1 != concept_id_1) or (current_concept_id_2 != concept_id_2):
             # New pair encountered, create the DeltaCount for the current pair
             # Only create it if we can find the single concept counts, the concept pair count, and the binning scheme
@@ -412,7 +414,7 @@ def query_delta_counts(dataset_id, concept_pairs):
             current_pair = (current_concept_id_1, current_concept_id_2)
             current_counts = list()
 
-        current_counts.append(r[u'count'])
+        current_counts.append(r['count'])
 
     # Finished reading table. Still need to add the last DeltaCounts
     _add_delta_count()
@@ -467,8 +469,8 @@ def concepts_cooccur(concept_id_1, concept_id_2, dataset_id=DATASET_ID_DEFAULT_T
     if concept_pair_count is None:
         # Get the concept_pair_count
         json_result = query_concept_pair_count(concept_id_1, concept_id_2, dataset_id)
-        if json_result is not None and u'results' in json_result and len(json_result[u'results']) == 1:
-            concept_pair_count = json_result[u'results'][0][u'concept_count']
+        if json_result is not None and 'results' in json_result and len(json_result['results']) == 1:
+            concept_pair_count = json_result['results'][0]['concept_count']
         else:
             # Could not find a concept pair count. Assume unrelated
             return False
@@ -490,7 +492,7 @@ def concepts_cooccur(concept_id_1, concept_id_2, dataset_id=DATASET_ID_DEFAULT_T
     related = False
     r = cur.fetchone()
     if r is not None:
-        cooccurrence_count = r[u'cooccurrence_count']
+        cooccurrence_count = r['cooccurrence_count']
         if cooccurrence_count == SUPPRESSION_MARKER:
             # Be aggressive with detecting co-occurrence relatedness. Assume the upper end
             cooccurrence_count = 9
@@ -583,10 +585,10 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
     # Get the domain_id and concept_class_id if we're restricting by type
     if restrict_type:
         concept_def = omop_concept_definition(concept_id)
-        domain = concept_def[u'domain_id']
+        domain = concept_def['domain_id']
 
-        if domain == u'Drug' and concept_def[u'concept_class_id'] == u'Ingredient':
-            concept_class = u'Ingredient'
+        if domain == 'Drug' and concept_def['concept_class_id'] == 'Ingredient':
+            concept_class = 'Ingredient'
         else:
             concept_class = None
     else:
@@ -613,7 +615,7 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
     }
 
     # Filter concepts by domain
-    if domain is not None and domain != [u'']:
+    if domain is not None and domain != ['']:
         # Restrict the concepts by domain
         domain_filter = 'AND c.domain_id = %(domain_id)s'
         params['domain_id'] = domain
@@ -622,7 +624,7 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
         domain_filter = ''
 
     # Filter concepts by concept_class
-    if concept_class is not None and concept_class != [u'']:
+    if concept_class is not None and concept_class != ['']:
         # Restrict the concepts by domain
         class_filter = 'AND c.concept_class_id = %(concept_class_id)s'
         params['concept_class_id'] = concept_class
@@ -639,19 +641,19 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
     similarities_binned = defaultdict(list)
 
     for r in cur.fetchall():
-        if r[u'concept_id'] != current_concept_id:
+        if r['concept_id'] != current_concept_id:
             # This row starts a new concept. Add the current concept to the lists
             _process_comparison_concept()
 
             # Start tracking a new concept
-            current_concept_id = r[u'concept_id']
+            current_concept_id = r['concept_id']
             current_counts = list()
-            current_concept_name = r[u'concept_name']
-            current_concept_count = r[u'concept_count']
-            current_bin_width = r[u'bin_width']
+            current_concept_name = r['concept_name']
+            current_concept_count = r['concept_count']
+            current_bin_width = r['bin_width']
 
         # Build a list of counts for this comparison concept
-        current_counts.append(r[u'count'])
+        current_counts.append(r['count'])
 
     # Finished reading the table, still need to process the current concept
     _process_comparison_concept()
@@ -688,15 +690,15 @@ def query_similar_age_distributions(concept_id, dataset_id=DATASET_ID_DEFAULT_TE
                 # First check the ln_ratio of the concepts
                 concept_pair_count = None
                 assoc_results = query_association('obsExpRatio', concept_id, cac.concept_id, dataset_id)
-                if assoc_results is not None and u'results' in assoc_results and len(assoc_results[u'results']) == 1:
-                    assoc_result = assoc_results[u'results'][0]
-                    ln_ratio = assoc_result[u'ln_ratio']
+                if assoc_results is not None and 'results' in assoc_results and len(assoc_results['results']) == 1:
+                    assoc_result = assoc_results['results'][0]
+                    ln_ratio = assoc_result['ln_ratio']
                     if ln_ratio > 2.0:
                         # This pair is related. Onto the next one
                         continue
 
                     # Grab the concept pair count for use in the co-occurrence check
-                    concept_pair_count = assoc_result[u'observed_count']
+                    concept_pair_count = assoc_result['observed_count']
 
                     # Next, check the co-occurrence
                     related = concepts_cooccur(concept_id, cac.concept_id, dataset_id,
@@ -796,25 +798,25 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
             continue
 
         source_results_binned[bin_width] = {
-            u'bin_width': bin_width,
-            u'deltas': list(),
-            u'cad_similarities': list(),
-            u'distribution': None,
-            u'significance': None
+            'bin_width': bin_width,
+            'deltas': list(),
+            'cad_similarities': list(),
+            'distribution': None,
+            'significance': None
         }
 
         target_results_binned[bin_width] = {
-            u'bin_width': bin_width,
-            u'deltas': list(),
-            u'cad_similarities': list(),
-            u'distribution': None,
-            u'significance': None
+            'bin_width': bin_width,
+            'deltas': list(),
+            'cad_similarities': list(),
+            'distribution': None,
+            'significance': None
         }
 
         combined_results_binned[bin_width] = {
-            u'bin_width': bin_width,
-            u'distribution': None,
-            u'significance': None
+            'bin_width': bin_width,
+            'distribution': None,
+            'significance': None
         }
 
     # Get concepts similar to the source concept for comparison
@@ -828,7 +830,7 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
     # Build a list of concept pairs between [concepts similar to source] -> target_concept_id
     similar_source_pairs = []
     similarity_source_list = []
-    for bin_width, cacs in concepts_similar_to_source.items():
+    for bin_width, cacs in list(concepts_similar_to_source.items()):
         similar_source_pairs += [(x.concept_id, target_concept_id) for x in cacs]
         similarity_source_list += similarity_to_source[bin_width]
 
@@ -839,20 +841,20 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
     for sim, delta in zip(similarity_source_list, deltas_source):
         # Check that the delta bin_width isn't a higher resolution than the bin width captured by the delta_primary
         if delta is not None and delta.bin_width >= delta_primary.bin_width:
-            source_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
-            source_results_binned[delta.bin_width][u'deltas'].append(delta)
+            source_results_binned[delta.bin_width]['cad_similarities'].append(sim)
+            source_results_binned[delta.bin_width]['deltas'].append(delta)
 
             # Also convert the delta to larger bin_widths to add them to the comparison in the larger bin_width groups
             for bin_width, n in settings:
                 if bin_width > delta.bin_width:
                     delta_downconverted = delta.convert_bin_scheme(bin_width, n)
-                    source_results_binned[bin_width][u'cad_similarities'].append(sim)
-                    source_results_binned[bin_width][u'deltas'].append(delta_downconverted)
+                    source_results_binned[bin_width]['cad_similarities'].append(sim)
+                    source_results_binned[bin_width]['deltas'].append(delta_downconverted)
 
     # Build a list of concept pairs between source_concept_id -> [concepts similar to target]
     similar_target_pairs = []
     similarity_target_list = []
-    for bin_width, cacs in concepts_similar_to_target.items():
+    for bin_width, cacs in list(concepts_similar_to_target.items()):
         similar_target_pairs += [(source_concept_id, x.concept_id) for x in cacs]
         similarity_target_list += similarity_to_target[bin_width]
 
@@ -863,59 +865,59 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
     for sim, delta in zip(similarity_target_list, deltas_target):
         # Check that the delta bin_width isn't a higher resolution than the bin width captured by the delta_primary
         if delta is not None and delta.bin_width >= delta_primary.bin_width:
-            target_results_binned[delta.bin_width][u'cad_similarities'].append(sim)
-            target_results_binned[delta.bin_width][u'deltas'].append(delta)
+            target_results_binned[delta.bin_width]['cad_similarities'].append(sim)
+            target_results_binned[delta.bin_width]['deltas'].append(delta)
 
             # Also convert the delta to larger bin_widths to add them to the comparison in the larger bin_width groups
             for bin_width, n in settings:
                 if bin_width > delta.bin_width:
                     delta_downconverted = delta.convert_bin_scheme(bin_width, n)
-                    target_results_binned[bin_width][u'cad_similarities'].append(sim)
-                    target_results_binned[bin_width][u'deltas'].append(delta_downconverted)
+                    target_results_binned[bin_width]['cad_similarities'].append(sim)
+                    target_results_binned[bin_width]['deltas'].append(delta_downconverted)
 
     # Run simulations on the source comparisons to generate a distribution
-    for bin_width, srb in source_results_binned.items():
-        srb_deltas = srb[u'deltas']
+    for bin_width, srb in list(source_results_binned.items()):
+        srb_deltas = srb['deltas']
         if len(srb_deltas) < 5:
             # Don't estimate the distribution for bins with too few comparison deltas
             continue
 
         # Estimate distributions of the comparison concepts
         dist = bootstrap_delta_distribution(srb_deltas, mode='relative_source', iterations=1000)
-        srb[u'distribution'] = dist.tolist()
+        srb['distribution'] = dist.tolist()
 
         # Compare the distributions to the confidence interval of the primary delta
         dp = delta_primary_downconverted[bin_width]
         cis = np.array(dp.confidence_intervals()).T / float(dp.source_concept_count)
         # note: need to convert numpy.bool to normal bool for json
         sig = [bool((cis[0, i] > dist[4, i]) or (cis[1, i] < dist[0, i])) for i in range(cis.shape[1])]
-        srb[u'significance'] = sig
+        srb['significance'] = sig
 
     # Run simulations on the target comparisons to generate a distribution
-    for bin_width, trb in target_results_binned.items():
-        trb_deltas = trb[u'deltas']
+    for bin_width, trb in list(target_results_binned.items()):
+        trb_deltas = trb['deltas']
         if len(trb_deltas) < 5:
             # Don't estimate the distribution for bins with too few comparison deltas
             continue
 
         # Estimate distributions of the comparison concepts
         dist = bootstrap_delta_distribution(trb_deltas, mode='relative_source', iterations=1000)
-        trb[u'distribution'] = dist.tolist()
+        trb['distribution'] = dist.tolist()
 
         # Compare the distributions to the confidence interval of the primary delta
         dp = delta_primary_downconverted[bin_width]
         cis = np.array(dp.confidence_intervals()).T / float(dp.source_concept_count)
         # note: need to convert numpy.bool to normal bool for json
         sig = [bool((cis[0, i] > dist[4, i]) or (cis[1, i] < dist[0, i])) for i in range(cis.shape[1])]
-        trb[u'significance'] = sig
+        trb['significance'] = sig
 
     # Run simulations on the combined source and target comparisons to generate a distribution
     for bin_width in [1, 2, 4, 8, 16]:
         combined_deltas = []
         if bin_width in source_results_binned:
-            combined_deltas += source_results_binned[bin_width][u'deltas']
+            combined_deltas += source_results_binned[bin_width]['deltas']
         if bin_width in target_results_binned:
-            combined_deltas += target_results_binned[bin_width][u'deltas']
+            combined_deltas += target_results_binned[bin_width]['deltas']
 
         if len(combined_deltas) < 5:
             # Don't estimate the distribution for bins with too few comparison deltas
@@ -925,42 +927,42 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
 
         # Estimate distributions of the comparison concepts
         dist = bootstrap_delta_distribution(combined_deltas, mode='relative_source', iterations=1000)
-        crb[u'distribution'] = dist.tolist()
+        crb['distribution'] = dist.tolist()
 
         # Compare the distributions to the confidence interval of the primary delta
         dp = delta_primary_downconverted[bin_width]
         cis = np.array(dp.confidence_intervals()).T / float(dp.source_concept_count)
         # note: need to convert numpy.bool to normal bool for json
         sig = [bool((cis[0, i] > dist[4, i]) or (cis[1, i] < dist[0, i])) for i in range(cis.shape[1])]
-        crb[u'significance'] = sig
+        crb['significance'] = sig
 
     # Create the result structure
-    queried_pair = [{u'bin_width': bw,
-                     u'delta': d.convert_to_dict_results()}
-                    for bw, d in delta_primary_downconverted.items()]
-    source_comparison = [{u'bin_width': bw,
-                          u'deltas': [d.convert_to_dict_results() for d in x[u'deltas']],
-                          u'cad_similarities': [float(s) for s in x[u'cad_similarities']],
-                          u'distribution': x[u'distribution'],
-                          u'significance': x[u'significance']}
-                         for bw, x in source_results_binned.items()]
-    target_comparison = [{u'bin_width': bw,
-                          u'deltas': [d.convert_to_dict_results() for d in x[u'deltas']],
-                          u'cad_similarities': [float(s) for s in x[u'cad_similarities']],
-                          u'distribution': x[u'distribution'],
-                          u'significance': x[u'significance']}
-                         for bw, x in target_results_binned.items()]
-    combined_comparison = [{u'bin_width': bw,
-                            u'distribution': x[u'distribution'],
-                            u'significance': x[u'significance']}
-                           for bw, x in combined_results_binned.items()]
+    queried_pair = [{'bin_width': bw,
+                     'delta': d.convert_to_dict_results()}
+                    for bw, d in list(delta_primary_downconverted.items())]
+    source_comparison = [{'bin_width': bw,
+                          'deltas': [d.convert_to_dict_results() for d in x['deltas']],
+                          'cad_similarities': [float(s) for s in x['cad_similarities']],
+                          'distribution': x['distribution'],
+                          'significance': x['significance']}
+                         for bw, x in list(source_results_binned.items())]
+    target_comparison = [{'bin_width': bw,
+                          'deltas': [d.convert_to_dict_results() for d in x['deltas']],
+                          'cad_similarities': [float(s) for s in x['cad_similarities']],
+                          'distribution': x['distribution'],
+                          'significance': x['significance']}
+                         for bw, x in list(target_results_binned.items())]
+    combined_comparison = [{'bin_width': bw,
+                            'distribution': x['distribution'],
+                            'significance': x['significance']}
+                           for bw, x in list(combined_results_binned.items())]
 
     # Create the json_return structure
     json_return = [{
-        u'queried_pair': queried_pair,
-        u'source_comparison': source_comparison,
-        u'target_comparison': target_comparison,
-        u'combined_comparison': combined_comparison
+        'queried_pair': queried_pair,
+        'source_comparison': source_comparison,
+        'target_comparison': target_comparison,
+        'combined_comparison': combined_comparison
     }]
 
     return json_return
@@ -968,7 +970,7 @@ def query_source_to_target(dataset_id, source_concept_id, target_concept_id):
 
 def query_cohd_temporal(service, method, args):
     # This function only handles temporal service.
-    assert service == u'temporal'
+    assert service == 'temporal'
 
     # Connect to MYSQL database
     conn = sql_connection()
@@ -976,46 +978,46 @@ def query_cohd_temporal(service, method, args):
 
     json_return = []
 
-    query = args.get(u'q')
+    query = args.get('q')
 
-    print u"Service: {s}; Method: {m}, Query: {q}".format(s=service, m=method, q=query)
+    print("Service: {s}; Method: {m}, Query: {q}".format(s=service, m=method, q=query))
 
     # Retrieves concept-age distributions
     # e.g. /api/temporal/conceptAgeCounts?dataset_id=4&concept_id=313217
-    if method == u'conceptAgeCounts':
+    if method == 'conceptAgeCounts':
         dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_TEMPORAL)
 
         # Get concept_id parameters
         concept_id = get_arg_concept_id(args)
         if concept_id is None:
-            return u'concept_id parameter is missing', 400
+            return 'concept_id parameter is missing', 400
 
         cads = query_concept_age_counts(dataset_id, concept_id)
         json_return = [cad.convert_to_dict_results() for cad in cads]
 
     # Finds concepts with a similar concept-age distribution to the concept of interest
     # e.g. /api/temporal/conceptAgeCounts?dataset_id=4&concept_id=313217
-    elif method == u'findSimilarAgeDistributions':
+    elif method == 'findSimilarAgeDistributions':
         # Get concept_id parameters
         concept_id = get_arg_concept_id(args)
         if concept_id is None:
-            return u'concept_id parameter is missing', 400
+            return 'concept_id parameter is missing', 400
 
         # Get optional params
         params = {}
         dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_TEMPORAL)
-        restrict_type = get_arg_boolean(args, u'restrict_type')
+        restrict_type = get_arg_boolean(args, 'restrict_type')
         if restrict_type is not None:
-            params[u'restrict_type'] = restrict_type
-        exclude_related = get_arg_boolean(args, u'exclude_related')
+            params['restrict_type'] = restrict_type
+        exclude_related = get_arg_boolean(args, 'exclude_related')
         if exclude_related is not None:
-            params[u'exclude_related'] = exclude_related
-        threshold = get_arg_float(args, u'threshold')
+            params['exclude_related'] = exclude_related
+        threshold = get_arg_float(args, 'threshold')
         if threshold is not None:
-            params[u'threshold'] = threshold
-        limit = get_arg_int(args, u'limit')
+            params['threshold'] = threshold
+        limit = get_arg_int(args, 'limit')
         if limit is not None:
-            params[u'limit'] = limit
+            params['limit'] = limit
 
         coi_cacs, cacs, similarities = query_similar_age_distributions(concept_id, dataset_id, **params)
         assert len(cacs) == len(similarities)
@@ -1029,50 +1031,50 @@ def query_cohd_temporal(service, method, args):
             # Insert the concept of interest as the first concept in the array
             coi_cac = coi_cacs[bin_width]
             cac_result = coi_cac.convert_to_dict_results()
-            cac_result[u'similarity'] = 1.0
+            cac_result['similarity'] = 1.0
             cac_results = [cac_result]
 
             sm = similarities[bin_width]
             for i, cac in enumerate(cacs[bin_width]):
                 cac_result = cac.convert_to_dict_results()
-                cac_result[u'similarity'] = float(sm[i])
+                cac_result['similarity'] = float(sm[i])
                 cac_results.append(cac_result)
 
             # Create a result set for the results in this bin width
             result_set = {
-                u'bin_width': bin_width,
-                u'concept_age_counts': cac_results
+                'bin_width': bin_width,
+                'concept_age_counts': cac_results
             }
             json_return.append(result_set)
 
     # Retrieves concept pair delta distributions
     # e.g. /api/temporal/conceptPairDeltaCounts?dataset_id=4&source_concept_id=312327&target_concept_id=313217
-    elif method == u'conceptPairDeltaCounts':
+    elif method == 'conceptPairDeltaCounts':
         dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_TEMPORAL)
 
         # Get concept_id parameters
-        source_concept_id = get_arg_concept_id(args, u'source_concept_id')
-        target_concept_id = get_arg_concept_id(args, u'target_concept_id')
+        source_concept_id = get_arg_concept_id(args, 'source_concept_id')
+        target_concept_id = get_arg_concept_id(args, 'target_concept_id')
         if source_concept_id is None:
-            return u'source_concept_id parameter is missing', 400
+            return 'source_concept_id parameter is missing', 400
         if target_concept_id is None:
-            return u'target_concept_id parameter is missing', 400
+            return 'target_concept_id parameter is missing', 400
 
         deltas = query_delta_counts(dataset_id, [(source_concept_id, target_concept_id)])
         json_return = [delta.convert_to_dict_results() for delta in deltas if delta is not None]
 
     # Returns ratio of observed to expected frequency between pairs of concepts
     # e.g. /api/temporal/sourceToTarget?dataset_id=4&source_concept_id=312327&target_concept_id=313217
-    elif method == u'sourceToTarget':
+    elif method == 'sourceToTarget':
         dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_TEMPORAL)
 
         # Get concept_id parameters
-        source_concept_id = get_arg_concept_id(args, u'source_concept_id')
-        target_concept_id = get_arg_concept_id(args, u'target_concept_id')
+        source_concept_id = get_arg_concept_id(args, 'source_concept_id')
+        target_concept_id = get_arg_concept_id(args, 'target_concept_id')
         if source_concept_id is None:
-            return u'source_concept_id parameter is missing', 400
+            return 'source_concept_id parameter is missing', 400
         if target_concept_id is None:
-            return u'target_concept_id parameter is missing', 400
+            return 'target_concept_id parameter is missing', 400
 
         json_return = query_source_to_target(dataset_id, source_concept_id, target_concept_id)
 
@@ -1083,7 +1085,7 @@ def query_cohd_temporal(service, method, args):
     cur.close()
     conn.close()
 
-    json_return = {u"results": json_return}
+    json_return = {"results": json_return}
     json_return = jsonify(json_return)
 
     return json_return
