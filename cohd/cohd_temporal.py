@@ -1,8 +1,10 @@
 from collections import defaultdict
 import random
+
 import numpy as np
 from scipy.stats import poisson
-from query_cohd_mysql import *
+
+from .query_cohd_mysql import *
 
 
 DATASET_ID_DEFAULT_TEMPORAL = 4

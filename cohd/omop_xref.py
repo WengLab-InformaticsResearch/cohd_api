@@ -1,6 +1,8 @@
+from difflib import SequenceMatcher
+
 import requests
 from numpy import argsort
-from difflib import SequenceMatcher
+
 
 # OXO API configuration
 _URL_OXO_SEARCH = 'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -961,7 +963,7 @@ class ConceptMapper:
         }
         or None
         """
-        from query_cohd_mysql import sql_connection, omop_concept_definition
+        from .query_cohd_mysql import sql_connection, omop_concept_definition
 
         mapping = None
 
@@ -1027,7 +1029,7 @@ class ConceptMapper:
         }]
         or None
         """
-        from query_cohd_mysql import sql_connection, omop_concept_definition
+        from .query_cohd_mysql import sql_connection, omop_concept_definition
 
         mappings = []
 

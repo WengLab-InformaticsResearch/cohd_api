@@ -2,9 +2,10 @@ import pymysql
 from flask import jsonify
 from scipy.stats import chisquare
 from numpy import argsort
-from omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
+
+from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
-from cohd_utilities import ln_ratio_ci, rel_freq_ci
+from .cohd_utilities import ln_ratio_ci, rel_freq_ci
 
 # Configuration
 CONFIG_FILE = "cohd_mysql.cnf"  # log-in credentials for database

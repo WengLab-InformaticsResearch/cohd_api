@@ -13,10 +13,11 @@ implemented in Flask
 
 from flask import Flask, request, redirect
 from flask_cors import CORS
-from google_analytics import GoogleAnalytics
-import query_cohd_mysql
-import cohd_temporal
-import cohd_translator
+
+from .google_analytics import GoogleAnalytics
+from . import query_cohd_mysql
+from . import cohd_temporal
+from . import cohd_translator
 
 #########
 # INITS #

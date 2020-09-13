@@ -5,12 +5,14 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 Current version 0.9.1
 """
 
-import query_cohd_mysql
 from datetime import datetime
-from flask import jsonify
 from numbers import Number
-from cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
-from omop_xref import ConceptMapper
+
+from flask import jsonify
+
+from . import query_cohd_mysql
+from .cohd_utilities import ln_ratio_ci, ci_significance, omop_concept_curie
+from .omop_xref import ConceptMapper
 
 
 def translator_predicates():
