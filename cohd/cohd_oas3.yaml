@@ -1265,7 +1265,68 @@ paths:
                           example: 3
                         p-value: 
                           type: integer
-                          example: 0                          
+                          example: 0
+      x-bte-kgs-operations:
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/chi_square'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/chi_square'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/chi_square'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/chi_square'
   /association/obsExpRatio:
     get:
       tags:
@@ -1369,6 +1430,71 @@ paths:
                         observed_count: 
                           type: integer
                           example: 117
+      x-bte-kgs-operations:
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+            confidence: 0.99
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/obs_exp_ratio'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+            confidence: 0.99
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/obs_exp_ratio'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+            confidence: 0.99
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/obs_exp_ratio'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+            confidence: 0.99
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/obs_exp_ratio'
   /association/relativeFrequency:
     get:
       tags:
@@ -1469,6 +1595,67 @@ paths:
                         relative_frequency:
                           type: integer
                           example: 0.35365853658536583
+      x-bte-kgs-operations:
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/relative_frequency'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/relative_frequency'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Condition
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/relative_frequency'
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+          parameters:
+            concept_id_1: "{inputs[0]}"
+            dataset_id: 3
+            domain: Drug
+          response_mapping:
+            $ref: '#/components/x-bte-kgs-response-mappings/relative_frequency'
   /temporal/conceptAgeCounts:
     get:
       tags:
@@ -1758,6 +1945,7 @@ paths:
     get:
       tags:
         - translator
+        - reasoner
       summary: Get supported relationships by source and target
       responses:
         '200':
@@ -1784,6 +1972,7 @@ paths:
     post:
       tags:
         - translator
+        - reasoner
       summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
         Query the COHD API following the [NCATS Translator Reasoner Standard API]
@@ -1858,6 +2047,43 @@ paths:
         '400':
           description: Invalid status value
       x-swagger-router-controller: swagger_server.controllers.query_controller
+      x-bte-kgs-operations:
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Disease
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
+        - inputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          outputs:
+          - id: biolink:OMOP
+            semantic: biolink:Drug
+          predicate: biolink:correlated_with
+          source: Columbia Open Health Data KP
+          supportBatch: false
 components:
   schemas:
     QueryOptions:
@@ -2189,6 +2415,17 @@ components:
         description: Biolink model relations
         url: https://biolink.github.io/biolink-model/docs/related_to.html
       example: affects
+  x-bte-kgs-response-mappings:
+    chi_square:
+      biolink:OMOP: results.concept_id_2
+      biolink:name: results.concept_2_name
+      biolink:p_value: results.p-value
+    obs_exp_ratio:
+      biolink:OMOP: results.concept_id_2
+      biolink:name: results.concept_2_name
+    relative_frequency:
+      biolink:OMOP: results.concept_id_2
+      biolink:name: results.concept_2_name
   responses: {}
   parameters: {}
   examples: {}
