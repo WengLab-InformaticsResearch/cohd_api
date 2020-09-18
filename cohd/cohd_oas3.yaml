@@ -1264,8 +1264,14 @@ paths:
                           type: integer
                           example: 3
                         p-value: 
-                          type: integer
-                          example: 0
+                          type: number
+                          example: 0.0314
+                        adj_p-value:
+                          type: number
+                          example: 0.0314
+                          description: >-
+                            Bonferonni adjusted p-value, adjusted with the total number of pairs of concepts in the
+                            dataset.
       x-bte-kgs-operations:
         - inputs:
           - id: biolink:OMOP
