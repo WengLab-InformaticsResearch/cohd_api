@@ -686,6 +686,15 @@ def query_db(service, method, args):
                 return 'No concept_id_1 selected', 400
             concept_id_1 = int(concept_id_1)
 
+            # Get the total number of pairs for Bonferonni adjustment
+            sql = '''SELECT SUM(count) AS pair_count
+                FROM domain_pair_concept_counts
+                WHERE dataset_id = %(dataset_id)s;'''
+            params = {'dataset_id': dataset_id}
+            cur.execute(sql, params)
+            results = cur.fetchall()
+            pair_count = int(results[0]['pair_count'])
+
             if concept_id_2 is not None and concept_id_2.strip().isdigit():
                 # concept_id_2 is specified, only return the chi-square for the pair (concept_id_1, concept_id_2)
                 concept_id_2 = int(concept_id_2)
@@ -799,7 +808,8 @@ def query_db(service, method, args):
                     'n_~c1_c2': int(c2 - cpc),
                     'n_c1_c2': int(cpc),
                     'chi_square': cs.statistic,
-                    'p-value': cs.pvalue
+                    'p-value': cs.pvalue,
+                    'adj_p-value': min(cs.pvalue * pair_count, 1.0)
                 }
                 if concept_id_2 is None:
                     new_r['concept_2_name'] = r['concept_2_name']
