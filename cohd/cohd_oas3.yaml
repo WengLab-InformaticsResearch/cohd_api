@@ -2425,13 +2425,19 @@ components:
     chi_square:
       biolink:OMOP: results.concept_id_2
       biolink:name: results.concept_2_name
-      biolink:p_value: results.p-value
+      biolink:has_count: results.n_c1_c2
+      biolink:p_value: results.adj_p-value
+      biolink:chi_squared_statistic: results.chi_square
     obs_exp_ratio:
       biolink:OMOP: results.concept_id_2
       biolink:name: results.concept_2_name
+      biolink:has_count: results.observed_count
     relative_frequency:
       biolink:OMOP: results.concept_id_2
       biolink:name: results.concept_2_name
+      biolink:has_count: results.concept_pair_count
+      biolink:has_total: results.concept_2_count
+      biolink:has_quotient: results.relative_frequency
   responses: {}
   parameters: {}
   examples: {}
