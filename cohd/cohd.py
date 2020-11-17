@@ -233,14 +233,6 @@ def api_call(service=None, meta=None, query=None):
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
             result = 'meta not recognized', 400
-    elif service == 'temporal':
-        if meta == 'conceptAgeCounts' or \
-                meta == 'conceptPairDeltaCounts' or \
-                meta == 'findSimilarAgeDistributions' or \
-                meta == 'sourceToTarget':
-            result = cohd_temporal.query_cohd_temporal(service, meta, request.args)
-        else:
-            result = 'meta not recognized', 400
     elif service == 'translator':
         if meta == 'query':
             reasoner = cohd_translator.COHDTranslatorReasoner(request)
