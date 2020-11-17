@@ -98,7 +98,7 @@ def query_db(service, method, args):
         # endpoint: /api/v1/query?service=metadata&meta=datasets
         if method == 'datasets':
             sql = '''SELECT * 
-                FROM cohd.dataset;'''
+                FROM dataset;'''
             cur.execute(sql)
             json_return = cur.fetchall()
 
@@ -107,7 +107,7 @@ def query_db(service, method, args):
         elif method == 'domainCounts':
             dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
-                FROM cohd.domain_concept_counts 
+                FROM domain_concept_counts 
                 WHERE dataset_id=%(dataset_id)s;'''
             params = {'dataset_id': dataset_id}
             cur.execute(sql, params)
@@ -118,18 +118,19 @@ def query_db(service, method, args):
         elif method == 'domainPairCounts':
             dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
-                FROM cohd.domain_pair_concept_counts 
+                FROM domain_pair_concept_counts 
                 WHERE dataset_id=%(dataset_id)s;'''
             params = {'dataset_id': dataset_id}
             cur.execute(sql, params)
             json_return = cur.fetchall()
 
-        # The number of patients in the dataset
-        # endpoint: /api/v1/query?service=metadata&meta=patientCount&dataset_id=1
-        elif method == 'patientCount':
+        # The number of visits in the dataset
+        # endpoint: /api/v1/query?service=metadata&meta=visitCount&dataset_id=1
+        # Note: adapted from original COHD code which used patients as the base for counting
+        elif method == 'visitCount':
             dataset_id = get_arg_dataset_id(args)
             sql = '''SELECT * 
-                FROM cohd.patient_count 
+                FROM patient_count 
                 WHERE dataset_id=%(dataset_id)s;'''
             params = {'dataset_id': dataset_id}
             cur.execute(sql, params)
@@ -147,8 +148,8 @@ def query_db(service, method, args):
 
             sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
                     CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
-                FROM cohd.concept c
-                LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
+                FROM concept c
+                LEFT JOIN concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
                 WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C') 
                     {domain_filter} 
                     {count_filter}
@@ -203,7 +204,7 @@ def query_db(service, method, args):
             concept_ids = [int(x.strip()) for x in query.split(',')]
 
             sql = '''SELECT concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code 
-                FROM cohd.concept
+                FROM concept
                 WHERE concept_id IN (%s);''' % ','.join(['%s' for _ in concept_ids])
 
             cur.execute(sql, concept_ids)
@@ -442,8 +443,8 @@ def query_db(service, method, args):
                     cc.concept_id,
                     cc.concept_count,
                     cc.concept_count / (pc.count + 0E0) AS concept_frequency
-                FROM cohd.concept_counts cc
-                JOIN cohd.patient_count pc ON cc.dataset_id = pc.dataset_id
+                FROM concept_counts cc
+                JOIN patient_count pc ON cc.dataset_id = pc.dataset_id
                 WHERE cc.dataset_id = %s AND concept_id IN ({concepts});'''.format(
                 concepts=','.join(['%s' for _ in concept_ids]))
             params = [dataset_id] + concept_ids
@@ -473,8 +474,8 @@ def query_db(service, method, args):
                     cpc.concept_id_2,
                     cpc.concept_count,
                     cpc.concept_count / (pc.count + 0E0) AS concept_frequency
-                FROM cohd.concept_pair_counts cpc
-                JOIN cohd.patient_count pc ON pc.dataset_id = cpc.dataset_id
+                FROM concept_pair_counts cpc
+                JOIN patient_count pc ON pc.dataset_id = cpc.dataset_id
                 WHERE cpc.dataset_id = %(dataset_id)s AND  
                     ((concept_id_1 = %(concept_id_1)s AND concept_id_2 = %(concept_id_2)s) OR 
                     (concept_id_1 = %(concept_id_2)s AND concept_id_2 = %(concept_id_1)s));'''
@@ -511,9 +512,9 @@ def query_db(service, method, args):
                         cpc.concept_count / (pc.count + 0E0) AS concept_frequency,
                         c.concept_name AS associated_concept_name, 
                         c.domain_id AS associated_domain_id
-                    FROM cohd.concept_pair_counts cpc
-                    JOIN cohd.concept c ON concept_id_2 = c.concept_id     
-                    JOIN cohd.patient_count pc ON cpc.dataset_id = pc.dataset_id          
+                    FROM concept_pair_counts cpc
+                    JOIN concept c ON concept_id_2 = c.concept_id     
+                    JOIN patient_count pc ON cpc.dataset_id = pc.dataset_id          
                     WHERE cpc.dataset_id = %(dataset_id)s AND concept_id_1 = %(concept_id)s)
                     UNION
                     (SELECT 
@@ -524,9 +525,9 @@ def query_db(service, method, args):
                         cpc.concept_count / (pc.count + 0E0) AS concept_frequency,
                         c.concept_name AS associated_concept_name, 
                         c.domain_id AS associated_domain_id
-                    FROM cohd.concept_pair_counts cpc
-                    JOIN cohd.concept c ON concept_id_1 = c.concept_id             
-                    JOIN cohd.patient_count pc ON cpc.dataset_id = pc.dataset_id      
+                    FROM concept_pair_counts cpc
+                    JOIN concept c ON concept_id_1 = c.concept_id             
+                    JOIN patient_count pc ON cpc.dataset_id = pc.dataset_id      
                     WHERE cpc.dataset_id = %(dataset_id)s AND concept_id_2 = %(concept_id)s)) x
                 ORDER BY concept_count DESC;'''
             params = {
@@ -566,9 +567,9 @@ def query_db(service, method, args):
                         cpc.concept_count / (pc.count + 0E0) AS concept_frequency,
                         c.concept_name AS associated_concept_name, 
                         c.domain_id AS associated_domain_id
-                    FROM cohd.concept_pair_counts cpc
-                    JOIN cohd.concept c ON concept_id_2 = c.concept_id     
-                    JOIN cohd.patient_count pc ON cpc.dataset_id = pc.dataset_id          
+                    FROM concept_pair_counts cpc
+                    JOIN concept c ON concept_id_2 = c.concept_id     
+                    JOIN patient_count pc ON cpc.dataset_id = pc.dataset_id          
                     WHERE cpc.dataset_id = %(dataset_id)s AND concept_id_1 = %(concept_id)s
                         AND c.domain_id = %(domain_id)s)
                     UNION
@@ -580,9 +581,9 @@ def query_db(service, method, args):
                         cpc.concept_count / (pc.count + 0E0) AS concept_frequency,
                         c.concept_name AS associated_concept_name, 
                         c.domain_id AS associated_domain_id
-                    FROM cohd.concept_pair_counts cpc
-                    JOIN cohd.concept c ON concept_id_1 = c.concept_id             
-                    JOIN cohd.patient_count pc ON cpc.dataset_id = pc.dataset_id      
+                    FROM concept_pair_counts cpc
+                    JOIN concept c ON concept_id_1 = c.concept_id             
+                    JOIN patient_count pc ON cpc.dataset_id = pc.dataset_id      
                     WHERE cpc.dataset_id = %(dataset_id)s AND concept_id_2 = %(concept_id)s
                         AND c.domain_id = %(domain_id)s)) x
                 ORDER BY concept_count DESC;'''
@@ -603,9 +604,9 @@ def query_db(service, method, args):
                         cc.concept_count, 
                         cc.concept_count / (pc.count + 0E0) AS concept_frequency,
                         c.domain_id, c.concept_name, c.vocabulary_id, c.concept_class_id
-                    FROM cohd.concept_counts cc
-                    JOIN cohd.concept c ON cc.concept_id = c.concept_id
-                    JOIN cohd.patient_count pc ON cc.dataset_id = pc.dataset_id
+                    FROM concept_counts cc
+                    JOIN concept c ON cc.concept_id = c.concept_id
+                    JOIN patient_count pc ON cc.dataset_id = pc.dataset_id
                     WHERE cc.dataset_id = %(dataset_id)s
                         {domain_filter}
                         {vocabulary_filter}
@@ -706,10 +707,10 @@ def query_db(service, method, args):
                         c1.concept_count AS concept_count_1,
                         c2.concept_count AS concept_count_2,
                         pc.count AS patient_count
-                    FROM cohd.concept_pair_counts cp
-                    JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                    JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                    JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                    FROM concept_pair_counts cp
+                    JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                    JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                    JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
                     WHERE cp.dataset_id = %(dataset_id)s 
                         AND c1.dataset_id = %(dataset_id)s 
                         AND c2.dataset_id = %(dataset_id)s
@@ -736,11 +737,11 @@ def query_db(service, method, args):
                             pc.count AS patient_count,
                             c.concept_name AS concept_2_name, 
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                        JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                        JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                        JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                        JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                        JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                        JOIN concept c ON cp.concept_id_2 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s 
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
@@ -757,11 +758,11 @@ def query_db(service, method, args):
                             pc.count AS patient_count,
                             c.concept_name AS concept_2_name, 
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                        JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                        JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                        JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                        JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                        JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                        JOIN concept c ON cp.concept_id_1 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s 
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
@@ -846,10 +847,10 @@ def query_db(service, method, args):
                         cp.concept_count AS observed_count,
                         c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
                         log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio
-                    FROM cohd.concept_pair_counts cp
-                    JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                    JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                    JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                    FROM concept_pair_counts cp
+                    JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                    JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                    JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
                     WHERE cp.dataset_id = %(dataset_id)s 
                         AND c1.dataset_id = %(dataset_id)s 
                         AND c2.dataset_id = %(dataset_id)s
@@ -874,11 +875,11 @@ def query_db(service, method, args):
                             log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio,
                             c.concept_name AS concept_2_name, 
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                        JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                        JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                        JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                        JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                        JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                        JOIN concept c ON cp.concept_id_2 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s 
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
@@ -894,11 +895,11 @@ def query_db(service, method, args):
                             log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio,
                             c.concept_name AS concept_2_name, 
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                        JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                        JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                        JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                        JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                        JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                        JOIN concept c ON cp.concept_id_1 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s 
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
@@ -958,8 +959,8 @@ def query_db(service, method, args):
                         cp.concept_count AS concept_pair_count,
                         cc.concept_count AS concept_2_count,
                         cp.concept_count / (cc.concept_count + 0E0) AS relative_frequency
-                    FROM cohd.concept_pair_counts cp
-                    JOIN cohd.concept_counts cc ON cp.concept_id_2 = cc.concept_id
+                    FROM concept_pair_counts cp
+                    JOIN concept_counts cc ON cp.concept_id_2 = cc.concept_id
                     WHERE cp.dataset_id = %(dataset_id)s
                         AND cc.dataset_id = %(dataset_id)s
                         AND cp.concept_id_1 = %(concept_id_1)s
@@ -972,8 +973,8 @@ def query_db(service, method, args):
                         cp.concept_count AS concept_pair_count,
                         cc.concept_count AS concept_2_count,
                         cp.concept_count / (cc.concept_count + 0E0) AS relative_frequency
-                    FROM cohd.concept_pair_counts cp
-                    JOIN cohd.concept_counts cc ON cp.concept_id_1 = cc.concept_id
+                    FROM concept_pair_counts cp
+                    JOIN concept_counts cc ON cp.concept_id_1 = cc.concept_id
                     WHERE cp.dataset_id = %(dataset_id)s
                         AND cc.dataset_id = %(dataset_id)s
                         AND cp.concept_id_1 = %(concept_id_2)s
@@ -997,9 +998,9 @@ def query_db(service, method, args):
                             cp.concept_count / (cc.concept_count + 0E0) AS relative_frequency,
                             c.concept_name AS concept_2_name,
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts cc ON cp.concept_id_2 = cc.concept_id
-                        JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts cc ON cp.concept_id_2 = cc.concept_id
+                        JOIN concept c ON cp.concept_id_2 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s
                             AND cc.dataset_id = %(dataset_id)s
                             AND cp.concept_id_1 = %(concept_id_1)s
@@ -1014,9 +1015,9 @@ def query_db(service, method, args):
                             cp.concept_count / (cc.concept_count + 0E0) AS relative_frequency,
                             c.concept_name AS concept_2_name,
                             c.domain_id AS concept_2_domain
-                        FROM cohd.concept_pair_counts cp
-                        JOIN cohd.concept_counts cc ON cp.concept_id_1 = cc.concept_id
-                        JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                        FROM concept_pair_counts cp
+                        JOIN concept_counts cc ON cp.concept_id_1 = cc.concept_id
+                        JOIN concept c ON cp.concept_id_1 = c.concept_id
                         WHERE cp.dataset_id = %(dataset_id)s
                             AND cc.dataset_id = %(dataset_id)s
                             AND cp.concept_id_2 = %(concept_id_1)s

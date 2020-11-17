@@ -16,7 +16,6 @@ from flask_cors import CORS
 
 from .google_analytics import GoogleAnalytics
 from . import query_cohd_mysql
-from . import cohd_temporal
 from . import cohd_translator
 
 #########
@@ -103,9 +102,9 @@ def api_metadata_domainPairCounts():
     return api_call('metadata', 'domainPairCounts')
 
 
-@app.route('/api/metadata/patientCount')
+@app.route('/api/metadata/visitCount')
 def api_metadata_patientCount():
-    return api_call('metadata', 'patientCount')
+    return api_call('metadata', 'visitCount')
 
 
 @app.route('/api/frequencies/singleConceptFreq')
@@ -151,26 +150,6 @@ def api_association_obsExpRatio():
 @app.route('/api/association/relativeFrequency')
 def api_association_relativeFrequency():
     return api_call('association', 'relativeFrequency')
-
-
-@app.route('/api/temporal/conceptAgeCounts')
-def api_temporal_conceptAgeCounts():
-    return api_call('temporal', 'conceptAgeCounts')
-
-
-@app.route('/api/temporal/conceptPairDeltaCounts')
-def api_temporal_conceptPairDeltaCounts():
-    return api_call('temporal', 'conceptPairDeltaCounts')
-
-
-@app.route('/api/temporal/findSimilarAgeDistributions')
-def api_temporal_findSimilarAgeDistributions():
-    return api_call('temporal', 'findSimilarAgeDistributions')
-
-
-@app.route('/api/temporal/sourceToTarget')
-def api_temporal_sourceToTarget():
-    return api_call('temporal', 'sourceToTarget')
 
 
 @app.route('/api/query', methods=['POST'])
@@ -221,7 +200,7 @@ def api_call(service=None, meta=None, query=None):
         if meta == 'datasets' or \
                 meta == 'domainCounts' or \
                 meta == 'domainPairCounts' or \
-                meta == 'patientCount':
+                meta == 'visitCount':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
             result = 'meta not recognized', 400
