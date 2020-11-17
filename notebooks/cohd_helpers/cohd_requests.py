@@ -747,5 +747,5 @@ def translator_query(node_1_curie, node_2_curie=None, node_2_type=None, max_resu
     if response.status_code == requests.status_codes.codes.OK:
         return response.json()
     else:
-        response.raise_for_status()
+        print(response)
 

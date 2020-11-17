@@ -15,6 +15,7 @@
 --     Restart SSMS for new settings to take effect
 --
 -- Turn on SQL CMD mode in SSMS: Query > SQL CMD Mode
+-- Run each section individually, otherwise all results may be output to the same file
 
 -- Prevent the count from showing up in the text file results
 SET NOCOUNT ON;
