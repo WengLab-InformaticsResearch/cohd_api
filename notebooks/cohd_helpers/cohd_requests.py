@@ -285,6 +285,23 @@ def patient_count(dataset_id=None):
         df = df[['dataset_id', 'count']]
     return json, df
 
+# Get the number of visits in the data set (COHD-COVID)
+def visit_count(dataset_id=None):
+    url = f'{server}/metadata/visitCount'
+
+    # Optional params
+    params = {}
+    if dataset_id is not None:
+        params['dataset_id'] = dataset_id
+
+    response = requests.get(url, params)
+    json = _process_response(response)
+    df = _json_to_df(json)
+    if len(df.columns) == 2:
+        # re-order the columns so that it displays in a more logical order
+        df = df[['dataset_id', 'count']]
+    return json, df
+
 # ######################################################################    
 # COHD Clinical Frequency functions
 # ######################################################################
