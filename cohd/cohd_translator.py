@@ -898,8 +898,8 @@ class TranslatorResponseMessage:
         kg_edge = {
             'id': ke_id,
             'type': self.query_edge_type,
-            'source_id': omop_concept_curie(node_1['omop_id']),
-            'target_id': omop_concept_curie(node_2['omop_id']),
+            'source_id': node_1['kg_node']['id'],
+            'target_id': node_2['kg_node']['id'],
             'attributes': attributes
         }
 
