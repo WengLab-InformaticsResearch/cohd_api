@@ -53,7 +53,7 @@ def omop_concept_lookup(cur, concept_id):
     :return: row from concept table
     """
     sql = '''SELECT *
-        FROM cohd.concept
+        FROM concept
         WHERE concept_id = %(concept_id)s;'''
     params = {'concept_id': concept_id}
 
