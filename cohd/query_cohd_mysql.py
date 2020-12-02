@@ -223,7 +223,7 @@ def query_db(service, method, args):
 
             sql = '''SELECT ca.ancestor_concept_id, ca.min_levels_of_separation, ca.max_levels_of_separation, 
                     c.concept_name, c.domain_id, c.vocabulary_id, c.concept_class_id, c.standard_concept, 
-                    c.concept_code, cc.concept_count
+                    c.concept_code, CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
                 FROM concept_ancestor ca
                 JOIN concept c ON ca.ancestor_concept_id = c.concept_id
                 LEFT JOIN concept_counts cc ON ca.ancestor_concept_id = cc.concept_id
@@ -275,7 +275,7 @@ def query_db(service, method, args):
 
             sql = '''SELECT ca.descendant_concept_id, ca.min_levels_of_separation, ca.max_levels_of_separation, 
                     c.concept_name, c.domain_id, c.vocabulary_id, c.concept_class_id, c.standard_concept, 
-                    c.concept_code, cc.concept_count
+                    c.concept_code, CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
                 FROM concept_ancestor ca
                 JOIN concept c ON ca.descendant_concept_id = c.concept_id
                 LEFT JOIN concept_counts cc ON ca.descendant_concept_id = cc.concept_id
