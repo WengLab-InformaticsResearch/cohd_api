@@ -899,8 +899,8 @@ def test_obsExpRatio():
     # Insulin and type-2 diabetes should be highly associated (high ln_ratio)
     expected_results = [
         {
-            "concept_id_1": 4193704,
-            "concept_id_2": 19078558,
+            "concept_id_1": 19078558,
+            "concept_id_2": 4193704,
             "dataset_id": 3,
             "expected_count": 1224.846689509186,
             "ln_ratio": 2.672160387674666,

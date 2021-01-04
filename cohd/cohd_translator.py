@@ -386,7 +386,7 @@ class COHDTranslatorReasoner:
                                                  kargs={'threshold': self._threshold}))
 
         # If the method is obsExpRatio, add a criteria for confidence interval
-        if self._method == 'obsexpratio' and self._confidence_interval > 0:
+        if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
             self._criteria.append(ResultCriteria(function=criteria_confidence,
                                                  kargs={'alpha': self._confidence_interval}))
 

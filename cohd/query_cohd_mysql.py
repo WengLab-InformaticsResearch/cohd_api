@@ -826,7 +826,6 @@ def query_db(service, method, args):
         elif method == 'obsExpRatio':
             # Get non-required parameters
             dataset_id = get_arg_dataset_id(args)
-            concept_id_2 = args.get('concept_id_2')
             domain_id = args.get('domain')
 
             # concept_id_1 is required
@@ -841,8 +840,8 @@ def query_db(service, method, args):
                 order = concept_id_1 < concept_id_2
                 sql = '''SELECT 
                         cp.dataset_id, 
-                        cp.concept_id_1, 
-                        cp.concept_id_2,
+                        cp.concept_id_1 AS {rename_1}, 
+                        cp.concept_id_2 AS {rename_2},
                         cp.concept_count AS observed_count,
                         c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
                         log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio
@@ -860,6 +859,12 @@ def query_db(service, method, args):
                     'concept_id_1': concept_id_1 if order else concept_id_2,
                     'concept_id_2': concept_id_2 if order else concept_id_1
                 }
+                rename_1 = 'concept_id_1'
+                rename_2 = 'concept_id_2'
+                if not order:
+                    rename_1 = 'concept_id_2'
+                    rename_2 = 'concept_id_1'
+                sql = sql.format(rename_1=rename_1, rename_2=rename_2)
 
             else:
                 # If concept_id_2 is not specified, get results for all pairs that include concept_id_1
