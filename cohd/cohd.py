@@ -176,7 +176,13 @@ def api_temporal_sourceToTarget():
 @app.route('/api/query', methods=['POST'])
 @app.route('/api/translator/query', methods=['POST'])
 def api_translator_query():
-    return api_call('translator', 'query')
+    return api_call('translator', 'query', version=None)
+
+
+@app.route('/api/<string:version>/query', methods=['POST'])
+@app.route('/api/<string:version>/translator/query', methods=['POST'])
+def api_translator_query_version(version):
+    return api_call('translator', 'query', version=version)
 
 
 @app.route('/api/predicates', methods=['GET'])
@@ -206,7 +212,7 @@ def google_analytics(endpoint=None, service=None, meta=None):
 
 @app.route('/api/query')
 @app.route('/api/v1/query')
-def api_call(service=None, meta=None, query=None):
+def api_call(service=None, meta=None, query=None, version=None):
     if service is None:
         service = request.args.get('service')
     if meta is None:
@@ -264,8 +270,7 @@ def api_call(service=None, meta=None, query=None):
             result = 'meta not recognized', 400
     elif service == 'translator':
         if meta == 'query':
-            reasoner = cohd_translator.COHDTranslatorReasoner(request)
-            result = reasoner.reason()
+            result = cohd_translator.translator_query(request, version)
         elif meta == 'predicates':
             result = cohd_translator.translator_predicates()
         else:
