@@ -8,9 +8,9 @@ from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 
 
-class CohdTrapi093(CohdTrapi):
+class CohdTrapi100(CohdTrapi):
     """
-    Pseudo-reasoner conforming to NCATS Biodmedical Data Translator Reasoner API Spec 0.9.3
+    Pseudo-reasoner conforming to NCATS Biodmedical Data Translator Reasoner API Spec 1.0
     """
 
     def __init__(self, request):
@@ -90,7 +90,7 @@ class CohdTrapi093(CohdTrapi):
         return True, None
 
     def _find_query_node(self, query_node_id):
-        """ Finds the desired query node by node_id from the list of query nodes in query_graph
+        """ Finds the desired query node by node_id from the dict of query nodes in query_graph
 
         Parameters
         ----------
@@ -101,14 +101,14 @@ class CohdTrapi093(CohdTrapi):
         -------
         query node object, or None if not found
         """
-        assert self._query_graph is not None and query_node_id, \
-            'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes()'
+        assert self._query_graph is not None and query_node_id,\
+            'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - empty query_graph or query_node_id'
 
-        for query_node in self._query_graph['nodes']:
-            if query_node['id'] == query_node_id:
-                return query_node
+        assert query_node_id in self._query_graph['nodes'], \
+            ('cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - '
+             f'{query_node_id} not in {",".join(self._query_graph["nodes"].keys())}')
 
-        return None
+        return self._query_graph['nodes'][query_node_id]
 
     def _interpret_query(self):
         """ Interprets the JSON request data for how the query should be performed.
@@ -186,6 +186,11 @@ class CohdTrapi093(CohdTrapi):
         if self._biolink_only is None or not isinstance(self._biolink_only, bool):
             self._biolink_only = CohdTrapi.default_biolink_only
 
+        # Get query_option for the desired maximum number of results
+        max_results = self._query_options.get('max_results')
+        if max_results:
+            self._max_results = min(max_results, self._max_results)  # Don't allow user to specify more than default
+
         # Get query information from query_graph
         self._query_graph = self._json_data['message']['query_graph']
 
@@ -197,44 +202,48 @@ class CohdTrapi093(CohdTrapi):
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner
-        edge = edges[0]
-        edge_types = edge['type']
-        if not isinstance(edge_types, list):
-            # In TRAPI, QEdge type can be string or list. If it's not currently a list, convert to a list to simplify
-            # following processing
-            edge_types = [edge_types]
-        edge_supported = False
-        for edge_type in edge_types:
-            if edge_type in CohdTrapi.supported_edge_types:
-                edge_supported = True
-                break
-        if not edge_supported:
-            self._valid_query = False
-            self._invalid_query_response = ('QEdge.type not supported by COHD Reasoner API', 422)
-            return self._valid_query, self._invalid_query_response
+        edge = list(edges.values())[0]  # Get first and only edge
+        if 'predicate' in edge:
+            edge_predicates = edge['predicate']
+            if not isinstance(edge_predicates, list):
+                # In TRAPI, QEdge type can be string or list. If it's not currently a list, convert to a list to
+                # simplify following processing
+                edge_predicates = [edge_predicates]
+            edge_supported = False
+            for edge_predicate in edge_predicates:
+                if edge_predicate in CohdTrapi.supported_edge_types:
+                    edge_supported = True
+                    break
+            if not edge_supported:
+                self._valid_query = False
+                self._invalid_query_response = ('QEdge.predicate not supported by COHD Reasoner API', 422)
+                return self._valid_query, self._invalid_query_response
+        else:
+            # TRAPI does not require predicate. If no predicate specified, assume using biolink:correlated_with
+            pass
 
         # Get concept_id_1
-        source_node = self._find_query_node(edge['source_id'])
-        curie_1 = source_node['curie']  # source node must contain a CURIE
+        subject_node = self._find_query_node(edge['subject'])
+        curie_1 = subject_node['id']  # source node must contain a CURIE
         self._source_concept_mapping = self._concept_mapper.map_to_omop(curie_1)
         if self._source_concept_mapping:
             self._concept_id_1 = self._source_concept_mapping['omop_concept_id']
 
             # Keep track of this mapping in the query_graph for the response
-            source_node['mapped_omop_concept'] = self._source_concept_mapping
+            subject_node['mapped_omop_concept'] = self._source_concept_mapping
         else:
             self._valid_query = False
             self._invalid_query_response = ('Could not map source node to OMOP concept', 422)
             return self._valid_query, self._invalid_query_response
 
-        # Check the formatting of node 1's type (even though it's not used)
-        if 'type' in source_node:
-            source_node['type'] = fix_blm_category(source_node['type'])
+        # Check the formatting of node 1's category (even though it's not used)
+        if 'category' in subject_node:
+            subject_node['category'] = fix_blm_category(subject_node['category'])
 
-        # Get the desired association concept or type
-        target_node = self._find_query_node(edge['target_id'])
-        curie_2 = target_node.get('curie')
-        node_type_2 = target_node.get('type')
+        # Get the desired association concept or category
+        object_node = self._find_query_node(edge['object'])
+        curie_2 = object_node.get('id')
+        node_category_2 = object_node.get('category')
         if curie_2 is not None and curie_2:
             # If CURIE of target node is specified, then query the association between concept_1 and concept_2
             self._domain_ids = None
@@ -244,32 +253,27 @@ class CohdTrapi093(CohdTrapi):
                 self._concept_id_2 = self._target_concept_mapping['omop_concept_id']
 
                 # Keep track of this mapping in the query graph for the response
-                target_node['mapped_omop_concept'] = self._target_concept_mapping
+                object_node['mapped_omop_concept'] = self._target_concept_mapping
             else:
                 self._valid_query = False
                 self._invalid_query_response = ('Could not map target node to OMOP concept', 422)
                 return self._valid_query, self._invalid_query_response
-        elif node_type_2 is not None and node_type_2:
+        elif node_category_2 is not None and node_category_2:
             # Attempt to correct the node type if necessary
-            node_type_2 = fix_blm_category(node_type_2)
-            target_node['type'] = node_type_2
+            node_category_2 = fix_blm_category(node_category_2)
+            object_node['category'] = node_category_2
 
-            # If CURIE is not specified and target node's type is specified, then query the association between
-            # concept_1 and all concepts in the domain
+            # If CURIE is not specified and target node's category is specified, then query the association
+            # between concept_1 and all concepts in the domain
             self._concept_id_2 = None
-            self._domain_ids = map_blm_class_to_omop_domain(node_type_2)
+            self._domain_ids = map_blm_class_to_omop_domain(node_category_2)
 
             # Keep track of this mapping in the query graph for the response
-            target_node['mapped_omop_domains'] = self._domain_ids
+            object_node['mapped_omop_domains'] = self._domain_ids
         else:
             # No CURIE or type specified, query for associations against all concepts
             self._concept_id_2 = None
             self._domain_ids = None
-
-        # Get the desired maximum number of results
-        max_results = self._json_data.get('max_results')
-        if max_results:
-            self._max_results = min(max_results, self._max_results)  # Don't allow user to specify more than default
 
         # Criteria for returning results
         self._criteria = []
@@ -347,8 +351,8 @@ class _TranslatorResponseMessage:
     query_options = None
     knowledge_graph = None
     query_edge_id = None
-    query_source_node_id = None
-    query_target_node_id = None
+    query_subject_node_id = None
+    query_object_node_id = None
 
     def __init__(self, query_graph, query_options, criteria=None, cohd_results=None, concept_mapper=None,
                  max_results=500, biolink_only=True):
@@ -368,8 +372,8 @@ class _TranslatorResponseMessage:
         self.nodes = {}
         self.results = []
         self.knowledge_graph = {
-            'nodes': [],
-            'edges': []
+            'nodes': {},
+            'edges': {}
         }
         self.query_options = query_options
         self.max_results = max_results
@@ -380,18 +384,16 @@ class _TranslatorResponseMessage:
 
         # Save info from query graph
         self.query_graph = query_graph
-        query_edge = query_graph['edges'][0]
-        self.query_edge_id = query_edge['id']
-        self.query_edge_type = query_edge['type']
-        self.query_source_node_id = query_graph['edges'][0]['source_id']
-        self.query_target_node_id = query_graph['edges'][0]['target_id']
+        for query_edge_id, query_edge in query_graph['edges'].items():
+            self.query_edge_id = query_edge_id
+            self.query_edge_predicate = query_edge['predicate']
+            self.query_subject_node_id = query_edge['subject']
+            self.query_object_node_id = query_edge['object']
+            break  # one and only one edge expected
 
         # Get the input CURIEs from the query graph
-        for qnode in self.query_graph['nodes']:
-            if qnode['id'] == self.query_source_node_id:
-                self.query_source_node_curie = qnode.get('curie', None)
-            elif qnode['id'] == self.query_target_node_id:
-                self.query_target_node_curie = qnode.get('curie', None)
+        self.query_subject_node_curie = self.query_graph['nodes'][self.query_subject_node_id].get('id', None)
+        self.query_object_node_curie = self.query_graph['nodes'][self.query_object_node_id].get('id', None)
 
         if cohd_results is not None:
             for result in cohd_results:
@@ -420,7 +422,7 @@ class _TranslatorResponseMessage:
 
         # Get node for concept 1
         concept_1_id = cohd_result['concept_id_1']
-        node_1 = self.get_node(concept_1_id, query_node_curie=self.query_source_node_curie)
+        node_1 = self.get_node(concept_1_id, query_node_curie=self.query_subject_node_curie)
 
         if self.biolink_only and not node_1.get('biolink_compliant', False):
             # Only include results when node_1 maps to biolink
@@ -430,46 +432,45 @@ class _TranslatorResponseMessage:
         concept_2_id = cohd_result['concept_id_2']
         concept_2_name = cohd_result.get('concept_2_name')
         concept_2_domain = cohd_result.get('concept_2_domain')
-        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_target_node_curie)
+        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_object_node_curie)
 
         if self.biolink_only and not node_2.get('biolink_compliant', False):
             # Only include results when node_2 maps to biolink
             return
 
         # Add nodes and edge to knowledge graph
-        kg_node_1, kg_node_2, kg_edge = self.add_kg_edge(node_1, node_2, cohd_result)
+        kg_node_1, kg_node_2, kg_edge, kg_edge_id = self.add_kg_edge(node_1, node_2, cohd_result)
 
         # Add to results
-        self.add_result(kg_node_1, kg_node_2, kg_edge)
+        self.add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id)
 
-    def add_result(self, kg_node_1, kg_node_2, kg_edge):
+    def add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id):
         """ Adds a knowledge graph edge to the results list
 
         Parameters
         ----------
-        kg_node_1: Source node
-        kg_node_2: Target node
-        kg_edge: edge
+        kg_node_1_id: Subject node ID
+        kg_node_2_id: Object node ID
+        kg_edge_id: edge ID
 
         Returns
         -------
         result
         """
         result = {
-            'node_bindings': [
-                {
-                    'qg_id': self.query_source_node_id,
-                    'kg_id': kg_node_1['id']
-                },
-                {
-                    'qg_id': self.query_target_node_id,
-                    'kg_id': kg_node_2['id']
-                }
-            ],
-            'edge_bindings': [{
-                'qg_id': self.query_edge_id,
-                'kg_id': kg_edge['id']
-            }]
+            'node_bindings': {
+                self.query_subject_node_id: [{
+                    'id': kg_node_1_id
+                }],
+                self.query_object_node_id: [{
+                    'id': kg_node_2_id
+                }]
+            },
+            'edge_bindings': {
+                self.query_edge_id: [{
+                    'id': kg_edge_id
+                }]
+            }
         }
         self.results.append(result)
         return result
@@ -505,7 +506,7 @@ class _TranslatorResponseMessage:
                     domain = concept_def['domain_id']
 
             # Map to Biolink Model or other target ontologies
-            blm_type = map_omop_domain_to_blm_class(domain)
+            blm_category = map_omop_domain_to_blm_class(domain)
             mappings = []
             if self.concept_mapper:
                 mappings = self.concept_mapper.map_from_omop(concept_id, domain)
@@ -529,7 +530,7 @@ class _TranslatorResponseMessage:
             else:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
                 # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_type, [])
+                blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_category, [])
                 for d in range(self.concept_mapper.distance + 1):
                     if found:
                         break
@@ -556,10 +557,12 @@ class _TranslatorResponseMessage:
                 'name': concept_name,
                 'domain': domain,
                 'internal_id': internal_id,
+                'primary_curie': primary_curie,
+                'in_kgraph': False,
+                'biolink_compliant': found,
                 'kg_node': {
-                    'id': primary_curie,
                     'name': primary_label,
-                    'type': [blm_type],
+                    'category': [blm_category],
                     'attributes': [
                         {
                             'name': 'omop_concept_id',
@@ -586,9 +589,7 @@ class _TranslatorResponseMessage:
                             'source': 'COHD',
                         }
                     ]
-                },
-                'in_kgraph': False,
-                'biolink_compliant': found
+                }
             }
             self.nodes[concept_id] = node
 
@@ -607,7 +608,7 @@ class _TranslatorResponseMessage:
         """
         kg_node = node['kg_node']
         if not node['in_kgraph']:
-            self.knowledge_graph['nodes'].append(kg_node)
+            self.knowledge_graph['nodes'][node['primary_curie']] = kg_node
             node['in_kgraph'] = True
 
         return kg_node
@@ -617,8 +618,8 @@ class _TranslatorResponseMessage:
 
         Parameters
         ----------
-        node_1: Source node
-        node_2: Target node
+        node_1: Subject node
+        node_2: Object node
         cohd_result: COHD result - data gets added to edge
 
         Returns
@@ -686,17 +687,16 @@ class _TranslatorResponseMessage:
 
         # Set the knowledge graph edge properties
         kg_edge = {
-            'id': ke_id,
-            'type': self.query_edge_type,
-            'source_id': node_1['kg_node']['id'],
-            'target_id': node_2['kg_node']['id'],
+            'predicate': self.query_edge_predicate,
+            'subject': node_1['primary_curie'],
+            'object': node_2['primary_curie'],
             'attributes': attributes
         }
 
         # Add the new edge
-        self.knowledge_graph['edges'].append(kg_edge)
+        self.knowledge_graph['edges'][ke_id] = kg_edge
 
-        return kg_node_1, kg_node_2, kg_edge
+        return kg_node_1, kg_node_2, kg_edge, ke_id
 
     def serialize(self):
         """ Creates the response message with JSON data in Reasoner Std API format
@@ -706,17 +706,19 @@ class _TranslatorResponseMessage:
         Response message with JSON data in Reasoner Std API format
         """
         return jsonify({
-            'context': 'https://biolink.github.io/biolink-model/context.jsonld',
-            'type': 'translator_reasoner_message',
+            # 'status': '', # TODO: String: One of a standardized set of short codes, e.g. Success,
+            #                       QueryNotTraversable, KPsNotAvailable
+            # 'description': '', # TODO: String: A brief human-readable description of the outcome
+            # 'logs': [],  # TODO: Array of LogEntry objects
+            'message': {
+                'results': self.results,
+                'query_graph': self.query_graph,
+                'knowledge_graph': self.knowledge_graph
+            },
+            # From TRAPI Extended
             'reasoner_id': 'COHD',
             'tool_version': 'COHD 3.0.0',
-            'schema_version': '0.9.3',
+            'schema_version': '1.0.0',
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'n_results': len(self.results),
-            'message_code': 'OK',
-            'code_description': '{n} result(s) found'.format(n=len(self.results)),
             'query_options': self.query_options,
-            'results': self.results,
-            'query_graph': self.query_graph,
-            'knowledge_graph': self.knowledge_graph
         })

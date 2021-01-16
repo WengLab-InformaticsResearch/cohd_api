@@ -13,7 +13,7 @@ class CohdTrapi(ABC):
     @abstractmethod
     def __init__(self, request):
         """ Constructor should take a flask request object """
-        pass
+        assert request is not None, 'cohd_trapi.py::CohdTrapi::__init__() - Bad request'
 
     @abstractmethod
     def operate(self):
@@ -24,6 +24,27 @@ class CohdTrapi(ABC):
         Response message with JSON data in Translator Reasoner API Standard
         """
         pass
+
+    # Default options
+    default_method = 'obsExpRatio'
+    default_min_cooccurrence = 0
+    default_confidence_interval = 0.99
+    default_dataset_id = 3
+    default_local_oxo = True
+    default_mapping_distance = 3
+    default_biolink_only = True
+    supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
+    # set of edge types that are supported by the COHD Reasoner
+    supported_edge_types = {
+        'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
+        'biolink:related_to',  # Ancestor of biolink:correlated_with
+        # Allow edge without biolink prefix
+        'correlated_with',
+        'related_to',
+        # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
+        'biolink:association',
+        'association',
+    }
 
 
 class ResultCriteria:
@@ -136,36 +157,33 @@ def criteria_confidence(cohd_result, alpha):
         return True
 
 
-
-
-
 mappings_domain_ontology = {
     '_DEFAULT': ['ICD9CM', 'RxNorm', 'UMLS', 'DOID', 'MONDO']
 }
 
 
-def fix_blm_types(blm_type):
+def fix_blm_category(blm_category):
     """ Checks and fixes blm_type.
 
-    Translator Reasoner API changed conventions for blm node types from snake case without 'biolink' prefix (e.g.,
+    Translator Reasoner API changed conventions for blm node categories from snake case without 'biolink' prefix (e.g.,
     biolink:population_of_individual_organisms) to camel case requiring prefix (e.g.,
     biolink:PopulationOfIndividualOrganisms). This method attempts to correct the input if it matches the old spec.
 
     Parameters
     ----------
-    blm_type - (String)
+    blm_category - (String)
 
     Returns
     -------
-    blm_type
+    corrected blm_category
     """
     # Don't process None or empty string
-    if blm_type is None or not blm_type:
-        return blm_type
+    if blm_category is None or not blm_category:
+        return blm_category
 
     # Remove any existing prefix and add biolink prefix
-    suffix = blm_type.split(':')[-1]
-    blm_type = 'biolink:' + suffix
+    suffix = blm_category.split(':')[-1]
+    blm_category = 'biolink:' + suffix
 
     # Convert snake case to camel case. Keep the original input if not in this dictionary.
     supported_type_conversions = {
@@ -176,9 +194,9 @@ def fix_blm_types(blm_type):
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
         'biolink:procedure': 'biolink:Procedure'
     }
-    blm_type = supported_type_conversions.get(blm_type, blm_type)
+    blm_category = supported_type_conversions.get(blm_category, blm_category)
 
-    return blm_type
+    return blm_category
 
 
 def map_blm_class_to_omop_domain(node_type):
@@ -301,10 +319,10 @@ class BiolinkConceptMapper:
 
     _default_ontology_map = {
         'biolink:Disease': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'ORPHA', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
-                       'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'HP', 'MP'],
+                            'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'HP', 'MP'],
         # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
         'biolink:Drug': ['PHARMGKB.DRUG', 'CHEBI', 'CHEMBL.COMPOUND', 'DRUGBANK', 'PUBCHEM.COMPOUND', 'MESH',
-                  'HMDB', 'INCHI', 'UNII', 'KEGG', 'gtpo'],
+                         'HMDB', 'INCHI', 'UNII', 'KEGG', 'gtpo'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
         'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT'],
         '_DEFAULT': []
@@ -359,7 +377,7 @@ class BiolinkConceptMapper:
             # Assume s is a prefix
             return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
 
-    def __init__(self, biolink_mappings=_default_ontology_map, distance=2, local_oxo=True):
+    def __init__(self, biolink_mappings=None, distance=2, local_oxo=True):
         """ Constructor
 
         Parameters
@@ -368,6 +386,9 @@ class BiolinkConceptMapper:
         distance: maximum allowed total distance (as opposed to OxO distance)
         local_oxo: use local implementation of OxO (default: True)
         """
+        if biolink_mappings is None:
+            biolink_mappings = BiolinkConceptMapper._default_ontology_map
+
         self.biolink_mappings = biolink_mappings
         self.distance = distance
         self.local_oxo = local_oxo

@@ -4,8 +4,10 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 """
 
 from flask import jsonify
+from semantic_version import Version
 
 from . import cohd_trapi_093
+from . import cohd_trapi_100
 
 
 def translator_predicates():
@@ -58,10 +60,19 @@ def translator_query(request, version=None):
     Response message with JSON data in Translator Reasoner API Standard or error status response for unsupported
     requested version
     """
-    if version is None or version == '0.9.3':
+    if version is None:
+        version = '1.0.0'
+
+    try:
+        version = Version(version)
+    except ValueError:
+        return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.0.0', 400
+
+    if Version('1.0.0-beta') <= version < Version('1.1.0'):
+        trapi = cohd_trapi_100.CohdTrapi100(request)
+        return trapi.operate()
+    elif version == Version('0.9.3'):
         trapi = cohd_trapi_093.CohdTrapi093(request)
         return trapi.operate()
-    elif version == '1.0.0' or version == '1.0':
-        return 'TRAPI 1.0.0 implementation coming soon', 501
     else:
         return f'TRAPI version {version} not supported', 501
