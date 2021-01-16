@@ -4,3 +4,4 @@ requests
 flask
 flask_cors
 pymysql
+semantic_version

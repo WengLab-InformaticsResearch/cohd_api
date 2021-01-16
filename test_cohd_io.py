@@ -4,10 +4,12 @@ checking the results against known values.
 
 Intended to be run with pytest: pytest -s test_cohd_io.py
 """
-from notebooks.cohd_helpers.cohd_requests import *
 from collections import namedtuple
-from reasoner_validator import validate_Message, ValidationError
 from pprint import pformat
+
+from notebooks.cohd_helpers.cohd_requests import *
+from trapi import reasoner_validator_092
+from trapi import reasoner_validator_100beta
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -493,7 +495,7 @@ def test_vocabularies():
         {"vocabulary_id": "ICD9CM"},
         {"vocabulary_id": "ICD9Proc"},
         {"vocabulary_id": "LOINC"},
-        { "vocabulary_id": "MedDRA"},
+        {"vocabulary_id": "MedDRA"},
         {"vocabulary_id": "MeSH"},
         {"vocabulary_id": "NDC"},
         {"vocabulary_id": "NDFRT"},
@@ -680,7 +682,9 @@ def test_mostFrequentConcepts():
             "concept_count": 431281,
             "concept_frequency": 0.2408811062811133,
             "concept_id": 2213283,
-            "concept_name": "Level IV - Surgical pathology, gross and microscopic examination Abortion - spontaneous/missed Artery, biopsy Bone marrow, biopsy Bone exostosis Brain/meninges, other than for tumor resection Breast, biopsy, not requiring microscopic evaluation of surgica",
+            "concept_name": ("Level IV - Surgical pathology, gross and microscopic examination Abortion - spontaneous/"
+                             "missed Artery, biopsy Bone marrow, biopsy Bone exostosis Brain/meninges, other than for "
+                             "tumor resection Breast, biopsy, not requiring microscopic evaluation of surgica"),
             "dataset_id": 1,
             "domain_id": "Procedure",
             "vocabulary_id": "CPT4"
@@ -912,8 +916,9 @@ def test_obsExpRatio():
 
 
 def test_relativeFrequency():
-    """ Check the /association/relativeFrequency endpoint. Get conditions where 19078558 (insulin) has high relative frequency in dataset 3
-    Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
+    """ Check the /association/relativeFrequency endpoint. Get conditions where 19078558 (insulin) has high relative
+    frequency in dataset 3. Checks the response json conforms to the expected schema and includes the expected results
+    (see expected_results).
     """
     print(f'test_cohd_io: testing /association/relativeFrequency on {server}..... ')
     json, df = relative_frequency(concept_id_1=19078558, domain_id='Condition', dataset_id=3)
@@ -964,24 +969,16 @@ def test_translator_query():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
     print(f'test_cohd_io: testing /translator/query on {server}..... ')
-    json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
-                            confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,
-                            local_oxo=True)
+    resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+                                       max_results=10, local_oxo=True)
+    json = resp.json()
 
-    # Replace call to Validator Web API with Reasoner Validator Python package to control Reasoner API version
-    # # Check that the JSON response adheres to the 'message' schema by using the Translator ReasonerStdAPI Validator
-    # url_validate_message = u'http://transltr.io:7071/validate_message'
-    # validation_response = requests.post(url_validate_message, json=json)
-    # # If the response is properly formatted, we should have received a 200 (OK) status code and "Successfully validated"
-    # # in the response body
-    # assert validation_response.status_code == requests.status_codes.codes.OK and \
-    #     validation_response.text.strip().lower() == '"successfully validated"'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API v0.9.2
-    validate_Message(json)
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_100beta.validate_Response(json)
 
     # There should be 10 results
-    assert len(json['results']) == 10
+    assert len(json['message']['results']) == 10
 
     print('...passed')
 
@@ -991,26 +988,51 @@ def test_translator_query_2():
     """
     print(f'test_cohd_io: testing /translator/query with ontology_targets on {server}..... ')
     ontology_targets = {
-        u'biolink:Disease': [u'SNOMEDCT', u'DOID'],
-        u'biolink:Procedure': [u'CPT4']
+        'biolink:Disease': ['SNOMEDCT', 'DOID'],
+        'biolink:Procedure': ['CPT4']
     }
-    json = translator_query(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio', dataset_id=3,
-                            confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,
-                            biolink_only=True, ontology_targets=ontology_targets, local_oxo=True)
+    resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+                                       max_results=10, biolink_only=True, ontology_targets=ontology_targets,
+                                       local_oxo=True)
+    json = resp.json()
 
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API v0.9.2
-    validate_Message(json)
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_100beta.validate_Response(json)
+
+    # There should be 10 results
+    assert len(json['message']['results']) == 10
+
+    # Check that each of the nodes are represented by the desired mapping type
+    for node_id, node in json['message']['knowledge_graph']['nodes'].items():
+        # Check that the prefix belongs to the desired list of ontology targets
+        assert len(node['category']) > 0
+        blm_type = node['category'][0]
+        assert blm_type in ontology_targets
+        prefix = node_id.split(':')[0]
+        assert prefix in ontology_targets[blm_type]
+
+    print('...passed')
+
+
+def test_translator_query_093():
+    """ Check the /0.9.3/translator/query endpoint mapping functionality
+    """
+    print(f'test_cohd_io: testing /translator/query with ontology_targets on {server}..... ')
+    ontology_targets = {
+        'biolink:Disease': ['SNOMEDCT', 'DOID'],
+        'biolink:Procedure': ['CPT4']
+    }
+    resp, query = translator_query_093(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+                                       max_results=10, biolink_only=True, ontology_targets=ontology_targets,
+                                       local_oxo=True)
+    json = resp.json()
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_092.validate_Message(json)
 
     # There should be 10 results
     assert len(json['results']) == 10
-
-    # Check that each of the nodes are represented by the desired mapping type
-    for node in json[u'knowledge_graph'][u'nodes']:
-        # Check that the prefix belongs to the desired list of ontology targets
-        assert len(node[u'type']) > 0
-        blm_type = node[u'type'][0]
-        assert blm_type in ontology_targets
-        prefix = node[u'id'].split(u':')[0]
-        assert prefix in ontology_targets[blm_type]
 
     print('...passed')
