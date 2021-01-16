@@ -1985,18 +1985,20 @@ paths:
         - reasoner
       summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
-        Query the COHD API following the [NCATS Translator Reasoner Standard API]
-        (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the
-        example query_graph.
+        Query the COHD API following the [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
+        Only single hop queries are supported. See the example query_graph.
             
-        For the source node, the curie must be specified (type is ignored).    
+        For the subject node, the id must be specified (category is ignored).
             
-        For the target node, both the curie and type are optional. If curie is specified for the target node, then the
-        association between the two identified concepts is returned. If curie is not specified and type is specified,
-        the associations between the source node and all concepts with the specified type are returned. If neither are
-        specified, then the associations between the source node and all concepts are returned.
+        For the object node, both the id and category are optional. If id is specified for the object node, then the
+        association between the two identified concepts is returned. If id is not specified and category is specified,
+        the associations between the subject node and all concepts with the specified category are returned. If neither
+        are specified, then the associations between the subject node and all concepts are returned.
         
-        COHD will attempt to map the CURIE to an OMOP concept and the node type to an OMOP domain. 
+        The COHD data are natively represented using OMOP. COHD will attempt to map between Biolink and OMOP both in the
+        input and response.
+        
+        Additional behavior options can be controlled using the optional parameters in query_options.
       operationId: query
       requestBody:
         description: Query information to be submitted
@@ -2132,9 +2134,8 @@ paths:
       description: >-
         This endpoint is temporarily provided to support TRAPI 0.9.3 queries
         
-        Query the COHD API following the [NCATS Translator Reasoner Standard API]
-        (https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI). Only single hop queries are supported. See the
-        example query_graph.
+        Query the COHD API following the [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
+        Only single hop queries are supported. See the example query_graph.
         
         For the source node, the curie must be specified (type is ignored).
         
