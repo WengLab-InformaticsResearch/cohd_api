@@ -4,10 +4,11 @@ checking the results against known values.
 
 Intended to be run with pytest: pytest -s test_cohd_io.py
 """
-from notebooks.cohd_helpers import cohd_requests as cr
 from collections import namedtuple
-from reasoner_validator import validate_Message, ValidationError
 from pprint import pformat
+
+from notebooks.cohd_helpers import cohd_requests as cr
+from trapi import reasoner_validator_092, reasoner_validator_100beta
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -929,24 +930,16 @@ def test_translator_query():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
     print(f'test_cohd_io: testing /translator/query on {cr.server}..... ')
-    json = cr.translator_query(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease', method='obsExpRatio',
-                            dataset_id=4, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,
-                            local_oxo=True)
+    resp, query = cr.translator_query_100(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
+                                          method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True)
+    json = resp.json()
 
-    # Replace call to Validator Web API with Reasoner Validator Python package to control Reasoner API version
-    # # Check that the JSON response adheres to the 'message' schema by using the Translator ReasonerStdAPI Validator
-    # url_validate_message = u'http://transltr.io:7071/validate_message'
-    # validation_response = requests.post(url_validate_message, json=json)
-    # # If the response is properly formatted, we should have received a 200 (OK) status code and "Successfully validated"
-    # # in the response body
-    # assert validation_response.status_code == requests.status_codes.codes.OK and \
-    #     validation_response.text.strip().lower() == '"successfully validated"'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API v0.9.2
-    validate_Message(json)
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_100beta.validate_Response(json)
 
     # There should be 10 results
-    assert len(json['results']) == 10
+    assert len(json['message']['results']) == 10
 
     print('...passed')
 
@@ -959,23 +952,47 @@ def test_translator_query_2():
         u'biolink:Disease': [u'SNOMEDCT', u'DOID'],
         u'biolink:Drug': [u'UMLS', u'RxNorm']
     }
-    json = cr.translator_query(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease', method='obsExpRatio',
-                            dataset_id=4, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5, max_results=10,
-                            biolink_only=True, ontology_targets=ontology_targets, local_oxo=True)
+    resp, query = cr.translator_query_100(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
+                                          method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, biolink_only=True,
+                                          ontology_targets=ontology_targets, local_oxo=True)
+    json = resp.json()
 
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API v0.9.2
-    validate_Message(json)
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_100beta.validate_Response(json)
+
+    # There should be 10 results
+    assert len(json['message']['results']) == 10
+
+    # Check that each of the nodes are represented by the desired mapping type
+    for node_id, node in json['message']['knowledge_graph']['nodes'].items():
+        # Check that the prefix belongs to the desired list of ontology targets
+        assert len(node['category']) > 0
+        blm_type = node['category'][0]
+        assert blm_type in ontology_targets
+        prefix = node_id.split(':')[0]
+        assert prefix in ontology_targets[blm_type]
+
+    print('...passed')
+
+
+def test_translator_query_093():
+    """ Check the /0.9.3/translator/query endpoint mapping functionality
+    """
+    print(f'test_cohd_io: testing /translator/query with ontology_targets on {cr.server}..... ')
+    ontology_targets = {
+        'biolink:Disease': ['SNOMEDCT', 'DOID'],
+        'biolink:Procedure': ['CPT4']
+    }
+    resp, query = cr.translator_query_093(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
+                                          method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True)
+    json = resp.json()
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    reasoner_validator_092.validate_Message(json)
 
     # There should be 10 results
     assert len(json['results']) == 10
-
-    # Check that each of the nodes are represented by the desired mapping type
-    for node in json[u'knowledge_graph'][u'nodes']:
-        # Check that the prefix belongs to the desired list of ontology targets
-        assert len(node[u'type']) > 0
-        blm_type = node[u'type'][0]
-        assert blm_type in ontology_targets
-        prefix = node[u'id'].split(u':')[0]
-        assert prefix in ontology_targets[blm_type]
 
     print('...passed')
