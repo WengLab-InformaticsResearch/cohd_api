@@ -198,8 +198,8 @@ def test_omop_concept_uri():
     try:
         response = requests.get(x, timeout=5)
         assert response.status_code == requests.status_codes.codes.OK
-    except requests.exceptions.ConnectTimeout:
-        # OHDSI API not always stable. Ignore timeouts
+    except requests.exceptions.ConnectionError:
+        # OHDSI API not always stable. Ignore connection errors
         pass
 
     # Check a valid OMOP concept ID passed in as an integer
@@ -210,8 +210,8 @@ def test_omop_concept_uri():
     try:
         response = requests.get(x, timeout=5)
         assert response.status_code == requests.status_codes.codes.OK
-    except requests.exceptions.ConnectTimeout:
-        # OHDSI API not always stable. Ignore timeouts
+    except requests.exceptions.ConnectionError:
+        # OHDSI API not always stable. Ignore connection errors
         pass
 
     # Check an invalid OMOP concept ID
@@ -222,8 +222,8 @@ def test_omop_concept_uri():
     try:
         response = requests.get(x, timeout=5)
         assert response.status_code == requests.status_codes.codes.OK
-    except requests.exceptions.ConnectTimeout:
-        # OHDSI API not always stable. Ignore timeouts
+    except requests.exceptions.ConnectionError:
+        # OHDSI API not always stable. Ignore connection errors
         pass
 
 
