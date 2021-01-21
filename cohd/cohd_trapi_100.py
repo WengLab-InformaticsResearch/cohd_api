@@ -222,10 +222,14 @@ class CohdTrapi100(CohdTrapi):
             # TRAPI does not require predicate. If no predicate specified, assume using biolink:correlated_with
             pass
 
+        # Find BLM - OMOP mappings for all identified query nodes
+        node_ids = [x['id'] for x in self._query_graph['nodes'].values() if 'id' in x and x['id'] is not None]
+        node_mappings = self._concept_mapper.map_to_omop(node_ids)
+
         # Get concept_id_1
         subject_node = self._find_query_node(edge['subject'])
         curie_1 = subject_node['id']  # source node must contain a CURIE
-        self._source_concept_mapping = self._concept_mapper.map_to_omop(curie_1)
+        self._source_concept_mapping = node_mappings[curie_1]
         if self._source_concept_mapping:
             self._concept_id_1 = self._source_concept_mapping['omop_concept_id']
 
@@ -247,7 +251,7 @@ class CohdTrapi100(CohdTrapi):
         if curie_2 is not None and curie_2:
             # If CURIE of target node is specified, then query the association between concept_1 and concept_2
             self._domain_ids = None
-            self._target_concept_mapping = self._concept_mapper.map_to_omop(curie_2)
+            self._target_concept_mapping = node_mappings[curie_2]
 
             if self._target_concept_mapping:
                 self._concept_id_2 = self._target_concept_mapping['omop_concept_id']
@@ -505,50 +509,31 @@ class _TranslatorResponseMessage:
                 if concept_def is not None and not domain:
                     domain = concept_def['domain_id']
 
-            # Map to Biolink Model or other target ontologies
-            blm_category = map_omop_domain_to_blm_class(domain)
-            mappings = []
-            if self.concept_mapper:
-                mappings = self.concept_mapper.map_from_omop(concept_id, domain)
-
             # If we don't find better mappings (below) for this concept, default to OMOP CURIE and label
             omop_curie = omop_concept_curie(concept_id)
             primary_curie = omop_curie
             primary_label = concept_name
 
-            found = False
+            # Map to Biolink Model or other target ontologies
+            blm_category = map_omop_domain_to_blm_class(domain)
+            mapped_to_blm = False
+            mapping = None
+            if self.concept_mapper:
+                mapping = self.concept_mapper.map_from_omop(concept_id, domain)
+
             if query_node_curie is not None and query_node_curie:
                 # The CURIE was specified for this node in the query_graph, use that CURIE to identify this node
-                found = True
+                mapped_to_blm = True
                 primary_curie = query_node_curie
-
                 # Find the label from the mappings
-                for mapping in mappings:
-                    if mapping['target_curie'] == query_node_curie:
-                        primary_label = mapping['target_label']
-                        break
-            else:
+                if mapping is not None:
+                    primary_label = mapping['target_label']
+            elif mapping is not None:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
                 # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                blm_prefixes = self.concept_mapper.biolink_mappings.get(blm_category, [])
-                for d in range(self.concept_mapper.distance + 1):
-                    if found:
-                        break
-
-                    # Get all mappings with the current distance
-                    m_d = [m for m in mappings if m['distance'] == d]
-
-                    # Look for the first matching prefix in the list of biolink prefixes
-                    for prefix in blm_prefixes:
-                        if found:
-                            break
-
-                        for m in m_d:
-                            if m['target_curie'].split(':')[0] == prefix:
-                                primary_curie = m['target_curie']
-                                primary_label = m['target_label']
-                                found = True
-                                break
+                primary_curie = mapping['target_curie']
+                primary_label = mapping['target_label']
+                mapped_to_blm = True
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
             internal_id = '{id:06d}'.format(id=len(self.nodes))
@@ -559,7 +544,7 @@ class _TranslatorResponseMessage:
                 'internal_id': internal_id,
                 'primary_curie': primary_curie,
                 'in_kgraph': False,
-                'biolink_compliant': found,
+                'biolink_compliant': mapped_to_blm,
                 'kg_node': {
                     'name': primary_label,
                     'category': [blm_category],
@@ -581,12 +566,6 @@ class _TranslatorResponseMessage:
                             'value': domain,
                             'type': 'EDAM:data_0967',  # Ontology concept data
                             'source': 'OMOP',
-                        },
-                        {
-                            'name': 'synonyms',
-                            'value': mappings,
-                            'type': 'EDAM:data_3509',  # Ontology mapping
-                            'source': 'COHD',
                         }
                     ]
                 }
