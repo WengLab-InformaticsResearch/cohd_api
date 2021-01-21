@@ -2274,6 +2274,8 @@ components:
           example: 0.5      
         ontology_targets:
           description: >
+            DEPRECATED: COHD is now attempting to map based on the Biolink Model yaml and SRI Node Normalizer.
+            
             COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each
             Biolink node type. The keys should be Biolink node types (e.g., 'biolink:Disease'). The values should be
             lists of target ontology prefixes, e.g., ['ICD9', 'UMLS', 'DOID']. An emtpy list indicates not to perform
