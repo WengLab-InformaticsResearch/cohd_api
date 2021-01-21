@@ -983,38 +983,6 @@ def test_translator_query():
     print('...passed')
 
 
-def test_translator_query_2():
-    """ Check the /translator/query endpoint mapping functionality
-    """
-    print(f'test_cohd_io: testing /translator/query with ontology_targets on {server}..... ')
-    ontology_targets = {
-        'biolink:Disease': ['SNOMEDCT', 'DOID'],
-        'biolink:Procedure': ['CPT4']
-    }
-    resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                       max_results=10, biolink_only=True, ontology_targets=ontology_targets,
-                                       local_oxo=True)
-    json = resp.json()
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_100beta.validate_Response(json)
-
-    # There should be 10 results
-    assert len(json['message']['results']) == 10
-
-    # Check that each of the nodes are represented by the desired mapping type
-    for node_id, node in json['message']['knowledge_graph']['nodes'].items():
-        # Check that the prefix belongs to the desired list of ontology targets
-        assert len(node['category']) > 0
-        blm_type = node['category'][0]
-        assert blm_type in ontology_targets
-        prefix = node_id.split(':')[0]
-        assert prefix in ontology_targets[blm_type]
-
-    print('...passed')
-
-
 def test_translator_query_093():
     """ Check the /0.9.3/translator/query endpoint mapping functionality
     """
