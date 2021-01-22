@@ -1725,7 +1725,7 @@ paths:
                   "query_graph": {
                     "nodes": {
                       "n00": {
-                        "id": "DOID:9053",
+                        "id": "MONDO:0021113",
                         "category": "biolink:Disease"
                       },
                       "n01": {
@@ -1873,7 +1873,7 @@ paths:
                     "nodes": [
                       {
                         "id": "n00",
-                        "curie": "DOID:9053",
+                        "curie": "MONDO:0021113",
                         "type": "biolink:Disease"
                       },
                       {
@@ -1954,8 +1954,178 @@ paths:
           predicate: biolink:correlated_with
           source: Columbia Open Health Data KP
           supportBatch: false
+  /translator/biolink_to_omop:
+    post:
+      tags:
+        - translator
+      summary: 'Map from Biolink to OMOP'
+      description: >-
+        Map Biolink CURIEs to OMOP concepts
+      operationId: biolink_to_omop
+      requestBody:
+        description: List of CURIEs
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CurieList'
+            example: >-
+              {
+                  "curies": [
+                      "HP:0002907",
+                      "MONDO:0001187"
+                  ]
+              }
+      responses:
+        '200':
+          description: >-
+            OK. There may or may not be results. Note that some of the provided
+            identifiers may not have been recognized.
+          content:
+            application/json:
+              schema:
+                additionalProperties:
+                  description: Mapping from OMOP concept to Biolink
+                  type: object
+                  properties:
+                    distance:
+                      description: mapping distance
+                      type: integer
+                    omop_concept_id:
+                      type: integer
+                    omop_concept_name:
+                      type: string
+              example: >-
+                {
+                  "MONDO:0001187": {
+                    "distance": 2,
+                    "omop_concept_id": 197508,
+                    "omop_concept_name": "Malignant tumor of urinary bladder"
+                  }
+                }
+        '400':
+          description: >-
+            Bad request. The request is invalid according to this OpenAPI
+            schema OR a specific identifier is believed to be invalid somehow
+            (not just unrecognized).
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: >-
+            Internal server error.
+          content:
+            application/json:
+              schema:
+                type: string
+  /translator/omop_to_biolink:
+    post:
+      tags:
+        - translator
+      summary: 'Map from OMOP to Biolink'
+      description: >-
+        Map OMOP concepts to normalized Biolink nodes using SRI Node Normalizer.
+      operationId: omop_to_biolink
+      requestBody:
+        description: List of OMOP IDs
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OmopList'
+            example: >-
+              {
+                  "omop_ids": [
+                      78472,
+                      197508
+                  ]
+              }
+      responses:
+        '200':
+          description: >-
+            OK. There may or may not be results. Note that some of the provided
+            identifiers may not have been recognized.
+            Mapping from OMOP concept to Biolink normalized nodes. See
+            [SRI Node Normalizer](https://nodenormalization-sri.renci.org/docs#/) for response format
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                example: >-
+                  {
+                    "197508": {
+                      "equivalent_identifiers": [
+                          {
+                              "identifier": "MONDO:0001187",
+                              "label": "urinary bladder cancer"
+                          },
+                          {
+                              "identifier": "DOID:11054"
+                          },
+                          {
+                              "identifier": "OMIM:109800"
+                          },
+                          {
+                              "identifier": "UMLS:C0005684"
+                          },
+                          {
+                              "identifier": "NCIT:C9334"
+                          },
+                          {
+                              "identifier": "SNOMEDCT:399326009"
+                          }
+                      ],
+                      "id": {
+                          "identifier": "MONDO:0001187",
+                          "label": "urinary bladder cancer"
+                      },
+                      "type": [
+                          "biolink:Disease",
+                          "biolink:DiseaseOrPhenotypicFeature",
+                          "biolink:BiologicalEntity",
+                          "biolink:NamedThing"
+                      ]
+                    }
+                  }
+        '400':
+          description: >-
+            Bad request. The request is invalid according to this OpenAPI
+            schema OR a specific identifier is believed to be invalid somehow
+            (not just unrecognized).
+          content:
+            application/json:
+              schema:
+                type: string
+        '500':
+          description: >-
+            Internal server error.
+          content:
+            application/json:
+              schema:
+                type: string
 components:
   schemas:
+    CurieList:
+      description: list of CURIEs
+      type: object
+      properties:
+        curies:
+          title: "list of CURIEs"
+          type: array
+          items:
+            type: string
+    OmopList:
+      description: list of OMOP IDs
+      type: object
+      properties:
+        curies:
+          title: "list of OMOP IDs"
+          type: array
+          items:
+            type: integer
     QueryOptions:
       description: Additional query options that apply to COHD
       type: object

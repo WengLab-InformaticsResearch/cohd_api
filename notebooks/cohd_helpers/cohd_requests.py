@@ -686,7 +686,7 @@ def temporal_source_to_target(source_concept_id, target_concept_id, dataset_id=N
 # ######################################################################
 def translator_query_093(node_1_curie, node_2_curie=None, node_2_type=None, max_results=500,
                      confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
-                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None):
+                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=30):
     """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
 
     Parameters
@@ -760,13 +760,13 @@ def translator_query_093(node_1_curie, node_2_curie=None, node_2_type=None, max_
               "query_options": query_options
             }
 
-    response = requests.post(url, json=query)
+    response = requests.post(url, json=query, timeout=timeout)
     return response, query
 
 
 def translator_query_100(node_1_curie, node_2_curie=None, node_2_type=None, max_results=500,
                      confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
-                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None):
+                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=30):
     """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
 
     Parameters
@@ -839,5 +839,37 @@ def translator_query_100(node_1_curie, node_2_curie=None, node_2_type=None, max_
       "query_options": query_options
     }
 
-    response = requests.post(url, json=query)
+    response = requests.post(url, json=query, timeout=timeout)
     return response, query
+
+
+def translator_biolink_to_omop(curies):
+    """ Map Biolink to OMOP
+
+    Parameters
+    ----------
+    curies: List of curies
+
+    Returns
+    -------
+    JSON response with mappings from CURIEs to OMOP concepts
+    """
+    url = f'{server}/translator/biolink_to_omop'
+    response = requests.post(url, json={'curies': curies})
+    return response.json()
+
+
+def translator_omop_to_biolink(omop_ids):
+    """ Map Biolink to OMOP
+
+    Parameters
+    ----------
+    omop_ids: List of OMOP IDs. Can be int, string, or CURIE format.
+
+    Returns
+    -------
+    JSON response with mappings from OMOP IDs to normalized Biolink nodes
+    """
+    url = f'{server}/translator/omop_to_biolink'
+    response = requests.post(url, json={'omop_ids': omop_ids})
+    return response.json()

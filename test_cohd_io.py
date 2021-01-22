@@ -986,7 +986,7 @@ def test_translator_query():
 def test_translator_query_093():
     """ Check the /0.9.3/translator/query endpoint mapping functionality
     """
-    print(f'test_cohd_io: testing /translator/query with ontology_targets on {server}..... ')
+    print(f'test_cohd_io: testing TRAPI 0.9.3 at /0.9.3/translator/query on {server}..... ')
     ontology_targets = {
         'biolink:Disease': ['SNOMEDCT', 'DOID'],
         'biolink:Procedure': ['CPT4']
