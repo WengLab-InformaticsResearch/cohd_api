@@ -10,7 +10,7 @@ Python 3
 
 Python packages
 ```
-pip install flask flask_cors pymysql requests reasoner_validator numpy scipy semantic_version
+pip install flask flask_cors flask-caching pymysql requests reasoner_validator numpy scipy semantic_version
 ```
 
 ## Running the Application
