@@ -191,6 +191,16 @@ def api_transator_predicates():
     return api_call('translator', 'predicates')
 
 
+@app.route('/api/translator/omop_to_biolink', methods=['POST'])
+def api_translator_omop_to_biolink():
+    return api_call('translator', 'omop_to_biolink')
+
+
+@app.route('/api/translator/biolink_to_omop', methods=['POST'])
+def api_translator_biolink_to_omop():
+    return api_call('translator', 'biolink_to_omop')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -273,6 +283,10 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.translator_query(request, version)
         elif meta == 'predicates':
             result = cohd_translator.translator_predicates()
+        elif meta == 'omop_to_biolink':
+            result = cohd_translator.omop_to_biolink(request)
+        elif meta == 'biolink_to_omop':
+            result = cohd_translator.biolink_to_omop(request)
         else:
             result = 'meta not recognized', 400
     else:

@@ -463,12 +463,12 @@ class BiolinkConceptMapper:
 
         Returns
         -------
-        Array of dict like:
-        [{
+        Dict like:
+        {
             "target_curie": "UMLS:C0154091",
             "target_label": "Carcinoma in situ of bladder",
             "distance": 1
-        }]
+        }
         or None
         """
         # Get mappings from ConceptMapper
@@ -486,28 +486,6 @@ class BiolinkConceptMapper:
         # Get the canonical BLM ID for each curie from the OxO mapping
         curies = [x['target_curie'] for x in mappings]
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
-
-        # # Change any mappings from OxO to the canonical IDs
-        # # Note 1: don't increment the distance since these are considered equivalent identifiers
-        # # Note 2: Canoncalization may yield multiple rows of mappings to the same canonical ID but with different
-        # # distances. Only keep the mapping with the shortest distance
-        # mappings_dict = dict()
-        # for mapping in mappings:
-        #     target_curie = mapping['target_curie']
-        #     if target_curie in normalized_nodes and normalized_nodes[target_curie] is not None:
-        #         if target_curie in mappings_dict:
-        #             # Already seen this canonical ID. Retain the shortest distance for a given canonical ID
-        #             if mapping['distance'] < mappings_dict[target_curie]['distance']:
-        #                 mappings_dict[target_curie]['distance'] = mapping['distance']
-        #         else:
-        #             canonical_node = normalized_nodes[target_curie]['id']
-        #             mapping['target_curie'] = canonical_node['identifier']
-        #             if 'label' in canonical_node:
-        #                 mapping['target_label'] = canonical_node['label']
-        #             mappings_dict[target_curie] = mapping
-        #     else:
-        #         # No normalized node found. Use the original mapping
-        #         mappings_dict[target_curie] = mapping
 
         # Find the mapping with the shortest distance canonical mapping
         if normalized_nodes is not None:
