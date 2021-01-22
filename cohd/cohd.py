@@ -13,11 +13,9 @@ implemented in Flask
 
 from flask import Flask, request, redirect
 from flask_cors import CORS
+from flask_caching import Cache
 
 from .google_analytics import GoogleAnalytics
-from . import query_cohd_mysql
-from . import cohd_temporal
-from . import cohd_translator
 
 #########
 # INITS #
@@ -26,7 +24,12 @@ from . import cohd_translator
 app = Flask(__name__)
 CORS(app)
 app.config.from_pyfile('cohd_flask.conf')
+cache = Cache(app)
 
+# Some of the above objects need to be created before loading other COHD modules
+from . import query_cohd_mysql
+from . import cohd_temporal
+from . import cohd_translator
 
 ##########
 # ROUTES #

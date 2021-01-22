@@ -5,6 +5,7 @@ from typing import Union, Any, Iterable, Dict
 
 from .cohd_utilities import ln_ratio_ci, ci_significance
 from .omop_xref import ConceptMapper
+from .cohd import cache
 
 
 class CohdTrapi(ABC):
@@ -412,6 +413,20 @@ class BiolinkConceptMapper:
 
         self._oxo_concept_mapper = ConceptMapper(oxo_mappings, self.distance, self.local_oxo)
 
+    def __repr__(self):
+        """ Used in flask cache
+
+        Returns
+        -------
+        String repr
+        """
+        d = {
+            'biolink_mappings': self.biolink_mappings,
+            'distance': self.distance,
+            'local_oxo': self.local_oxo
+        }
+        return str(d)
+
     def map_to_omop(self, curies: Iterable[str]) -> Dict[str, Any]:
         """ Map to OMOP concept from ontology
 
@@ -453,6 +468,7 @@ class BiolinkConceptMapper:
 
         return omop_mappings
 
+    @cache.memoize(timeout=604800, cache_none=True)
     def map_from_omop(self, concept_id, domain_id):
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
