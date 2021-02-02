@@ -3,6 +3,7 @@ import requests
 from requests.compat import urljoin
 from typing import Union, Any, Iterable, Optional, Dict, NamedTuple, List
 from collections import defaultdict
+from datetime import datetime
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
@@ -628,15 +629,16 @@ class BiolinkConceptMapper:
         -------
         Number of concepts
         """
-        print('Building cache for BiolinkConceptMapper::map_from_omop')
-        mapper = BiolinkConceptMapper()
+        print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
+        mapper = BiolinkConceptMapper(biolink_mappings=None, distance=CohdTrapi.default_mapping_distance,
+                                      local_oxo=CohdTrapi.default_local_oxo)
         concepts = query_active_concepts()
         for i, concept in enumerate(concepts):
             blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
             mapper.map_from_omop(concept['concept_id'], blm_category)
             if i % 1000 == 0:
-                print(f'{i} / {len(concepts)} concepts mapped')
-        print('Cache build complete.')
+                print(f'{datetime.now()}: {i} / {len(concepts)} concepts mapped')
+        print(f'{datetime.now()}: Cache build complete.')
         return len(concepts)
 
 
