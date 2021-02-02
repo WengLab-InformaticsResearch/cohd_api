@@ -1,3 +1,4 @@
+from typing import NamedTuple, Optional
 import numpy as np
 from scipy.stats import poisson
 
@@ -119,3 +120,10 @@ def omop_concept_curie(concept_id):
     OMOP:{concept_id}
     """
     return 'OMOP:{concept_id}'.format(concept_id=concept_id)
+
+
+class DomainClass(NamedTuple):
+    """ Structure to hold OMOP domain_id and concept_class_id as a pair
+    """
+    domain_id: Optional[str]
+    concept_class_id: Optional[str]

@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
 import requests
 from requests.compat import urljoin
-from typing import Union, Any, Iterable, Dict
+from typing import Union, Any, Iterable, Optional, Dict, NamedTuple, List
+from collections import defaultdict
 
-from .cohd_utilities import ln_ratio_ci, ci_significance
+from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
 from .cohd import cache
+from .query_cohd_mysql import query_active_concepts
 
 
 class CohdTrapi(ABC):
@@ -34,7 +36,7 @@ class CohdTrapi(ABC):
     default_min_cooccurrence = 0
     default_confidence_interval = 0.99
     default_dataset_id = 3
-    default_local_oxo = True
+    default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
@@ -191,8 +193,10 @@ def fix_blm_category(blm_category):
 
     # Convert snake case to camel case. Keep the original input if not in this dictionary.
     supported_type_conversions = {
+        'biolink:chemical_substance': 'biolink:ChemicalSubstance',
         'biolink:device': 'biolink:Device',
         'biolink:disease': 'biolink:Disease',
+        'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
         'biolink:drug': 'biolink:Drug',
         'biolink:phenomenon': 'biolink:Phenomenon',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
@@ -203,7 +207,7 @@ def fix_blm_category(blm_category):
     return blm_category
 
 
-def map_blm_class_to_omop_domain(node_type):
+def map_blm_class_to_omop_domain(node_type: str) -> List[DomainClass]:
     """ Maps the Biolink Model class to OMOP domain_id, e.g., 'biolink:Disease' to 'Condition'
 
     Note, some classes may map to multiple domains, e.g., 'biolink:PopulationOfIndividualOrganisms' maps to
@@ -217,41 +221,78 @@ def map_blm_class_to_omop_domain(node_type):
     -------
     If normalized successfully: List of OMOP domains, e.g., ['Drug']; Otherwise: None
     """
+
     mappings = {
-        'biolink:Device': ['Device'],
-        'biolink:Disease': ['Condition'],
-        'biolink:Drug': ['Drug'],
-        'biolink:Phenomenon': ['Measurement', 'Observation'],
-        'biolink:PopulationOfIndividualOrganisms': ['Ethnicity', 'Gender', 'Race'],
-        'biolink:Procedure': ['Procedure']
+        'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
+        'biolink:Device': [DomainClass('Device', None)],
+        'biolink:Disease': [DomainClass('Condition', None)],
+        'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
+        'biolink:Drug': [DomainClass('Drug', None)],
+        'biolink:Phenomenon': [DomainClass('Measurement', None),
+                               DomainClass('Observation', None)],
+        'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
+        'biolink:PopulationOfIndividualOrganisms': [DomainClass('Ethnicity', None),
+                                                    DomainClass('Gender', None),
+                                                    DomainClass('Race', None)],
+        'biolink:Procedure': [DomainClass('Procedure', None)]
     }
     return mappings.get(node_type)
 
 
-def map_omop_domain_to_blm_class(domain):
+def map_omop_domain_to_blm_class(domain: str,
+                                 concept_class: Optional[str] = None,
+                                 desired_blm_categories: Iterable[str] = None
+                                 ) -> str:
     """ Maps the OMOP domain_id to Biolink Model class, e.g., 'Condition' to 'biolink:Disease'
 
     Parameters
     ----------
     domain - OMOP domain, e.g., 'Condition'
+    concept_class - [optional] OMOP concept class ID, e.g., 'Ingredient'
+    desired_blm_categories - [optional] desired Biolink categories to choose from (e.g., if a query node specifies a
+                     list of acceptable categories). This list does not have an ordered preference. Use the ordered
+                     preference defined within this function's mappings_domain
 
     Returns
     -------
     If normalized successfully: Biolink Model semantic type. If no mapping found, use NamedThing
     """
-    mappings = {
-        'Condition': 'biolink:Disease',
-        'Device': 'biolink:Device',
-        'Drug': 'biolink:Drug',
-        'Ethnicity': 'biolink:PopulationOfIndividualOrganisms',
-        'Gender': 'biolink:PopulationOfIndividualOrganisms',
-        'Measurement': 'biolink:Phenomenon',
-        'Observation': 'biolink:Phenomenon',
-        'Procedure': 'biolink:Procedure',
-        'Race': 'biolink:PopulationOfIndividualOrganisms'
-    }
-    default_type = 'named_thing'
-    return mappings.get(domain, default_type)
+    default_type = 'biolink:NamedThing'
+
+    if DomainClass(domain, concept_class) in map_omop_domain_to_blm_class.mappings_domain_class:
+        biolink_cat = map_omop_domain_to_blm_class.mappings_domain_class[DomainClass(domain, concept_class)]
+    elif DomainClass(domain, None) in map_omop_domain_to_blm_class.mappings_domain_class:
+        biolink_cat = map_omop_domain_to_blm_class.mappings_domain_class[DomainClass(domain, None)]
+    else:
+        biolink_cat = default_type
+
+    if desired_blm_categories is None:
+        # No preferred list of biolink categories provided. Return first item in preferred order
+        biolink_cat = biolink_cat[0]
+    else:
+        # Find the first blm category that's in blm_categories. If none of the mapped biolink categories are in the
+        # desired list, then use the first mapped biolink category
+        biolink_cat = next((cat for cat in biolink_cat if cat in desired_blm_categories), biolink_cat[0])
+
+    return biolink_cat
+
+
+# Preferred mappings from OMOP (domain_id, concept_class_id) to biolink categories
+# List items are in preferred order
+map_omop_domain_to_blm_class.mappings_domain_class = {
+    DomainClass('Condition', None): ['biolink:DiseaseOrPhenotypicFeature'],
+    DomainClass('Device', None): ['biolink:Device'],
+    DomainClass('Drug', None): ['biolink:Drug',
+                                'biolink:ChemicalSubstance'],
+    DomainClass('Drug', 'Ingredient'): ['biolink:ChemicalSubstance',
+                                        'biolink:Drug'],
+    DomainClass('Ethnicity', None): ['biolink:PopulationOfIndividualOrganisms'],
+    DomainClass('Gender', None): ['biolink:PopulationOfIndividualOrganisms'],
+    DomainClass('Measurement', None): ['biolink:Phenomenon'],
+    DomainClass('Observation', None): ['biolink:Phenomenon'],
+    DomainClass('Procedure', None): ['biolink:Procedure'],
+    DomainClass('Race', None): ['biolink:PopulationOfIndividualOrganisms']
+}
 
 
 class BiolinkConceptMapper:
@@ -263,12 +304,11 @@ class BiolinkConceptMapper:
     """
 
     _mappings_prefixes_blm_to_oxo = {
-        # Disease prefixes
+        # DiseaseOrPhenotypicFeature prefixes
         'MONDO': 'MONDO',
         'DOID': 'DOID',
         'OMIM': 'OMIM',
         'ORPHANET': 'Orphanet',
-        'ORPHA': None,
         'EFO': 'EFO',
         'UMLS': 'UMLS',
         'MESH': 'MeSH',
@@ -279,19 +319,39 @@ class BiolinkConceptMapper:
         'ICD10': 'ICD10CM',
         'ICD9': 'ICD9CM',
         'ICD0': None,
+        'KEGG.DISEASE': None,
         'HP': 'HP',
         'MP': 'MP',
+        'ZP': None,
+        'UPHENO': None,
+        'APO': 'APO',
+        'FBcv': 'FBcv',
+        'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
+        'RXCUI': 'RxNorm',
+        'NDC': None,
         'PHARMGKB.DRUG': None,
-        'CHEBI': 'CHEBI',
-        'CHEMBL.COMPOUND': None,
-        'DRUGBANK': 'DrugBank',
+        # Chemical Substances prefixes
         'PUBCHEM.COMPOUND': 'PubChem_Compound',
-        'HMDB': 'HMDB',
-        'INCHI': None,
+        'CHEMBL.COMPOUND': None,
         'UNII': None,
-        'KEGG': 'KEGG',
-        'gtpo': None,
+        'CHEBI': 'CHEBI',
+        'DRUGBANK': 'DrugBank',
+        'CAS': 'CAS',
+        'DrugCentral': None,
+        'GTOPDB': None,
+        'HMDB': 'HMDB',
+        'KEGG.COMPOUND': 'KEGG',
+        'ChemBank': None,
+        'Aeolus': None,
+        'PUBCHEM.SUBSTANCE': None,
+        'SIDER.DRUG': None,
+        'INCHI': None,
+        'INCHIKEY': 'InChIKey',
+        'KEGG.GLYCAN': 'KEGG',
+        'KEGG.DRUG': 'KEGG',
+        'KEGG.DGROUP': 'KEGG',
+        'KEGG.ENVIRON': 'KEGG',
         # Procedure prefixes
         'ICD10PCS': None
     }
@@ -312,24 +372,32 @@ class BiolinkConceptMapper:
         'ICD9CM': 'ICD9',
         'HP': 'HP',
         'MP': 'MP',
+        'APO': 'APO',
+        'FBcv': 'FBcv',
+        'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
+        'RxNorm': 'RXCUI',
+        # Chemical Substance prefixes
+        'PubChem_Compound': 'PUBCHEM.COMPOUND',
         'CHEBI': 'CHEBI',
         'DrugBank': 'DRUGBANK',
-        'PubChem_Compound': 'PUBCHEM.COMPOUND',
+        'CAS': 'CAS',
         'HMDB': 'HMDB',
-        'KEGG': 'KEGG',
+        'INCHIKEY': 'InChIKey',
         # Procedure prefixes
     }
 
     _default_ontology_map = {
-        'biolink:Disease': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'ORPHA', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
-                            'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'HP', 'MP'],
-        # Note: for Drug, also map to some of the prefixes specified in ChemicalSubstance
-        'biolink:Drug': ['PHARMGKB.DRUG', 'CHEBI', 'CHEMBL.COMPOUND', 'DRUGBANK', 'PUBCHEM.COMPOUND', 'MESH',
-                         'HMDB', 'INCHI', 'UNII', 'KEGG', 'gtpo'],
+        'biolink:DiseaseOrPhenotypicFeature': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
+                                               'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'KEGG.DISEASE',
+                                               'HP', 'MP', 'ZP', 'UPHENO', 'APO', 'FBcv', 'WBPhenotype'],
+        'biolink:ChemicalSubstance': ['PUBCHEM.COMPOUND', 'CHEMBL.COMPOUND', 'UNII', 'CHEBI', 'DRUGBANK', 'MESH', 'CAS',
+                                      'DrugCentral', 'GTOPDB', 'HMDB', 'KEGG.COMPOUND', 'ChemBank', 'Aeolus',
+                                      'PUBCHEM.SUBSTANCE', 'SIDER.DRUG', 'INCHI', 'INCHIKEY', 'KEGG.GLYCAN',
+                                      'KEGG.DRUG', 'KEGG.DGROUP', 'KEGG.ENVIRON'],
+        'biolink:Drug': ['RXCUI', 'NDC', 'PHARMGKB.DRUG'],
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT'],
-        '_DEFAULT': []
+        'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
     }
 
     @staticmethod
@@ -381,7 +449,7 @@ class BiolinkConceptMapper:
             # Assume s is a prefix
             return BiolinkConceptMapper._mappings_prefixes_oxo_to_blm.get(s, s)
 
-    def __init__(self, biolink_mappings=None, distance=2, local_oxo=True):
+    def __init__(self, biolink_mappings=None, distance=2, local_oxo=False):
         """ Constructor
 
         Parameters
@@ -390,26 +458,36 @@ class BiolinkConceptMapper:
         distance: maximum allowed total distance (as opposed to OxO distance)
         local_oxo: use local implementation of OxO (default: True)
         """
-        if biolink_mappings is None:
-            biolink_mappings = BiolinkConceptMapper._default_ontology_map
-
-        self.biolink_mappings = biolink_mappings
         self.distance = distance
         self.local_oxo = local_oxo
 
-        # Convert Biolink Model prefix conventions to OxO conventions
-        oxo_mappings = dict()
-        for blm_type, prefixes in list(self.biolink_mappings.items()):
-            omop_domains = map_blm_class_to_omop_domain(blm_type)
-            if omop_domains is None or not omop_domains:
+        if biolink_mappings is None:
+            biolink_mappings = BiolinkConceptMapper._default_ontology_map
+        self.biolink_mappings = biolink_mappings
+
+        # Convert the biolink_mappings to also be represented using OxO prefixes
+        self.biolink_mappings_as_oxo = dict()
+        for blm_category, prefixes in biolink_mappings.items():
+            oxo_prefixes = [BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix)
+                            for prefix in prefixes]
+            # remove None from list
+            oxo_prefixes = [p for p in oxo_prefixes if p is not None]
+            self.biolink_mappings_as_oxo[blm_category] = oxo_prefixes
+
+        # Define target ontologies per OMOP domain based on mappings between Biolink categories and OMOP domains
+        # Since Biolink categories have n:n mappings to OMOP domains, merge the target ontologies by OMOP domain
+        oxo_mappings_set = defaultdict(set)
+        for blm_category, prefixes in list(self.biolink_mappings_as_oxo.items()):
+            omop_domain_classes = map_blm_class_to_omop_domain(blm_category)
+            if omop_domain_classes is None or not omop_domain_classes:
                 continue
 
-            # Map each prefix
-            domain_mappings = [BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix) for prefix in prefixes]
-            # Remove None from list
-            domain_mappings = [m for m in domain_mappings if m is not None]
-            for omop_domain in omop_domains:
-                oxo_mappings[omop_domain] = domain_mappings
+            for omop_domain_class in omop_domain_classes:
+                oxo_mappings_set[omop_domain_class.domain_id].union(prefixes)
+
+        oxo_mappings = dict()
+        for domain, prefix_set in oxo_mappings_set.items():
+            oxo_mappings[domain] = list(prefix_set)
 
         self._oxo_concept_mapper = ConceptMapper(oxo_mappings, self.distance, self.local_oxo)
 
@@ -427,6 +505,7 @@ class BiolinkConceptMapper:
         }
         return str(d)
 
+    @cache.memoize(timeout=2419200, cache_none=True)
     def map_to_omop(self, curies: Iterable[str]) -> Dict[str, Any]:
         """ Map to OMOP concept from ontology
 
@@ -468,14 +547,14 @@ class BiolinkConceptMapper:
 
         return omop_mappings
 
-    @cache.memoize(timeout=604800, cache_none=True)
-    def map_from_omop(self, concept_id, domain_id):
+    @cache.memoize(timeout=2419200, cache_none=True)
+    def map_from_omop(self, concept_id: int, blm_category: str):
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
         ----------
         concept_id: OMOP concept ID
-        domain_id: OMOP concept's domain. Will look it up if not specified
+        blm_category: biolink model category of the concept
 
         Returns
         -------
@@ -487,8 +566,13 @@ class BiolinkConceptMapper:
         }
         or None
         """
+        if blm_category not in self.biolink_mappings_as_oxo:
+            # No target ontologies defined for this Biolink category
+            return None
+
         # Get mappings from ConceptMapper
-        mappings = self._oxo_concept_mapper.map_from_omop(concept_id, domain_id)
+        target_ontologies = self.biolink_mappings_as_oxo[blm_category]
+        mappings = self._oxo_concept_mapper.map_from_omop_to_target(concept_id, target_ontologies)
 
         if mappings is None:
             return mappings
@@ -520,7 +604,6 @@ class BiolinkConceptMapper:
         # Did not find any canonical nodes from SRI Node Normalizer
         # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
         # choose by the order of prefixes listed in the Concept Mapper.
-        blm_category = map_omop_domain_to_blm_class(domain_id)
         blm_prefixes = self.biolink_mappings.get(blm_category, [])
         for d in range(self.distance + 1):
             # Get all mappings with the current distance
@@ -534,6 +617,25 @@ class BiolinkConceptMapper:
                         return m
 
         return None
+
+    @staticmethod
+    def build_cache_map_from() -> int:
+        """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
+
+        Returns
+        -------
+        Number of concepts
+        """
+        print('Building cache for BiolinkConceptMapper::map_from_omop')
+        mapper = BiolinkConceptMapper()
+        concepts = query_active_concepts()
+        for i, concept in enumerate(concepts):
+            blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
+            mapper.map_from_omop(concept['concept_id'], blm_category)
+            if i % 1000 == 0:
+                print(f'{i} / {len(concepts)} concepts mapped')
+        print('Cache build complete.')
+        return len(concepts)
 
 
 class SriNodeNormalizer:

@@ -6,3 +6,4 @@ flask_cors
 flask-caching
 pymysql
 semantic_version
+apscheduler

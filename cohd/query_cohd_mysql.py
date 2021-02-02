@@ -150,7 +150,7 @@ def query_db(service, method, args):
                 FROM cohd.concept c
                 LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
                 WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C') 
-                    {domain_filter} 
+                    {domain_filter}
                     {count_filter}
                 ORDER BY cc.concept_count DESC
                 LIMIT 1000;'''
@@ -745,7 +745,8 @@ def query_db(service, method, args):
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
                             AND cp.concept_id_1 = %(concept_id_1)s 
-                            {domain_filter})
+                            {domain_filter}
+                            {concept_class_filter})
                         UNION
                         (SELECT 
                             cp.dataset_id, 
@@ -766,7 +767,8 @@ def query_db(service, method, args):
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
                             AND cp.concept_id_2 = %(concept_id_1)s 
-                            {domain_filter})) x;'''
+                            {domain_filter}
+                            {concept_class_filter})) x;'''
                 params = {
                     'dataset_id': dataset_id,
                     'concept_id_1': concept_id_1
@@ -777,7 +779,17 @@ def query_db(service, method, args):
                     params['domain_id'] = domain_id
                 else:
                     domain_filter = ''
-                sql = sql.format(domain_filter=domain_filter)
+
+                # Filter concepts by concept_class
+                concept_class_id = args.get('concept_class')
+                if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
+                        concept_class_id.isspace():
+                    concept_class_filter = ''
+                else:
+                    concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                    params['concept_class_id'] = concept_class_id
+
+                sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter)
 
             cur.execute(sql, params)
             results = cur.fetchall()
@@ -888,7 +900,8 @@ def query_db(service, method, args):
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
                             AND cp.concept_id_1 = %(concept_id_1)s 
-                            {domain_filter})
+                            {domain_filter}
+                            {concept_class_filter})
                         UNION
                         (SELECT 
                             cp.dataset_id, 
@@ -908,7 +921,8 @@ def query_db(service, method, args):
                             AND c1.dataset_id = %(dataset_id)s 
                             AND c2.dataset_id = %(dataset_id)s
                             AND cp.concept_id_2 = %(concept_id_1)s 
-                            {domain_filter})) x
+                            {domain_filter}
+                            {concept_class_filter})) x
                     ORDER BY ln_ratio DESC;'''
                 params = {
                     'dataset_id': dataset_id,
@@ -922,7 +936,17 @@ def query_db(service, method, args):
                 else:
                     # Unrestricted domain
                     domain_filter = ''
-                sql = sql.format(domain_filter=domain_filter)
+
+                # Filter concepts by concept_class
+                concept_class_id = args.get('concept_class')
+                if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
+                        concept_class_id.isspace():
+                    concept_class_filter = ''
+                else:
+                    concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                    params['concept_class_id'] = concept_class_id
+
+                sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter)
 
             cur.execute(sql, params)
             json_return = cur.fetchall()
@@ -1008,7 +1032,8 @@ def query_db(service, method, args):
                         WHERE cp.dataset_id = %(dataset_id)s
                             AND cc.dataset_id = %(dataset_id)s
                             AND cp.concept_id_1 = %(concept_id_1)s
-                            {domain_filter})
+                            {domain_filter}
+                            {concept_class_filter})
                         UNION
                         (SELECT
                             cp.dataset_id,
@@ -1025,7 +1050,8 @@ def query_db(service, method, args):
                         WHERE cp.dataset_id = %(dataset_id)s
                             AND cc.dataset_id = %(dataset_id)s
                             AND cp.concept_id_2 = %(concept_id_1)s
-                            {domain_filter})) x
+                            {domain_filter}
+                            {concept_class_filter})) x
                     ORDER BY relative_frequency DESC;'''
                 params = {
                     'dataset_id': dataset_id,
@@ -1039,7 +1065,17 @@ def query_db(service, method, args):
                 else:
                     # Unrestricted domain
                     domain_filter = ''
-                sql = sql.format(domain_filter=domain_filter)
+
+                # Filter concepts by concept_class
+                concept_class_id = args.get('concept_class')
+                if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
+                        concept_class_id.isspace():
+                    concept_class_filter = ''
+                else:
+                    concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+                    params['concept_class_id'] = concept_class_id
+
+                sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter)
 
             cur.execute(sql, params)
             json_return = cur.fetchall()
@@ -1125,7 +1161,8 @@ def query_concept_pair_count(concept_id_1, concept_id_2, dataset_id=None):
     return response.get_json()
 
 
-def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, confidence=None):
+def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
+                      confidence=None):
     """ Calls the desired association method and returns the results
 
     Parameters
@@ -1135,6 +1172,7 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
     concept_id_2: (optional) String - OMOP concept ID
     dataset_id: (optional) String - COHD dataset ID
     domain_id: (optional) String - OMOP domain ID
+    concept_class_id: (optional) String - OMOP concept class ID
     confidence: (optional) String - Confidence level
 
     Returns
@@ -1155,6 +1193,8 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
         args['dataset_id'] = str(dataset_id)
     if domain_id is not None and domain_id:
         args['domain'] = domain_id
+    if concept_class_id is not None and concept_class_id:
+        args['concept_class'] = concept_class_id
     if confidence is not None:
         args['confidence'] = str(confidence)
 
@@ -1203,3 +1243,25 @@ def omop_concept_definitions(concept_ids):
         concept_defs[r['concept_id']] = r
 
     return concept_defs
+
+
+def query_active_concepts():
+    """ Gets all OMOP concepts with count data in any dataset in COHD
+
+    Returns
+    -------
+    Concept definitions for all active concepts
+    """
+    sql = """
+    WITH concept_ids AS
+        (SELECT DISTINCT concept_id
+        FROM concept_counts)
+    SELECT c.*
+    FROM concept_ids
+    JOIN concept c ON concept_ids.concept_id = c.concept_id;
+    """
+    conn = sql_connection()
+    cur = conn.cursor()
+    cur.execute(sql)
+    results = cur.fetchall()
+    return results
