@@ -39,6 +39,8 @@ class CohdTrapi(ABC):
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
+    default_max_results = 50
+    limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     # set of edge types that are supported by the COHD Reasoner
     supported_edge_types = {

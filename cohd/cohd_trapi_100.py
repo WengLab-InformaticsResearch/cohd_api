@@ -32,8 +32,8 @@ class CohdTrapi100(CohdTrapi):
         self._confidence_interval = None
         self._concept_mapper = BiolinkConceptMapper()
         self._request = request
-        self._max_results = 500
-        self._local_oxo = True
+        self._max_results = CohdTrapi.default_max_results
+        self._local_oxo = CohdTrapi.default_local_oxo
 
         # Determine how the query should be performed
         self._interpret_query()
@@ -189,7 +189,8 @@ class CohdTrapi100(CohdTrapi):
         # Get query_option for the desired maximum number of results
         max_results = self._query_options.get('max_results')
         if max_results:
-            self._max_results = min(max_results, self._max_results)  # Don't allow user to specify more than default
+            # Don't allow user to specify more than default
+            self._max_results = min(max_results, CohdTrapi.limit_max_results)
 
         # Get query information from query_graph
         self._query_graph = self._json_data['message']['query_graph']
