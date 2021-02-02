@@ -25,7 +25,7 @@ class CohdTrapi093(CohdTrapi):
         self._concept_id_1 = None
         self._concept_id_2 = None
         self._dataset_id = None
-        self._domain_ids = None
+        self._domain_class_pairs = None
         self._threshold = None
         self._criteria = []
         self._min_cooccurrence = None
@@ -241,7 +241,7 @@ class CohdTrapi093(CohdTrapi):
         node_type_2 = target_node.get('type')
         if curie_2 is not None and curie_2:
             # If CURIE of target node is specified, then query the association between concept_1 and concept_2
-            self._domain_ids = None
+            self._domain_class_pairs = None
             self._target_concept_mapping = node_mappings[curie_2]
 
             if self._target_concept_mapping:
@@ -261,14 +261,15 @@ class CohdTrapi093(CohdTrapi):
             # If CURIE is not specified and target node's type is specified, then query the association between
             # concept_1 and all concepts in the domain
             self._concept_id_2 = None
-            self._domain_ids = map_blm_class_to_omop_domain(node_type_2)
+            self._domain_class_pairs = map_blm_class_to_omop_domain(node_type_2)
 
             # Keep track of this mapping in the query graph for the response
-            target_node['mapped_omop_domains'] = self._domain_ids
+            target_node['mapped_omop_domains'] = [x.domain_id for x in self._domain_class_pairs]
+            target_node['mapped_omop_classes'] = [x.concept_class_id for x in self._domain_class_pairs]
         else:
             # No CURIE or type specified, query for associations against all concepts
             self._concept_id_2 = None
-            self._domain_ids = None
+            self._domain_class_pairs = None
 
         # Get the desired maximum number of results
         max_results = self._json_data.get('max_results')
@@ -308,16 +309,17 @@ class CohdTrapi093(CohdTrapi):
         """
         # Check if the query is valid
         if self._valid_query:
-            if self._concept_id_2 is None and self._domain_ids:
+            if self._concept_id_2 is None and self._domain_class_pairs:
                 # Node 2 not specified, but node 2's type was specified. Query associations between Node 1 and the
                 # requested types (domains)
                 results = []
-                for domain_id in self._domain_ids:
+                for domain_id, concept_class_id in self._domain_class_pairs:
                     new_results = query_cohd_mysql.query_association(method=self._method,
                                                                      concept_id_1=self._concept_id_1,
                                                                      concept_id_2=self._concept_id_2,
                                                                      dataset_id=self._dataset_id,
                                                                      domain_id=domain_id,
+                                                                     concept_class_id=concept_class_id,
                                                                      confidence=self._confidence_interval)
                     if new_results:
                         results.extend(new_results['results'])
@@ -394,8 +396,10 @@ class _TranslatorResponseMessage:
         for qnode in self.query_graph['nodes']:
             if qnode['id'] == self.query_source_node_id:
                 self.query_source_node_curie = qnode.get('curie', None)
+                self.query_source_node_type = qnode.get('type', None)
             elif qnode['id'] == self.query_target_node_id:
                 self.query_target_node_curie = qnode.get('curie', None)
+                self.query_target_node_type = qnode.get('type', None)
 
         if cohd_results is not None:
             for result in cohd_results:
@@ -424,7 +428,8 @@ class _TranslatorResponseMessage:
 
         # Get node for concept 1
         concept_1_id = cohd_result['concept_id_1']
-        node_1 = self.get_node(concept_1_id, query_node_curie=self.query_source_node_curie)
+        node_1 = self.get_node(concept_1_id, query_node_curie=self.query_source_node_curie,
+                               query_node_types=self.query_source_node_type)
 
         if self.biolink_only and not node_1.get('biolink_compliant', False):
             # Only include results when node_1 maps to biolink
@@ -434,7 +439,8 @@ class _TranslatorResponseMessage:
         concept_2_id = cohd_result['concept_id_2']
         concept_2_name = cohd_result.get('concept_2_name')
         concept_2_domain = cohd_result.get('concept_2_domain')
-        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_target_node_curie)
+        node_2 = self.get_node(concept_2_id, concept_2_name, concept_2_domain, self.query_target_node_curie,
+                               query_node_types=self.query_target_node_type)
 
         if self.biolink_only and not node_2.get('biolink_compliant', False):
             # Only include results when node_2 maps to biolink
@@ -478,7 +484,8 @@ class _TranslatorResponseMessage:
         self.results.append(result)
         return result
 
-    def get_node(self, concept_id, concept_name=None, domain=None, query_node_curie=None):
+    def get_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
+                 query_node_types=None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
@@ -487,7 +494,9 @@ class _TranslatorResponseMessage:
         concept_id: OMOP concept ID
         concept_name: OMOP concept name
         domain: OMOP concept domain
+        concept_class: OMOP concept_class_id
         query_node_curie: CURIE used in the QNode corresponding to this KG Node
+        query_node_types: list of types for this QNode
 
         Returns
         -------
@@ -497,16 +506,19 @@ class _TranslatorResponseMessage:
 
         if node is None:
             # Create the node
-            if concept_name is None or domain is None:
+            if concept_name is None or domain is None or concept_class is None:
                 # Concept information not specified, lookup concept definition
                 concept_name = concept_name if concept_name is not None else ''
                 domain = domain if domain is not None else ''
                 concept_def = query_cohd_mysql.omop_concept_definition(concept_id)
 
-                if concept_def is not None and not concept_name:
-                    concept_name = concept_def['concept_name']
-                if concept_def is not None and not domain:
-                    domain = concept_def['domain_id']
+                if concept_def is not None:
+                    if not concept_name:
+                        concept_name = concept_def['concept_name']
+                    if not domain:
+                        domain = concept_def['domain_id']
+                    if not concept_class:
+                        concept_class = concept_def['concept_class_id']
 
             # If we don't find better mappings (below) for this concept, default to OMOP CURIE and label
             omop_curie = omop_concept_curie(concept_id)
@@ -514,11 +526,11 @@ class _TranslatorResponseMessage:
             primary_label = concept_name
 
             # Map to Biolink Model or other target ontologies
-            blm_type = map_omop_domain_to_blm_class(domain)
+            blm_type = map_omop_domain_to_blm_class(domain, concept_class, query_node_types)
             mapped_to_blm = False
             mapping = None
             if self.concept_mapper:
-                mapping = self.concept_mapper.map_from_omop(concept_id, domain)
+                mapping = self.concept_mapper.map_from_omop(concept_id, blm_type)
 
             if query_node_curie is not None and query_node_curie:
                 # The CURIE was specified for this node in the query_graph, use that CURIE to identify this node

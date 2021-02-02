@@ -20,25 +20,36 @@ def translator_predicates():
     json response object
     """
     return jsonify({
+        'biolink:ChemicalSubstance': {
+            'biolink:ChemicalSubstance': ['biolink:correlated_with'],
+            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:Drug': ['biolink:correlated_with'],
+            'biolink:Procedure': ['biolink:correlated_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+        },
         'biolink:Disease': {
+            'biolink:ChemicalSubstance': ['biolink:correlated_with'],
             'biolink:Disease': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:Drug': {
+            'biolink:ChemicalSubstance': ['biolink:correlated_with'],
             'biolink:Disease': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:Procedure': {
+            'biolink:ChemicalSubstance': ['biolink:correlated_with'],
             'biolink:Disease': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:PopulationOfIndividualOrganisms': {
+            'biolink:ChemicalSubstance': ['biolink:correlated_with'],
             'biolink:Disease': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
