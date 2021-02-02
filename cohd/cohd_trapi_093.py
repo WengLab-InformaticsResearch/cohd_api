@@ -234,11 +234,18 @@ class CohdTrapi093(CohdTrapi):
         # Check the formatting of node 1's type (even though it's not used)
         if 'type' in source_node:
             source_node['type'] = fix_blm_category(source_node['type'])
+            # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease. Change the query
+            if source_node['type'] == 'biolink:Disease':
+                source_node['type'] = 'biolink:DiseaseOrPhenotypicFeature'
 
         # Get the desired association concept or type
         target_node = self._find_query_node(edge['target_id'])
         curie_2 = target_node.get('curie')
         node_type_2 = target_node.get('type')
+        # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease. Change the query
+        if node_type_2 == 'biolink:Disease':
+            node_type_2 = 'biolink:DiseaseOrPhenotypicFeature'
+
         if curie_2 is not None and curie_2:
             # If CURIE of target node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None

@@ -22,35 +22,35 @@ def translator_predicates():
     return jsonify({
         'biolink:ChemicalSubstance': {
             'biolink:ChemicalSubstance': ['biolink:correlated_with'],
-            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
-        'biolink:Disease': {
+        'biolink:DiseaseOrPhenotypicFeature': {
             'biolink:ChemicalSubstance': ['biolink:correlated_with'],
-            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:Drug': {
             'biolink:ChemicalSubstance': ['biolink:correlated_with'],
-            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:Procedure': {
             'biolink:ChemicalSubstance': ['biolink:correlated_with'],
-            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
         'biolink:PopulationOfIndividualOrganisms': {
             'biolink:ChemicalSubstance': ['biolink:correlated_with'],
-            'biolink:Disease': ['biolink:correlated_with'],
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
             'biolink:Drug': ['biolink:correlated_with'],
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']

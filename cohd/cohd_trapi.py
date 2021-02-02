@@ -196,6 +196,7 @@ def fix_blm_category(blm_category):
         'biolink:chemical_substance': 'biolink:ChemicalSubstance',
         'biolink:device': 'biolink:Device',
         'biolink:disease': 'biolink:Disease',
+        'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
         'biolink:drug': 'biolink:Drug',
         'biolink:phenomenon': 'biolink:Phenomenon',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
@@ -225,9 +226,11 @@ def map_blm_class_to_omop_domain(node_type: str) -> List[DomainClass]:
         'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
         'biolink:Disease': [DomainClass('Condition', None)],
+        'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Drug': [DomainClass('Drug', None)],
         'biolink:Phenomenon': [DomainClass('Measurement', None),
                                DomainClass('Observation', None)],
+        'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:PopulationOfIndividualOrganisms': [DomainClass('Ethnicity', None),
                                                     DomainClass('Gender', None),
                                                     DomainClass('Race', None)],
@@ -277,7 +280,7 @@ def map_omop_domain_to_blm_class(domain: str,
 # Preferred mappings from OMOP (domain_id, concept_class_id) to biolink categories
 # List items are in preferred order
 map_omop_domain_to_blm_class.mappings_domain_class = {
-    DomainClass('Condition', None): ['biolink:Disease'],
+    DomainClass('Condition', None): ['biolink:DiseaseOrPhenotypicFeature'],
     DomainClass('Device', None): ['biolink:Device'],
     DomainClass('Drug', None): ['biolink:Drug',
                                 'biolink:ChemicalSubstance'],
@@ -301,12 +304,11 @@ class BiolinkConceptMapper:
     """
 
     _mappings_prefixes_blm_to_oxo = {
-        # Disease prefixes
+        # DiseaseOrPhenotypicFeature prefixes
         'MONDO': 'MONDO',
         'DOID': 'DOID',
         'OMIM': 'OMIM',
         'ORPHANET': 'Orphanet',
-        'ORPHA': None,
         'EFO': 'EFO',
         'UMLS': 'UMLS',
         'MESH': 'MeSH',
@@ -317,8 +319,14 @@ class BiolinkConceptMapper:
         'ICD10': 'ICD10CM',
         'ICD9': 'ICD9CM',
         'ICD0': None,
+        'KEGG.DISEASE': None,
         'HP': 'HP',
         'MP': 'MP',
+        'ZP': None,
+        'UPHENO': None,
+        'APO': 'APO',
+        'FBcv': 'FBcv',
+        'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
         'RXCUI': 'RxNorm',
         'NDC': None,
@@ -364,6 +372,9 @@ class BiolinkConceptMapper:
         'ICD9CM': 'ICD9',
         'HP': 'HP',
         'MP': 'MP',
+        'APO': 'APO',
+        'FBcv': 'FBcv',
+        'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
         'RxNorm': 'RXCUI',
         # Chemical Substance prefixes
@@ -377,8 +388,9 @@ class BiolinkConceptMapper:
     }
 
     _default_ontology_map = {
-        'biolink:Disease': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'ORPHA', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
-                            'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'HP', 'MP'],
+        'biolink:DiseaseOrPhenotypicFeature': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
+                                               'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'KEGG.DISEASE',
+                                               'HP', 'MP', 'ZP', 'UPHENO', 'APO', 'FBcv', 'WBPhenotype'],
         'biolink:ChemicalSubstance': ['PUBCHEM.COMPOUND', 'CHEMBL.COMPOUND', 'UNII', 'CHEBI', 'DRUGBANK', 'MESH', 'CAS',
                                       'DrugCentral', 'GTOPDB', 'HMDB', 'KEGG.COMPOUND', 'ChemBank', 'Aeolus',
                                       'PUBCHEM.SUBSTANCE', 'SIDER.DRUG', 'INCHI', 'INCHIKEY', 'KEGG.GLYCAN',
