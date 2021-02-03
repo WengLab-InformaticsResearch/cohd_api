@@ -32,8 +32,8 @@ class CohdTrapi093(CohdTrapi):
         self._confidence_interval = None
         self._concept_mapper = BiolinkConceptMapper()
         self._request = request
-        self._max_results = 500
-        self._local_oxo = True
+        self._max_results = CohdTrapi.default_max_results
+        self._local_oxo = CohdTrapi.default_local_oxo
 
         # Determine how the query should be performed
         self._interpret_query()
@@ -281,7 +281,8 @@ class CohdTrapi093(CohdTrapi):
         # Get the desired maximum number of results
         max_results = self._json_data.get('max_results')
         if max_results:
-            self._max_results = min(max_results, self._max_results)  # Don't allow user to specify more than default
+            # Don't allow user to specify more than default
+            self._max_results = min(max_results, CohdTrapi.limit_max_results)
 
         # Criteria for returning results
         self._criteria = []
@@ -300,7 +301,7 @@ class CohdTrapi093(CohdTrapi):
         # If the method is obsExpRatio, add a criteria for confidence interval
         if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
             self._criteria.append(ResultCriteria(function=criteria_confidence,
-                                                 kargs={'alpha': self._confidence_interval}))
+                                                 kargs={'confidence': self._confidence_interval}))
 
         if self._valid_query:
             return True

@@ -55,22 +55,22 @@ def test_cohd_double_poisson_ci():
     No return value. Asserts will be triggered upon failure.
     """
     x = cohd_utilities.double_poisson_ci(50)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (29.0, 75.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (28.0, 75.0), dp=1)
 
     x = cohd_utilities.double_poisson_ci(50, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (29.0, 75.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (28.0, 75.0), dp=1)
 
     x = cohd_utilities.double_poisson_ci(50, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (33.0, 68.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (33.0, 69.0), dp=1)
 
     x = cohd_utilities.double_poisson_ci(5000)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4769.0, 5235.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4769.0, 5234.0), dp=1)
 
     x = cohd_utilities.double_poisson_ci(5000, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and  _crr(x, (4769.0, 5235.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and  _crr(x, (4769.0, 5234.0), dp=1)
 
     x = cohd_utilities.double_poisson_ci(5000, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4829.0, 5173.0), dp=1)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4822.0, 5180.0), dp=1)
 
 
 def test_ln_ratio_ci():
@@ -83,28 +83,28 @@ def test_ln_ratio_ci():
     No return value. Asserts will be triggered upon failure.
     """
     x = cohd_utilities.ln_ratio_ci(50, 2.0)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.4552728245583282, 2.4054651081081646))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.4201815047470578, 2.4054651081081646))
 
     x = cohd_utilities.ln_ratio_ci(50, 2.0, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.4552728245583282, 2.4054651081081646))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.4201815047470578, 2.4054651081081646))
 
     x = cohd_utilities.ln_ratio_ci(50, 2.0, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.584484556038334, 2.3074846997479606))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.584484556038334, 2.3220834991691133))
 
     x = cohd_utilities.ln_ratio_ci(50, 5.0, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4.584484556038334, 5.3074846997479606))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4.584484556038334, 5.322083499169113))
 
     x = cohd_utilities.ln_ratio_ci(5000, 2.0)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.9526987268819869, 2.0459289318883997))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.9526987268819869, 2.045737891673854))
 
     x = cohd_utilities.ln_ratio_ci(5000, 2.0, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.9526987268819869, 2.0459289318883997))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.9526987268819869, 2.045737891673854))
 
     x = cohd_utilities.ln_ratio_ci(5000, 2.0, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.9652014944573044, 2.0340148785872776))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (1.963750867324879, 2.0353671438372913))
 
     x = cohd_utilities.ln_ratio_ci(5000, 5.0, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4.965201494457304, 5.034014878587278))
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (4.963750867324879, 5.035367143837291))
 
 
 def test_rel_freq_ci():
@@ -119,28 +119,36 @@ def test_rel_freq_ci():
     dp = 6  # decimal places to check results
 
     x = cohd_utilities.rel_freq_ci(50, 5000)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.0055396370582617, 0.015726567414552316), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.005349636988918609, 0.015726567414552316), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 5000, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.0055396370582617, 0.015726567414552316), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.005349636988918609, 0.015726567414552316), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 5000, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.006379277015271603, 0.01408159039138538), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.006370656370656371, 0.01430941518042306), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 100, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.264, 0.8831168831168831), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.2619047619047619, 0.9078947368421053), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.009493796881718718, 0.01051889180912883), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.009493796881718718, 0.010516903601748128), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000, 0.99)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.009493796881718718, 0.01051889180912883), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.009493796881718718, 0.010516903601748128), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.009624852009678667, 0.010381713093040057), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.009609501888221286, 0.010397284662800804), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 10000, 0.95)
-    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and _crr(x, (0.47135187896534897, 0.5301834580301322), dp)
+    assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
+           _crr(x, (0.47020965382740126, 0.5314455729968195), dp)
 
 
 def test_ci_significance():
