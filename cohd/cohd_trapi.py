@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import requests
 from requests.compat import urljoin
-from typing import Union, Any, Iterable, Optional, Dict, NamedTuple, List
+from typing import Union, Any, Iterable, Optional, Dict, List
 from collections import defaultdict
 from datetime import datetime
 
@@ -143,14 +143,14 @@ def criteria_threshold(cohd_result, threshold):
         return False
 
 
-def criteria_confidence(cohd_result, alpha):
+def criteria_confidence(cohd_result, confidence):
     """ Checks the confidence interval of the result for significance using alpha. Only applies to observed-expected
     frequency ratio. Returns True for all other types of results.
 
     Parameters
     ----------
     cohd_result
-    alpha
+    confidence
 
     Returns
     -------
@@ -158,11 +158,11 @@ def criteria_confidence(cohd_result, alpha):
     """
     if 'ln_ratio' in cohd_result:
         # obsExpFreq
-        ci = ln_ratio_ci(cohd_result['observed_count'], cohd_result['ln_ratio'], alpha)
+        ci = ln_ratio_ci(cohd_result['observed_count'], cohd_result['ln_ratio'], confidence)
         return ci_significance(ci)
     else:
         # relativeFrequency doesn't have a good cutoff for confidence interval, and chiSquare uses
-        # p-value for signficance, so allow methods other than obsExpRatio to pass
+        # p-value for significance, so allow methods other than obsExpRatio to pass
         return True
 
 

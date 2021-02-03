@@ -301,7 +301,7 @@ class CohdTrapi093(CohdTrapi):
         # If the method is obsExpRatio, add a criteria for confidence interval
         if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
             self._criteria.append(ResultCriteria(function=criteria_confidence,
-                                                 kargs={'alpha': self._confidence_interval}))
+                                                 kargs={'confidence': self._confidence_interval}))
 
         if self._valid_query:
             return True
