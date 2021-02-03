@@ -870,7 +870,7 @@ def test_obsExpRatio():
             "concept_id_2": 46271075,
             "confidence_interval": [
                 -0.8271427658843471,
-                0.8378649977045639
+                0.8104660235164496
             ],
             "dataset_id": 1,
             "expected_count": 16.00742880726372,
@@ -915,7 +915,7 @@ def test_relativeFrequency():
             "concept_id_2": 434610,
             "concept_pair_count": 17,
             "confidence_interval": [
-                0.018633540372670808,
+                0.015527950310559006,
                 0.14883720930232558
             ],
             "dataset_id": 3,
