@@ -29,6 +29,8 @@ cache = Cache(app)
 # Some of the above objects need to be created before loading other COHD modules
 from . import query_cohd_mysql
 from . import cohd_translator
+from . import cohd_trapi
+from . import scheduled_tasks
 
 ##########
 # ROUTES #
@@ -183,6 +185,11 @@ def api_translator_biolink_to_omop():
     return api_call('translator', 'biolink_to_omop')
 
 
+@app.route('/api/dev/build_cache_map_from', methods=['GET'])
+def api_internal_build_cache_map_from():
+    return api_call('dev', 'build_cache_map_from')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -261,6 +268,12 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.omop_to_biolink(request)
         elif meta == 'biolink_to_omop':
             result = cohd_translator.biolink_to_omop(request)
+        else:
+            result = 'meta not recognized', 400
+    elif service == 'dev':
+        if meta == 'build_cache_map_from':
+            count = cohd_trapi.BiolinkConceptMapper.build_cache_map_from()
+            result = str(count), 200
         else:
             result = 'meta not recognized', 400
     else:

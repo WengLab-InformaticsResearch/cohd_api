@@ -1229,7 +1229,17 @@ paths:
             type: string
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict the associated concept (concept_id_2) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
-          example: Procedure
+          example: Drug
+        - name: concept_class
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            An OMOP concept_class_id, e.g., "Ingredient", to restrict the associated concept (concept_id_2) to. If this
+            parameter is not specified, then the concept_class_id is unrestricted. Example useful usage would be to have
+            domain="Drug" and concept_class="Ingredient"
+          example: Ingredient
       operationId: chiSquare
       responses:
         default:
@@ -1388,7 +1398,17 @@ paths:
             type: string
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict the associated concept (concept_id_2) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
-          example: Procedure
+          example: Drug
+        - name: concept_class
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            An OMOP concept_class_id, e.g., "Ingredient", to restrict the associated concept (concept_id_2) to. If this
+            parameter is not specified, then the concept_class_id is unrestricted. Example useful usage would be to have
+            domain="Drug" and concept_class="Ingredient"
+          example: Ingredient
         - name: confidence
           in: query
           required: false
@@ -1553,7 +1573,17 @@ paths:
             type: string
           description: >-
             An OMOP domain id, e.g., "Condition", "Drug", "Procedure", etc., to restrict concept_id_2 (the base concept) to. If this parameter is not specified, then the domain is unrestricted. See /metadata/domainCounts for a list of valid domain IDs.
-          example: Procedure
+          example: Drug
+        - name: concept_class
+          in: query
+          required: false
+          schema:
+            type: string
+          description: >-
+            An OMOP concept_class_id, e.g., "Ingredient", to restrict the associated concept (concept_id_2) to. If this
+            parameter is not specified, then the concept_class_id is unrestricted. Example useful usage would be to have
+            domain="Drug" and concept_class="Ingredient"
+          example: Ingredient
         - name: confidence
           in: query
           required: false
