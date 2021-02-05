@@ -22,6 +22,8 @@ class CohdTrapi(ABC):
         """ Constructor should take a flask request object """
         assert request is not None, 'cohd_trapi.py::CohdTrapi::__init__() - Bad request'
 
+        self._method = None
+
     @abstractmethod
     def operate(self):
         """ Performs the operation requested by the TRAPI request.
@@ -43,8 +45,8 @@ class CohdTrapi(ABC):
     default_max_results = 50
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
-    # set of edge types that are supported by the COHD Reasoner
-    supported_edge_types = {
+    # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
+    supported_edge_types = [
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
         'biolink:related_to',  # Ancestor of biolink:correlated_with
         # Allow edge without biolink prefix
@@ -53,7 +55,24 @@ class CohdTrapi(ABC):
         # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
         'biolink:association',
         'association',
+    ]
+
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
+    default_predicate = 'biolink:correlated_with'
+    method_predicates = {
+        'obsExpRatio': default_predicate,
+        'relativeFrequency': default_predicate,
+        'chiSquare': default_predicate
     }
+
+    def _get_kg_predicate(self) -> str:
+        """ Determines which predicate should be used to represent the COHD analysis
+
+        Returns
+        -------
+        Biolink predicate
+        """
+        return CohdTrapi.method_predicates.get(self._method, CohdTrapi.default_predicate)
 
 
 class ResultCriteria:
@@ -66,7 +85,7 @@ class ResultCriteria:
 
         Parameters
         ----------
-        function: function
+        function: a function
         kargs: keyword arguments
         """
         self.function = function
@@ -208,6 +227,24 @@ def fix_blm_category(blm_category):
     blm_category = supported_type_conversions.get(blm_category, blm_category)
 
     return blm_category
+
+
+def suggest_blm_category(blm_category: str) -> Optional[str]:
+    """ COHD prefers certain Biolink categories over others. This returns a preferred Biolink category if one exists.
+
+    Parameters
+    ----------
+    blm_category
+
+    Returns
+    -------
+    The preferred Biolink category, or None
+    """
+    suggestions = {
+        # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease.
+        'biolink:Disease': 'biolink:DiseaseOrPhenotypicFeature'
+    }
+    return suggestions.get(blm_category)
 
 
 def map_blm_class_to_omop_domain(node_type: str) -> List[DomainClass]:
@@ -509,7 +546,7 @@ class BiolinkConceptMapper:
         return str(d)
 
     @cache.memoize(timeout=2419200, cache_none=True)
-    def map_to_omop(self, curies: Iterable[str]) -> Dict[str, Any]:
+    def map_to_omop(self, curies: List[str]) -> Optional[Dict[str, Any]]:
         """ Map to OMOP concept from ontology
 
         Parameters
@@ -551,7 +588,7 @@ class BiolinkConceptMapper:
         return omop_mappings
 
     @cache.memoize(timeout=2419200, cache_none=True)
-    def map_from_omop(self, concept_id: int, blm_category: str):
+    def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Dict[str, Any]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
@@ -647,7 +684,7 @@ class SriNodeNormalizer:
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
 
     @staticmethod
-    def get_normalized_nodes(curies: Iterable[str]) -> Union[Dict[str, Any], None]:
+    def get_normalized_nodes(curies: List[str]) -> Union[Dict[str, Any], None]:
         """ Straightforward call to get_normalized_nodes. Returns json from response.
 
         Parameters
@@ -667,7 +704,7 @@ class SriNodeNormalizer:
             return None
 
     @staticmethod
-    def get_canonical_identifiers(curies: Iterable[str]) -> Union[Dict[str, Union[str, None]], None]:
+    def get_canonical_identifiers(curies: List[str]) -> Union[Dict[str, Union[str, None]], None]:
         """ Retrieve the canonical identifier
 
         Parameters
