@@ -4,11 +4,30 @@ from requests.compat import urljoin
 from typing import Union, Any, Iterable, Optional, Dict, List
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
 from .cohd import cache
 from .query_cohd_mysql import query_active_concepts
+
+
+class TrapiStatusCode(Enum):
+    """
+    Enumerated TRAPI status codes.
+
+    Note: There is currently no standardized list of allowed status codes. Below are a few examples
+    from the TRAPI spec and from this doc:
+    https://docs.google.com/document/d/12GRjcAqXQfp557kAcVEm7V0mE3hKGxAY5B6ZPavp6tQ/edit#
+    plus a few defined for COHD
+    """
+    SUCCESS = 'Success'
+    NO_RESULTS = 'NoResults'
+    QUERY_NOT_TRAVERSABLE = 'QueryNotTraversable'
+    KP_NOT_AVAILABLE = 'KPNotAvailable'
+    UNRESOLVABLE_CURIE = 'UnresolvableCurie'
+    COULD_NOT_MAP_CURIE_TO_LOCAL_KG = 'CouldNotMapCurieToLocalKG'
+    UNSUPPORTED_QNODE_CATEGORY = 'UnsupportedQNodeCategory'
 
 
 class CohdTrapi(ABC):
@@ -247,7 +266,7 @@ def suggest_blm_category(blm_category: str) -> Optional[str]:
     return suggestions.get(blm_category)
 
 
-def map_blm_class_to_omop_domain(node_type: str) -> List[DomainClass]:
+def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     """ Maps the Biolink Model class to OMOP domain_id, e.g., 'biolink:Disease' to 'Condition'
 
     Note, some classes may map to multiple domains, e.g., 'biolink:PopulationOfIndividualOrganisms' maps to

@@ -230,7 +230,7 @@ class CohdTrapi100(CohdTrapi):
         edges = self._query_graph['edges']
         if len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = ('COHD reasoner only supports 1-hop queries', 422)
+            self._invalid_query_response = ('COHD reasoner only supports 1-hop queries', 400)
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner
@@ -251,7 +251,7 @@ class CohdTrapi100(CohdTrapi):
                     break
             if not edge_supported:
                 self._valid_query = False
-                self._invalid_query_response = ('QEdge.predicate not supported by COHD Reasoner API', 422)
+                self._invalid_query_response = ('QEdge.predicate not supported by COHD Reasoner API', 400)
                 return self._valid_query, self._invalid_query_response
         else:
             # TRAPI does not require predicate. If no predicate specified, suggest the use of 'biolink:correlated_with'
@@ -292,7 +292,7 @@ class CohdTrapi100(CohdTrapi):
         # COHD queries require at least 1 node with a specified ID
         if len(node_ids) == 0:
             self._valid_query = False
-            self._invalid_query_response = ('COHD TRAPI requires at least one node to have an ID', 422)
+            self._invalid_query_response = ('COHD TRAPI requires at least one node to have an ID', 400)
             return self._valid_query, self._invalid_query_response
 
         # Find BLM - OMOP mappings for all identified query nodes
@@ -315,7 +315,9 @@ class CohdTrapi100(CohdTrapi):
                 break
         if not found:
             self._valid_query = False
-            self._invalid_query_response = (f'Could not map node {self._concept_1_qnode_key} to OMOP concept', 422)
+            description = f'Could not map node {self._concept_1_qnode_key} to OMOP concept'
+            response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Get qnode categories and check the formatting
@@ -351,15 +353,28 @@ class CohdTrapi100(CohdTrapi):
                     break
             if not found:
                 self._valid_query = False
-                self._invalid_query_response = (f'Could not map node {self._concept_2_qnode_key} to OMOP concept', 422)
+                description = f'Could not map node {self._concept_2_qnode_key} to OMOP concept'
+                response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
         elif self._concept_2_qnode_categories is not None and self._concept_2_qnode_categories:
             # If CURIE is not specified and target node's category is specified, then query the association
             # between concept_1 and all concepts in the domain
             self._concept_2_qnode_curie = None
             self._concept_2_omop_id = None
-            # For now, only use the first category in the list
-            self._domain_class_pairs = map_blm_class_to_omop_domain(self._concept_2_qnode_categories[0])
+            # For now, only use the first category in the list that maps to a handled OMOP domain/class pair
+            for category in self._concept_2_qnode_categories:
+                self._domain_class_pairs = map_blm_class_to_omop_domain(category)
+                if self._domain_class_pairs is not None:
+                    break
+
+            if self._domain_class_pairs is None:
+                # None of the categories for this QNode were mapped to OMOP
+                self._valid_query = False
+                description = f"QNode {self._concept_2_qnode_key}'s category not supported by COHD"
+                response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
 
             # Keep track of this mapping in the query graph for the response
             concept_2_qnode['mapped_omop_domains'] = [x.domain_id for x in self._domain_class_pairs]
@@ -721,7 +736,10 @@ class CohdTrapi100(CohdTrapi):
 
         return kg_node_1, kg_node_2, kg_edge, ke_id
 
-    def _serialize_trapi_response(self, cohd_results):
+    def _serialize_trapi_response(self,
+                                  cohd_results: List[Dict[str, Any]],
+                                  status: TrapiStatusCode = TrapiStatusCode.SUCCESS,
+                                  logs: Optional[List[str]] = None):
         """ Creates the response message with JSON data in Reasoner Std API format
 
         Returns
@@ -736,11 +754,12 @@ class CohdTrapi100(CohdTrapi):
                 if len(self._results) >= self._max_results:
                     break
 
-        return jsonify({
-            # 'status': '', # TODO: String: One of a standardized set of short codes, e.g. Success,
-            #                       QueryNotTraversable, KPsNotAvailable
-            # 'description': '', # TODO: String: A brief human-readable description of the outcome
-            # 'logs': [],  # TODO: Array of LogEntry objects
+        if len(self._results) == 0:
+            status = TrapiStatusCode.NO_RESULTS
+
+        response = {
+            'status': status.value,
+            'description': f'COHD returned {len(self._results)} results.',
             'message': {
                 'results': self._results,
                 'query_graph': self._query_graph,
@@ -752,4 +771,38 @@ class CohdTrapi100(CohdTrapi):
             'schema_version': '1.0.0',
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
-        })
+        }
+        if logs is not None and logs:
+            response['logs'] = logs
+        return jsonify(response)
+
+    def _trapi_mini_response(self,
+                             status: TrapiStatusCode,
+                             description: str,
+                             logs: Optional[List[str]] = None):
+        """ Creates a minimal TRAPI response without creating the knowledge graph or results.
+        This is useful for situations where some issue occurred but the TRAPI convention expects an HTTP
+        Status Code 200 and TRAPI Response object.
+
+        Returns
+        -------
+        Response message with JSON data in Reasoner Std API format
+        """
+        response = {
+            'status': status.value,
+            'description': description,
+            'message': {
+                'results': [],  # TODO: change back to None when validator bug is fixed
+                'query_graph': self._query_graph,
+                'knowledge_graph': {'nodes': {}, 'edges': {}}  # TODO: change back to None
+            },
+            # From TRAPI Extended
+            'reasoner_id': 'COHD',
+            'tool_version': 'COHD 3.0.0',
+            'schema_version': '1.0.0',
+            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'query_options': self._query_options,
+        }
+        if logs is not None and logs:
+            response['logs'] = logs
+        return jsonify(response)
