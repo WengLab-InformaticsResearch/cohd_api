@@ -8,7 +8,7 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from trapi import reasoner_validator_092, reasoner_validator_100beta
+from trapi import reasoner_validator_092, reasoner_validator_10x
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -936,7 +936,7 @@ def test_translator_query():
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_100beta.validate_Response(json)
+    reasoner_validator_10x.validate_Response(json)
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
