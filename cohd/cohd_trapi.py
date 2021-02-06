@@ -4,11 +4,30 @@ from requests.compat import urljoin
 from typing import Union, Any, Iterable, Optional, Dict, List
 from collections import defaultdict
 from datetime import datetime
+from enum import Enum
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
 from .cohd import cache
 from .query_cohd_mysql import query_active_concepts
+
+
+class TrapiStatusCode(Enum):
+    """
+    Enumerated TRAPI status codes.
+
+    Note: There is currently no standardized list of allowed status codes. Below are a few examples
+    from the TRAPI spec and from this doc:
+    https://docs.google.com/document/d/12GRjcAqXQfp557kAcVEm7V0mE3hKGxAY5B6ZPavp6tQ/edit#
+    plus a few defined for COHD
+    """
+    SUCCESS = 'Success'
+    NO_RESULTS = 'NoResults'
+    QUERY_NOT_TRAVERSABLE = 'QueryNotTraversable'
+    KP_NOT_AVAILABLE = 'KPNotAvailable'
+    UNRESOLVABLE_CURIE = 'UnresolvableCurie'
+    COULD_NOT_MAP_CURIE_TO_LOCAL_KG = 'CouldNotMapCurieToLocalKG'
+    UNSUPPORTED_QNODE_CATEGORY = 'UnsupportedQNodeCategory'
 
 
 class CohdTrapi(ABC):
@@ -21,6 +40,8 @@ class CohdTrapi(ABC):
     def __init__(self, request):
         """ Constructor should take a flask request object """
         assert request is not None, 'cohd_trapi.py::CohdTrapi::__init__() - Bad request'
+
+        self._method = None
 
     @abstractmethod
     def operate(self):
@@ -43,8 +64,8 @@ class CohdTrapi(ABC):
     default_max_results = 50
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
-    # set of edge types that are supported by the COHD Reasoner
-    supported_edge_types = {
+    # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
+    supported_edge_types = [
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
         'biolink:related_to',  # Ancestor of biolink:correlated_with
         # Allow edge without biolink prefix
@@ -53,7 +74,24 @@ class CohdTrapi(ABC):
         # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
         'biolink:association',
         'association',
+    ]
+
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
+    default_predicate = 'biolink:correlated_with'
+    method_predicates = {
+        'obsExpRatio': default_predicate,
+        'relativeFrequency': default_predicate,
+        'chiSquare': default_predicate
     }
+
+    def _get_kg_predicate(self) -> str:
+        """ Determines which predicate should be used to represent the COHD analysis
+
+        Returns
+        -------
+        Biolink predicate
+        """
+        return CohdTrapi.method_predicates.get(self._method, CohdTrapi.default_predicate)
 
 
 class ResultCriteria:
@@ -66,7 +104,7 @@ class ResultCriteria:
 
         Parameters
         ----------
-        function: function
+        function: a function
         kargs: keyword arguments
         """
         self.function = function
@@ -210,7 +248,25 @@ def fix_blm_category(blm_category):
     return blm_category
 
 
-def map_blm_class_to_omop_domain(node_type: str) -> List[DomainClass]:
+def suggest_blm_category(blm_category: str) -> Optional[str]:
+    """ COHD prefers certain Biolink categories over others. This returns a preferred Biolink category if one exists.
+
+    Parameters
+    ----------
+    blm_category
+
+    Returns
+    -------
+    The preferred Biolink category, or None
+    """
+    suggestions = {
+        # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease.
+        'biolink:Disease': 'biolink:DiseaseOrPhenotypicFeature'
+    }
+    return suggestions.get(blm_category)
+
+
+def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     """ Maps the Biolink Model class to OMOP domain_id, e.g., 'biolink:Disease' to 'Condition'
 
     Note, some classes may map to multiple domains, e.g., 'biolink:PopulationOfIndividualOrganisms' maps to
@@ -509,7 +565,7 @@ class BiolinkConceptMapper:
         return str(d)
 
     @cache.memoize(timeout=2419200, cache_none=True)
-    def map_to_omop(self, curies: Iterable[str]) -> Dict[str, Any]:
+    def map_to_omop(self, curies: List[str]) -> Optional[Dict[str, Any]]:
         """ Map to OMOP concept from ontology
 
         Parameters
@@ -551,7 +607,7 @@ class BiolinkConceptMapper:
         return omop_mappings
 
     @cache.memoize(timeout=2419200, cache_none=True)
-    def map_from_omop(self, concept_id: int, blm_category: str):
+    def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Dict[str, Any]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
@@ -647,7 +703,7 @@ class SriNodeNormalizer:
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
 
     @staticmethod
-    def get_normalized_nodes(curies: Iterable[str]) -> Union[Dict[str, Any], None]:
+    def get_normalized_nodes(curies: List[str]) -> Union[Dict[str, Any], None]:
         """ Straightforward call to get_normalized_nodes. Returns json from response.
 
         Parameters
@@ -667,7 +723,7 @@ class SriNodeNormalizer:
             return None
 
     @staticmethod
-    def get_canonical_identifiers(curies: Iterable[str]) -> Union[Dict[str, Union[str, None]], None]:
+    def get_canonical_identifiers(curies: List[str]) -> Union[Dict[str, Union[str, None]], None]:
         """ Retrieve the canonical identifier
 
         Parameters

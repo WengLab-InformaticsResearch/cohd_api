@@ -160,8 +160,14 @@ def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
     }
 
     r = requests.post(url=_URL_OXO_SEARCH, data=data)
-    json_return = r.json()
-    return json_return
+    if r.status_code == 200:
+        json_return = r.json()
+        return json_return
+    else:
+        print('omop_xref.py::oxo_search - Non-200 response code from OxO:')
+        print(r)
+
+    return None
 
 
 def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
@@ -182,6 +188,10 @@ def xref_to_omop_standard_concept(cur, curie, distance=2, best=False):
 
     # Call OxO to map to a vocabulary that OMOP knows
     j = oxo_search([curie], mapping_targets=_OXO_OMOP_MAPPING_TARGETS, distance=distance)
+    if j is None:
+        # Error from OxO, return the empty mappings list
+        return mappings
+
     search_result = j['_embedded']['searchResults'][0]
     mrl = search_result['mappingResponseList']
 
@@ -351,7 +361,11 @@ def xref_from_omop_standard_concept(cur, concept_id, mapping_targets=None, dista
     # Call OxO to map from these intermediate CURIEs to the external ontologies
     if len(curies) > 0:
         j = oxo_search(curies, mapping_targets=mapping_targets, distance=distance)
-        search_results = j['_embedded']['searchResults']
+        if j is not None:
+            search_results = j['_embedded']['searchResults']
+        else:
+            # Error from OxO
+            return []
 
     # Combine OxO mappings with OMOP mappings
     for i, search_result in enumerate(search_results):
