@@ -792,9 +792,9 @@ class CohdTrapi100(CohdTrapi):
             'status': status.value,
             'description': description,
             'message': {
-                'results': [],  # TODO: change back to None when validator bug is fixed
+                'results': None,
                 'query_graph': self._query_graph,
-                'knowledge_graph': {'nodes': {}, 'edges': {}}  # TODO: change back to None
+                'knowledge_graph': None
             },
             # From TRAPI Extended
             'reasoner_id': 'COHD',
