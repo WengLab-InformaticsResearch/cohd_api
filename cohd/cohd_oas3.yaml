@@ -61,6 +61,8 @@ info:
     component: KP
     team:
       - Clinical Data Provider
+  x-trapi:
+    version: 1.0.0
 tags:
   - name: Metadata
     description: COHD metadata
@@ -74,7 +76,7 @@ tags:
     description: Concept-age distributions, concept-pair delta distributions, and temporal analyses
   - name: translator
     description: NCATS Biomedical Data Translator APIs
-  - name: reasoner
+  - name: trapi
     description: Implements the NCATS Translator Reasoner API standards
 x-externalResources:
   - x-url: 'https://www.dbmi.columbia.edu/'
