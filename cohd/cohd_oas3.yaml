@@ -1987,7 +1987,7 @@ paths:
     get:
       tags:
         - translator
-        - reasoner
+        - trapi
       summary: Get supported relationships by source and target
       responses:
         '200':
@@ -2014,7 +2014,7 @@ paths:
     post:
       tags:
         - translator
-        - reasoner
+        - trapi
       summary: 'Query COHD following NCATS Translator Reasoner Standard API'
       description: >-
         Query the COHD API following the [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
@@ -2161,7 +2161,7 @@ paths:
     post:
       tags:
         - translator
-        - reasoner
+        - trapi
       summary: 'Query COHD following NCATS Translator Reasoner Standard API version 0.9.3'
       description: >-
         This endpoint is temporarily provided to support TRAPI 0.9.3 queries
