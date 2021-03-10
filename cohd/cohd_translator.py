@@ -8,7 +8,7 @@ from semantic_version import Version
 
 from . import cohd_trapi_093
 from . import cohd_trapi_100
-from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer
+from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
 
@@ -154,7 +154,9 @@ def omop_to_biolink(request):
     for omop_id in omop_ids:
         if omop_id in concept_definitions:
             domain_id = concept_definitions[omop_id]['domain_id']
-            mapping = concept_mapper.map_from_omop(omop_id, domain_id)
+            concept_class_id = concept_definitions[omop_id]['concept_class_id']
+            blm_category = map_omop_domain_to_blm_class(domain_id, concept_class_id, )
+            mapping = concept_mapper.map_from_omop(omop_id, blm_category)
             mappings[omop_id] = mapping
 
     # Normalize with SRI Node Normalizer

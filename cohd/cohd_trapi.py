@@ -459,6 +459,9 @@ class BiolinkConceptMapper:
         'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
     }
 
+    # Update Flask cache. When True, flask cache will be updated for the given (parameter-sensitive) call
+    update_cache = False
+
     @staticmethod
     def map_blm_prefixes_to_oxo_prefixes(s):
         """ Attempts to map the Biolink Model prefix to OxO prefix, e.g., 'ICD10' to 'ICD10CM'. If the mapping is not
@@ -564,7 +567,8 @@ class BiolinkConceptMapper:
         }
         return str(d)
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=2419200, cache_none=True,
+                   forced_update=lambda: BiolinkConceptMapper.update_cache)
     def map_to_omop(self, curies: List[str]) -> Optional[Dict[str, Any]]:
         """ Map to OMOP concept from ontology
 
@@ -606,7 +610,8 @@ class BiolinkConceptMapper:
 
         return omop_mappings
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=2419200, cache_none=True,
+                   forced_update=lambda: BiolinkConceptMapper.update_cache)
     def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Dict[str, Any]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
@@ -686,6 +691,10 @@ class BiolinkConceptMapper:
         Number of concepts
         """
         print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
+
+        # Force cache updating
+        BiolinkConceptMapper.update_cache = True
+
         mapper = BiolinkConceptMapper(biolink_mappings=None, distance=CohdTrapi.default_mapping_distance,
                                       local_oxo=CohdTrapi.default_local_oxo)
         concepts = query_active_concepts()
@@ -694,6 +703,10 @@ class BiolinkConceptMapper:
             mapper.map_from_omop(concept['concept_id'], blm_category)
             if i % 1000 == 0:
                 print(f'{datetime.now()}: {i} / {len(concepts)} concepts mapped')
+
+        # Disable cache updating
+        BiolinkConceptMapper.update_cache = False
+
         print(f'{datetime.now()}: Cache build complete.')
         return len(concepts)
 
