@@ -55,13 +55,13 @@ class CohdTrapi(ABC):
 
     # Default options
     default_method = 'obsExpRatio'
-    default_min_cooccurrence = 0
+    default_min_cooccurrence = 50
     default_confidence_interval = 0.99
     default_dataset_id = 3
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
-    default_max_results = 50
+    default_max_results = 500
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
