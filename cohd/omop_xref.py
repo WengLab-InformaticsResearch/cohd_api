@@ -1016,6 +1016,7 @@ class ConceptMapper:
         cur = conn.cursor()
 
         prefix, concept_code = curie.split(':')
+        omop_vocab = _OXO_PREFIX_TO_OMOP_VOCAB.get(prefix, prefix)
         if prefix == 'OMOP':
             # Already an OMOP concept
             concept_def = omop_concept_definition(concept_code)
@@ -1025,9 +1026,9 @@ class ConceptMapper:
                     'omop_concept_name': concept_def['concept_name'],
                     'distance': 0
                 }
-        elif prefix in _OMOP_VOCABULARIES:
+        elif omop_vocab in _OMOP_VOCABULARIES:
             # Source vocabulary is in OMOP vocab
-            omop_mapping = omop_map_to_standard(cur, concept_code, prefix)
+            omop_mapping = omop_map_to_standard(cur, concept_code, omop_vocab)
             if omop_mapping:
                 mapping = {
                     'omop_concept_id': omop_mapping[0]['standard_concept_id'],
