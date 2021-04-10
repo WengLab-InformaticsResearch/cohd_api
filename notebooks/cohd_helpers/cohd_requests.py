@@ -8,7 +8,7 @@ from .cohd_temporal_analysis import AgeCounts, DeltaCounts
 
 # COHD API server
 # server = 'http://tr-kp-clinical.ncats.io/api'
-server = 'http://cohd.io/api'
+server = 'https://cohd.io/api'
 
 # ######################################################################
 # Utility functions
