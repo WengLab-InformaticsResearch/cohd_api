@@ -4,6 +4,7 @@ from typing import Optional, Union, Dict, List, Tuple, Iterable, Any
 import requests
 from numpy import argsort
 
+from .cohd import cache
 from .cohd_utilities import DomainClass
 
 
@@ -960,6 +961,20 @@ class ConceptMapper:
                 self.domain_targets_omop[domain] = targets_omop
                 self.domain_targets_oxo[domain] = targets_oxo
 
+    def __repr__(self):
+        """ Used in flask cache
+
+        Returns
+        -------
+        String repr
+        """
+        d = {
+            'domain_targets': self.domain_targets,
+            'distance': self.distance,
+            'local_oxo': self.local_oxo
+        }
+        return str(d)
+
     @staticmethod
     def _split_omop_oxo_targets(targets: Iterable[str]) -> Tuple[List, List]:
         """ Given a list of target ontologies, figure out which ones can be retrieved by OMOP mappings. All other target
@@ -990,6 +1005,7 @@ class ConceptMapper:
 
         return targets_omop, targets_oxo
 
+    @cache.memoize(timeout=2419200, cache_none=True)
     def map_to_omop(self, curie):
         """ Map to OMOP concept from ontology
 
@@ -1142,6 +1158,7 @@ class ConceptMapper:
 
         return mappings
 
+    @cache.memoize(timeout=2419200, cache_none=True)
     def map_from_omop_to_target(self,
                                 concept_id: Union[str, int],
                                 target_ontologies: Iterable[str]) -> List[Dict[str, Any]]:

@@ -1,11 +1,13 @@
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from .cohd import cache
 from .cohd_trapi import BiolinkConceptMapper
 
 
 def task_build_cache():
     print('Running scheduled task to build cache')
+    cache.clear()
     BiolinkConceptMapper.build_cache_map_from()
 
 
