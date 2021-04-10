@@ -7,7 +7,7 @@ import requests
 from time import sleep
 from collections import defaultdict
 
-from . import cohd
+from . import cohd  # Needed to prevent circular import with omop_xref
 from . import cohd_utilities
 from . import omop_xref
 
