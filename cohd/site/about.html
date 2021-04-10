@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>COHD</title>
+    <title>COHD-COVID</title>
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link href="styles/style.css" rel="stylesheet" type="text/css">
     <link href="styles/jquery.dynatable.css" rel="stylesheet" type="text/css">
@@ -14,21 +14,20 @@
     <div class="w3-bar w3-large">
       <a href="index.html" class="w3-bar-item w3-button color-columbia">COHD</a>
       <a href="about.html" class="w3-bar-item w3-button color-columbia">About</a>
-      <a href="http://cohd.smart-api.info/" target="_blank" class="w3-bar-item w3-button color-columbia">SmartAPI</a>
+      <a href="http://cohdcovid.smart-api.info/" target="_blank" class="w3-bar-item w3-button color-columbia">SmartAPI</a>
       <a href="contact.html" class="w3-bar-item w3-button color-columbia">Contact</a>
     </div>
-	  <h1 class="color-columbia">Columbia Open Health Data</h1>
+	  <h1 class="color-columbia">Columbia Open Health Data for COVID-19 Research</h1>
     <h2 class="color-columbia">About</h2>
-    <p>Columbia Open Health Data (COHD) provides access to counts and patient prevalence (i.e., prevalence from electronic health records) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the Columbia University Irving Medical Center's OHDSI database including inpatient and outpatient data. Counts are the number of patients with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of patients with the concept divided by the total number of patients in the dataset. Clinical concepts (e.g., conditions, procedures, drugs) are coded by their standard concept ID in the OMOP Common Data Model. To protect patient privacy, all concepts and pairs of concepts where the count &le; 10 were excluded, and counts were randomized by the Poisson distribution.</p>
-    <p>Two released data sets and one beta data set are available:</p>
+    <p>Columbia Open Health Data (COHD) for COVID-19 Research provides access to counts and visit prevalence (i.e., prevalence from electronic health records) of conditions, procedures, drug exposures, and the co-occurrence frequencies between them. Count and frequency data were derived from the Columbia University Irving Medical Center's OHDSI database including inpatient data. Counts are the number of visits with the concept, e.g., diagnosed with a condition, exposed to a drug, or a procedure was performed. Frequencies are the number of visits with the concept divided by the total number of visits in the dataset. Clinical concepts (e.g., conditions, procedures, drugs) are coded by their standard concept ID in the OMOP Common Data Model. To protect patient privacy, all concepts and pairs of concepts where the count &le; 10 were excluded, and counts were randomized by the Poisson distribution.</p>
+    <p>Datasets from three primary cohorts are available:</p>
     <ol>
-      <li>5-year non-hierarchical dataset: Includes clinical data from 2013-2017</li>
-      <li>lifetime non-hierarchical dataset: Includes clinical data from all dates</li>
-      <li>BETA! 5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.</li>
+      <li>COVID-19: Hospitalized patients aged 18 or older with a COVID-19 related condition diagnosis and/or a confirmed positive COVID-19 test during their hospitalization period or within the prior 21 days. Date range: March 1, 2020 to September 1, 2020. This cohort is also further stratified by sex (male and female) and age (adult: 18-64, senior: 65+).</li>
+      <li>General inpatient: All hospitalized patients aged 18 or older. Date range: January 1, 2014 to December 31, 2019.</li>
+      <li>Influenza: Hospitalized patients aged 18 or older who had at least one occurrence of influenza conditions or pre-coordinated positive measurements or positive influenza testing in the prior 21 days or during their hospitalization period. Date range: January 1, 2014 to December 31, 2019.</li>
     </ol>
-    <p>While the lifetime dataset captures a larger patient population and range of concepts, the 5-year dataset has better underlying data consistency. Please read our open <a href="https://www.nature.com/articles/sdata2018273" target="_blank">publication</a> in Scientific Data for an in depth description of our methods, results, and a discussion of the nuances of interpreting these data.</p>
-    <p>In the beta release of the 5-year hierarchical data set, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc.</p>
-    <p>COHD was developed at the <a href="https://www.dbmi.columbia.edu" target="_blank">Columbia University Department of Biomedical Informatics</a> as a collaboration between the <a href="http://people.dbmi.columbia.edu/~chw7007/" target="_blank">Weng Lab</a>, <a href="http://tatonettilab.org/" target="_blank">Tatonetti Lab</a>, and the <a href="https://ncats.nih.gov/translator" target="_blank">NCATS Biomedical Data Translator</a> program (Red Team). This work was supported in part by grants: NCATS OT3TR002027, NLM R01LM009886-08A1, and NIGMS R01GM107145.
+    <p>Both hierarchical and non-hierarchical datasets are available for each cohort. In the hierarchical datasets, the counts for each concept include the visits from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes visits with Ibuprofen 600 MG Oral Tablet (ID 19019073), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc.</p>
+    <p>COHD-COVID was developed at the <a href="https://www.dbmi.columbia.edu" target="_blank">Columbia University Department of Biomedical Informatics</a> as a collaboration between the <a href="http://people.dbmi.columbia.edu/~chw7007/" target="_blank">Weng Lab</a>, <a href="http://tatonettilab.org/" target="_blank">Tatonetti Lab</a>, and the <a href="https://ncats.nih.gov/translator" target="_blank">NCATS Biomedical Data Translator</a> program (Red Team). This work was supported in part by grants: NCATS 1OT2TR003434, NLM R01LM012895, NCATS OT3TR002027, NLM R01LM009886-08A1, and NIGMS R01GM107145.
     </p>
     <h2 class="color-columbia">Instructions</h2>
     <h3>Retrieve data for a single concept</h3>
@@ -81,15 +80,15 @@
     </div>
     <h2 class="color-columbia">API</h2>
     <p>The <a href="http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35" target="_blank">COHD RESTful SmartAPI</a> provides a more powerful method to interact with the COHD data. The web user interface provides access to a few of the most frequently used endpoints in the COHD API. The COHD API additionally provides access to metadata, methods to explore the OMOP concept hierarchy, and cross-referencing between OMOP and external ontologies.</p>
-    <h2 class="color-columbia">Data Set Files</h2>
-    <p>The fully released data sets can be directly downloaded from <a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">FigSHARE</a>.</p>
+    <!--<h2 class="color-columbia">Data Set Files</h2>
+    <p>The fully released data sets can be directly downloaded from <a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">FigSHARE</a>.</p>-->
     <h2 class="color-columbia">Useful Links</h2>
     <ul class="ul-links">
       <li><a href="http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35" target="_blank">COHD SmartAPI Documentation</a></li>
-      <li><a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">Download COHD data sets (FigSHARE)</a>
-      <li><a href="https://www.nature.com/articles/sdata2018273" target="_blank">COHD data descriptor (Scientific Data)</a></li>
+      <!--<li><a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">Download COHD data sets (FigSHARE)</a>
+      <li><a href="https://www.nature.com/articles/sdata2018273" target="_blank">COHD data descriptor (Scientific Data)</a></li>-->
       <li><a href="http://athena.ohdsi.org" target="_blank">Athena - OMOP concept references</a></li>
-      <li><a href="https://github.com/WengLab-InformaticsResearch/ehr_prevalence" target="_blank">Github repository: COHD data analysis</a></li>
+      <li><a href="https://github.com/Jayaos/cohd-covid" target="_blank">Github repository: COHD-COVID data analysis</a></li>
       <li><a href="https://github.com/WengLab-InformaticsResearch/cohd_api" target="_blank">Github repository: COHD REST API server</a></li>
     </ul>
   </body>

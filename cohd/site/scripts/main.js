@@ -1,4 +1,4 @@
-const baseURL = new URL('https://cohd.io')
+const baseURL = new URL('https://covid.cohd.io')
 
 const exampleInputs1 = [
     {inner: '<span class="information">Example OMOP concept IDs:</span>', value: ''},
@@ -281,9 +281,9 @@ function encodeQueryData(data) {
 function populateDatasetSelector() {  
   // Add a static list of datasets by default
   var selDataset = $("#comboDataset");
-  selDataset.append('<option value="1" title="Clinical data from 2013-2017. Each concept\'s count reflects the use of that specific concept.">5-year non-hierarchical</option>')
-    .append('<option value="2" title="Clinical data from all years in the database. Each concept\'s count reflects the use of that specific concept.">Lifetime non-hierarchical</option>')
-    .append('<option value="3" title="Clinical data from 2013-2017. Each concept\'s count includes use of that concept and descendant concepts.">5-year hierarchical</option>');
+  // selDataset.append('<option value="1" title="Clinical data from 2013-2017. Each concept\'s count reflects the use of that specific concept.">5-year non-hierarchical</option>')
+  //  .append('<option value="2" title="Clinical data from all years in the database. Each concept\'s count reflects the use of that specific concept.">Lifetime non-hierarchical</option>')
+  //  .append('<option value="3" title="Clinical data from 2013-2017. Each concept\'s count includes use of that concept and descendant concepts.">5-year hierarchical</option>');
 
   // Try to add list of datasets returned from 'datasets' endpoint
   var urlDataset = new URL("/api/metadata/datasets", baseURL);
@@ -339,11 +339,11 @@ function displayConcept1(data, status) {
     $.get(urlSingleConceptFreq, function(data, status) {
       if (data["results"].length > 0) {
         var conceptData = data["results"][0];
-        $("#divConcept1Results").append("<p class=\"results\"><b>Patient count:</b> " + conceptData["concept_count"] + "</p>")
-          .append("<p class=\"results\"><b>Patient prevalence:</b> " + (conceptData["concept_frequency"] * 100).toFixed(6) + "%</p>");
+        $("#divConcept1Results").append("<p class=\"results\"><b>Visit count:</b> " + conceptData["concept_count"] + "</p>")
+          .append("<p class=\"results\"><b>Visit prevalence:</b> " + (conceptData["concept_frequency"] * 100).toFixed(6) + "%</p>");
       } else {
-        $("#divConcept1Results").append("<p class=\"results\"><b>Patient count:</b> 0</p>")
-          .append("<p class=\"results\"><b>Patient prevalence:</b> 0%</p>");
+        $("#divConcept1Results").append("<p class=\"results\"><b>Visit count:</b> 0</p>")
+          .append("<p class=\"results\"><b>Visit prevalence:</b> 0%</p>");
       }
     });
   } else {
@@ -374,11 +374,11 @@ function displayConcept2(data, status) {
     $.get(urlSingleConceptFreq, function(data, status) {
       if (data["results"].length > 0) {
         var conceptData = data["results"][0];
-        $("#divConcept2Results").append("<p class=\"results\"><b>Patient count:</b> " + conceptData["concept_count"] + "</p>")
-          .append("<p class=\"results\"><b>Patient prevalence:</b> " + (conceptData["concept_frequency"] * 100).toFixed(6) + "%</p>");
+        $("#divConcept2Results").append("<p class=\"results\"><b>Visit count:</b> " + conceptData["concept_count"] + "</p>")
+          .append("<p class=\"results\"><b>Visit prevalence:</b> " + (conceptData["concept_frequency"] * 100).toFixed(6) + "%</p>");
       } else {
-        $("#divConcept2Results").append("<p class=\"results\"><b>Patient count:</b> 0</p>")
-          .append("<p class=\"results\"><b>Patient prevalence:</b> 0%</p>");
+        $("#divConcept2Results").append("<p class=\"results\"><b>Visit count:</b> 0</p>")
+          .append("<p class=\"results\"><b>Visit prevalence:</b> 0%</p>");
       }
     });
   } else {
@@ -439,11 +439,11 @@ function displayPairedCounts(data, status) {
     var pairedData = data["results"][0];
     $("#divPairedResults").empty()
       .append("<p class=\"resultsPair\"><b><u>Co-occurrence Count</u></b></p>")
-      .append("<p class=\"resultsPair\"><b>Patient count:</b> " + pairedData["concept_count"] + "</p>")
-      .append("<p class=\"resultsPair\"><b>Patient prevalence:</b> " + (pairedData["concept_frequency"] * 100).toFixed(6) + "%</p>");
+      .append("<p class=\"resultsPair\"><b>Visit count:</b> " + pairedData["concept_count"] + "</p>")
+      .append("<p class=\"resultsPair\"><b>Visit prevalence:</b> " + (pairedData["concept_frequency"] * 100).toFixed(6) + "%</p>");
   } else {
     // No associated data found.
-    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 patients with this pair of concepts.</p>");
+    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 visits with this pair of concepts.</p>");
   }
 }
 
@@ -543,7 +543,7 @@ function displayPairedChi(data, status) {
         "<tr><td>Total</td><td>" + (pairedData["n"] - pairedData["n_c2"]) + "</td><td>" + pairedData["n_c2"] + "</td><td>" + pairedData["n"] + "</td></tr></table>");
   } else {
     // No associated data found.
-    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 patients with this pair of concepts.</p>");
+    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 visits with this pair of concepts.</p>");
   }
 }
 
@@ -625,7 +625,7 @@ function displayPairedOEFR(data, status) {
       .append("<p class=\"resultsPair\"><b>Log ratio: </b> " + pairedData["ln_ratio"] + "</p>");
   } else {
     // No associated data found.
-    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 patients with this pair of concepts.</p>");
+    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 visits with this pair of concepts.</p>");
   }
 }
 
@@ -706,7 +706,7 @@ function displayPairedRF(data, status) {
       .append("<p class=\"resultsPair\"><b>Relative frequency: </b> " + (pairedData["relative_frequency"] * 100).toFixed(6) + "%</p>");      
   } else {
     // No associated data found.
-    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 patients with this pair of concepts.</p>");
+    $("#divPairedResults").html("<p class=\"resultsPair\"><b>Associated data not found.</b></p><p class=\"resultsPair\">Fewer than 10 visits with this pair of concepts.</p>");
   }
 }
 
