@@ -1,0 +1,237 @@
+* { box-sizing: border-box; }
+
+html {
+  font-size: 12px; 
+  font-family: 'Arial', sans-serif;
+  background-color: white;
+}
+
+body {
+  width: 1300px;
+  margin: 0 auto;
+  padding: 0 20px 20px 20px;
+  border: none;
+}
+
+.color-columbia {
+  color: #00539F;
+}
+
+.background-columbia {
+  background-color: #00539F;
+}
+
+h1 {
+  font-size: 60px;
+  font-weight: bold;
+  text-align: center;
+  padding: 20px 0;
+}
+
+h2 {
+  font-weight: bold;
+}
+
+h3 {
+  font-weight: bold;
+}
+
+p, li {
+  font-size: 16px;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+p.results {
+  margin: 0px;
+  padding: 0px;
+  line-height: 1.5;
+}
+
+p.resultsPair {
+  margin: 0px;
+  text-align: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  padding: 8px 4px;
+  background-color: #00539F;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+td {
+  padding: 6px 2px;
+  font-size: 14px;
+}
+
+tr:nth-child(even) {
+  background-color: #e2e2e2;
+}
+
+input {
+  font-size: 16px;
+  padding: 5px;
+}
+
+input.rounded {
+  display: block;
+  border-radius: 8px;
+  border: 2px solid grey;
+  padding: 8px 12px;
+}
+
+input.inputConcept {
+  width: 100%;
+}
+
+label {
+  font-size: 16px;
+  display: inline-block;
+  margin-bottom: 15px;
+  clear: right;
+}
+
+button {
+  font-size: 16px;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: none;
+  color: #ffffff;
+}
+
+a.contact {
+  font-weight: bold;
+}
+
+ul.ul-links {
+  list-style: none;
+  padding-left: 0px;
+}
+
+img.img-example {
+  border: 2px solid black;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 1200px;
+  padding: 10px;
+}
+
+a.dynatable-sort-header {
+  text-decoration: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.clearfix::after {
+  content: "";
+  clear: both;
+  display: table;
+}
+
+div.singleResultsBox {
+  float: left;
+  width: 50%;
+  padding: 25 0px 0px 0px;
+}
+
+div.singleResults {
+  padding: 25px 25px 0px 0px;
+}
+
+div.pairedResults {
+  margin: 25px 0px 50px;
+}
+
+div.cohd-example {
+  margin: 0px 0px 50px 0px;
+}
+
+span.information {
+  color: #888888;
+}
+
+select.rounded {
+  font-size: 16px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid grey;
+}
+
+optgroup {
+  font-size: 16px;
+}
+
+option {
+  font-size: 16px;
+}
+
+ /* The alert message box */
+.alert {
+  padding: 20px;
+  background-color: #f44336; /* Red */
+  color: white;
+  margin-bottom: 15px;
+}
+
+/* The close button */
+.closebtn {
+  margin-left: 15px;
+  color: white;
+  font-weight: bold;
+  float: right;
+  font-size: 22px;
+  line-height: 20px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+/* When moving the mouse over the close button */
+.closebtn:hover {
+  color: black;
+} 
+
+
+/******************** https://www.w3schools.com/howto/howto_js_autocomplete.asp **********************/
+
+.autocomplete {
+  /*the container must be positioned relative:*/
+  position: relative;
+  display: inline-block;
+  width: 500px;
+}
+
+.autocomplete-items {
+  position: absolute;
+  border: 1px solid #d4d4d4;
+  border-bottom: none;
+  border-top: none;
+  z-index: 99;
+  /*position the autocomplete items to be the same width as the container:*/
+  top: 100%;
+  left: 0;
+  right: 0;
+}
+.autocomplete-items div {
+  padding: 10px;
+  cursor: pointer;
+  background-color: #fff;
+  border-bottom: 1px solid #d4d4d4;
+}
+.autocomplete-items div:hover {
+  /*when hovering an item:*/
+  background-color: #e9e9e9;
+}
+.autocomplete-active {
+  /*when navigating through the items using the arrow keys:*/
+  background-color: DodgerBlue !important;
+  color: #ffffff;
+}

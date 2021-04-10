@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>COHD</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link href="styles/style.css" rel="stylesheet" type="text/css">
+    <link href="styles/jquery.dynatable.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">  
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="scripts/jquery.dynatable.js"></script>
+  </head>
+  <body>
+    <div class="w3-bar w3-large">
+      <a href="index.html" class="w3-bar-item w3-button color-columbia">COHD</a>
+      <a href="about.html" class="w3-bar-item w3-button color-columbia">About</a>
+      <a href="http://cohd.smart-api.info/" target="_blank" class="w3-bar-item w3-button color-columbia">SmartAPI</a>
+      <a href="contact.html" class="w3-bar-item w3-button color-columbia">Contact</a>
+    </div>
+	  <h1 class="color-columbia">Columbia Open Health Data</h1>
+    <h2 class="color-columbia">About</h2>
+    <p>Columbia Open Health Data (COHD) provides access to counts and patient prevalence (i.e., prevalence from electronic health records) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the Columbia University Irving Medical Center's OHDSI database including inpatient and outpatient data. Counts are the number of patients with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of patients with the concept divided by the total number of patients in the dataset. Clinical concepts (e.g., conditions, procedures, drugs) are coded by their standard concept ID in the OMOP Common Data Model. To protect patient privacy, all concepts and pairs of concepts where the count &le; 10 were excluded, and counts were randomized by the Poisson distribution.</p>
+    <p>Two released data sets and one beta data set are available:</p>
+    <ol>
+      <li>5-year non-hierarchical dataset: Includes clinical data from 2013-2017</li>
+      <li>lifetime non-hierarchical dataset: Includes clinical data from all dates</li>
+      <li>BETA! 5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.</li>
+    </ol>
+    <p>While the lifetime dataset captures a larger patient population and range of concepts, the 5-year dataset has better underlying data consistency. Please read our open <a href="https://www.nature.com/articles/sdata2018273" target="_blank">publication</a> in Scientific Data for an in depth description of our methods, results, and a discussion of the nuances of interpreting these data.</p>
+    <p>In the beta release of the 5-year hierarchical data set, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc.</p>
+    <p>COHD was developed at the <a href="https://www.dbmi.columbia.edu" target="_blank">Columbia University Department of Biomedical Informatics</a> as a collaboration between the <a href="http://people.dbmi.columbia.edu/~chw7007/" target="_blank">Weng Lab</a>, <a href="http://tatonettilab.org/" target="_blank">Tatonetti Lab</a>, and the <a href="https://ncats.nih.gov/translator" target="_blank">NCATS Biomedical Data Translator</a> program (Red Team). This work was supported in part by grants: NCATS OT3TR002027, NLM R01LM009886-08A1, and NIGMS R01GM107145.
+    </p>
+    <h2 class="color-columbia">Instructions</h2>
+    <h3>Retrieve data for a single concept</h3>
+    <ol type="1">
+      <li>Choose a data set to retrieve data from</li>
+      <li>Choose Concept 1 by either:
+        <ol type="a">
+          <li>entering the OMOP concept ID (e.g., "313217" (without the quotation marks) for "Atrial fibrillation"</li>
+          <li>searching for a concept by typing the name and selecting the concept ID from the drop down list</li>
+        </ol>
+      </li>
+      <li>Press the "Get single concept" button</li>
+    </ol>
+    <h3>Retrieve association data for pair(s) of concepts</h3>
+    <ol type="1">
+      <li>Choose a data set to retrieve data from</li>
+      <li>Choose an association method</li>
+      <li>Choose Concept 1 by either:
+        <ol type="a">
+          <li>entering the OMOP concept ID (e.g., "313217" (without the quotation marks) for "Atrial fibrillation"</li>
+          <li>searching for a concept by typing the name and selecting the concept ID from the drop down list</li>
+        </ol>
+      </li>
+      <li>Choose Concept 2 by either:
+        <ol type="a">
+          <li>leaving the field blank to retrieve associations with all concepts</li>
+          <li>entering an OMOP domain to retrieve associations with all concepts in the given domain (hint: press the "down" keyboard key when this field is blank to show the list of OMOP domains present in the selected data set)</li>
+          <li>entering the OMOP concept ID (e.g., "313217" (without the quotation marks) for "Atrial fibrillation"</li>
+          <li>searching for a concept by typing the name and selecting the concept ID from the drop down list</li>
+        </ol>
+      </li>
+      <li>Press the "Get concept pairs" button</li>
+      <li>For results between multiple pairs, links to download the data as JSON or CSV are presented below the results table</li>
+    </ol>
+    <h2 class="color-columbia">Examples</h2>
+    <div class="cohd-example">
+      <h3>Example 1: Atrial fibrillation</h3>
+      <p>COHD can be used to retrieve the patient prevalence of individual concepts. In this example, information for the condition "Atrial fibrillation" (OMOP concept ID 313217) is retrieved from the 5-year non-hierarchical data set. The results show the concept definition (concept ID, concept name, concept domain, concept class, source vocabulary for the OMOP concept, and concept code in the source vocabulary) and the occurrence data (patient count and patient prevalence).</p>
+      <img src="images/example1.png" class="img-example">
+    </div>
+    <div class="cohd-example">
+      <h3>Example 2: Drugs associated with atrial fibrillation</h3>
+      <p>COHD can be used to retrieve association data calculated from the co-occurrences of pairs of concepts. In this example, the relative frequency of drugs associated with the condition "Atrial fibrillation" (OMOP concept ID 313217) is retrieved from the 5-year non-hierarchical data set. The relative frequency informs investigators that among patients who have taken the drug identified in each row, this proportion of patients experienced atrial fibrillation at some time within the 5-year inclusion period of the data set. Note that the relative frequency can exceed the upper limit of 100% due to the Poisson randomization.<p>
+      <img src="images/example2.png" class="img-example">
+    </div>
+    <div class="cohd-example">
+      <h3>Example 3: Conditions associated with albuterol</h3>
+      <p>Similar to Example 2, in this example, the relative frequency of conditions associated with the drug "Albuterol 0.83 MG/ML Inhalant Solution" (OMOP concept ID 19123989) is retrieved from the 5-year non-hierarchical data set. The relative frequency informs investigators that among patients who have had the condition identified in each row, this proportion of patients have taken "Albuterol 0.83 MG/ML Inhalant Solution" at some time within the 5-year inclusion period of the data set. Note that the relative frequency can exceed the upper limit of 100% due to the Poisson randomization.<p>
+      <img src="images/example3.png" class="img-example">
+    </div>
+    <h2 class="color-columbia">API</h2>
+    <p>The <a href="http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35" target="_blank">COHD RESTful SmartAPI</a> provides a more powerful method to interact with the COHD data. The web user interface provides access to a few of the most frequently used endpoints in the COHD API. The COHD API additionally provides access to metadata, methods to explore the OMOP concept hierarchy, and cross-referencing between OMOP and external ontologies.</p>
+    <h2 class="color-columbia">Data Set Files</h2>
+    <p>The fully released data sets can be directly downloaded from <a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">FigSHARE</a>.</p>
+    <h2 class="color-columbia">Useful Links</h2>
+    <ul class="ul-links">
+      <li><a href="http://smart-api.info/ui/9fbeaeabd19b334fa0f1932aa111bf35" target="_blank">COHD SmartAPI Documentation</a></li>
+      <li><a href="https://doi.org/10.6084/m9.figshare.c.4151252" target="_blank">Download COHD data sets (FigSHARE)</a>
+      <li><a href="https://www.nature.com/articles/sdata2018273" target="_blank">COHD data descriptor (Scientific Data)</a></li>
+      <li><a href="http://athena.ohdsi.org" target="_blank">Athena - OMOP concept references</a></li>
+      <li><a href="https://github.com/WengLab-InformaticsResearch/ehr_prevalence" target="_blank">Github repository: COHD data analysis</a></li>
+      <li><a href="https://github.com/WengLab-InformaticsResearch/cohd_api" target="_blank">Github repository: COHD REST API server</a></li>
+    </ul>
+  </body>
+</html>
