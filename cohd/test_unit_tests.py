@@ -1,13 +1,15 @@
 """
 This test module tests some of the utility functions supporting the COHD API
 """
-from . import cohd_utilities
-from . import omop_xref
 import numpy as np
 import numbers
 import requests
 from time import sleep
 from collections import defaultdict
+
+from . import cohd  # Needed to prevent circular import with omop_xref
+from . import cohd_utilities
+from . import omop_xref
 
 
 def _isnumeric(number_list):

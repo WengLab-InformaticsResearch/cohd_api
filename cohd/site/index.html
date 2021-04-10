@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>COHD</title>
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link href="styles/style.css" rel="stylesheet" type="text/css">
+    <link href="styles/jquery.dynatable.css" rel="stylesheet" type="text/css">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">  
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="scripts/jquery.blockUI.js"></script>
+    <script src="scripts/jquery.dynatable.js"></script>
+  </head>
+  <body>
+    <div class="w3-bar w3-large">
+      <a href="index.html" class="w3-bar-item w3-button color-columbia">COHD</a>
+      <a href="about.html" class="w3-bar-item w3-button color-columbia">About</a>
+      <a href="http://cohd.smart-api.info/" target="_blank" class="w3-bar-item w3-button color-columbia">SmartAPI</a>
+      <a href="contact.html" class="w3-bar-item w3-button color-columbia">Contact</a>
+    </div>
+	  <h1 class="color-columbia">Columbia Open Health Data</h1>
+    <div class="clearfix">
+      <div class="singleResultsBox">     
+        <label title="Choose which data set to retrieve data from">Data set: 
+          <select name="Dataset" id="comboDataset" class="rounded" tabindex="1"></select>
+        </label>
+        <label title="Enter an OMOP concept ID to retrieve information for Concept 1. You can also search for concepts by name and use the auto-complete suggestions to retrieve the desired OMOP concept ID.">
+          Concept 1: 
+          <div class="autocomplete">
+            <input type="text" id="inputConcept1" placeholder="OMOP concept ID or concept name to search" class="inputConcept rounded" tabindex="3">
+          </div>
+        </label>
+        <button id="buttonConcept1" class="background-columbia" tabindex="5">Get single concept</button>
+        <div id="divConcept1Results" class="singleResults"></div>
+      </div>
+      <div class="singleResultsBox">    
+        <label title="Choose which type of association method to perform">
+          Association method: 
+          <select name="Association method" id="comboAssocMethod" class="rounded" tabindex="2">
+            <option value="count" title="Raw co-occurrence count">Co-occurrence count</option>
+            <option value="chi" title="Chi-square analysis">Chi-square</option>
+            <option value="oefr" title="Observed frequency divided by expected frequency">Observed-to-expected frequency ratio</option>
+            <option value="rf" title="Paired frequency divided by individual frequency of the associated concept">Relative frequency</option>
+          </select>
+        </label>
+        <label title="(Optional) Choose the associated concepts. Leave this field empty to receive associations between Concept 1 and all other concepts. Enter an OMOP concept ID or search for a concept by name to receive associations between Concept 1 and Concept 2. Enter a domain to receive associations between Concept 1 and all other concepts in the given domain. Domains: condition, drug, procedure, gender, ethnicity, race.">
+          Concept 2: 
+          <div class="autocomplete">
+            <input type="text" id="inputConcept2" placeholder="(Optional) OMOP concept ID, domain, or concept name" class="inputConcept rounded" tabindex="4">
+          </div>          
+        </label>
+        <button id="buttonConcept2" class="background-columbia" tabindex="6">Get concept pairs</button>
+        <div id="divConcept2Results" class="singleResults"></div>
+      </div>
+    </div>
+    <div id="divMessages"></div>
+    <div id="divPairedResults" class="pairedResults"></div>
+    <script src="scripts/main.js"></script>
+  </body>
+</html>

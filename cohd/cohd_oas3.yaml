@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-  - url: 'http://covid.cohd.io/api/'
+  - url: 'https://covid.cohd.io/api/'
 info:
   description: |
     The Columbia Open Health Data (COHD) for COVID-19 Research API provides access to counts and frequencies (i.e., EHR visit prevalence) of conditions, procedures, drug exposures, and the co-occurrence frequencies between them for a cohort of hospitalized COVID-19 patients and two comparator cohorts of hospitalized influenza patients and hospitalized patients. Count and frequency data were derived from the [Columbia University Medical Center's](http://www.cumc.columbia.edu/) [OHDSI](https://www.ohdsi.org/) database including inpatient. Counts are the number of inpatient visits associated with the concept, e.g., diagnosed with a condition, exposed to a drug, or a procedure was performed. Frequencies are the number of unique visits associated with the concept divided by the total number of visits in the dataset, i.e., prevalence in the electronic health records. To protect patient privacy, all concepts and pairs of concepts where the count <= 10 were excluded, and counts were randomized by the Poisson distribution.         

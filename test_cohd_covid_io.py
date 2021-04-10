@@ -16,7 +16,7 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Test the cohd.covid.io server
-cr.server = 'http://covid.cohd.io/api'
+cr.server = 'https://covid.cohd.io/api'
 
 
 def check_results_schema(json, schema):

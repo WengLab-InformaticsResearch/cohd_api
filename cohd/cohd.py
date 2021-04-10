@@ -42,7 +42,7 @@ from . import scheduled_tasks
 @app.route('/api/')
 def api_cohd():
     google_analytics(endpoint='/')
-    return redirect("http://cohdcovid.smart-api.info/", code=302)
+    return redirect("https://cohdcovid.smart-api.info/", code=302)
 
 
 @app.route('/api/omop/findConceptIDs')
@@ -190,6 +190,11 @@ def api_internal_build_cache_map_from():
     return api_call('dev', 'build_cache_map_from')
 
 
+@app.route('/api/dev/clear_cache', methods=['GET'])
+def api_internal_clear_cache():
+    return api_call('dev', 'clear_cache')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -271,11 +276,18 @@ def api_call(service=None, meta=None, query=None, version=None):
         else:
             result = 'meta not recognized', 400
     elif service == 'dev':
-        if meta == 'build_cache_map_from':
-            count = cohd_trapi.BiolinkConceptMapper.build_cache_map_from()
-            result = str(count), 200
+        # Requires a key to run
+        if 'DEV_KEY' in app.config and app.config['DEV_KEY'] == request.args.get('q', None):
+            if meta == 'build_cache_map_from':
+                result = cohd_trapi.BiolinkConceptMapper.build_cache_map_from()
+            elif meta == 'clear_cache':
+                cache.clear()
+                result = 'Cleared cache', 200
+            else:
+                result = 'meta not recognized', 400
         else:
-            result = 'meta not recognized', 400
+            # Pretend like the 'dev' service doesn't exist
+            result = 'service not recognized', 400
     else:
         result = 'service not recognized', 400
 

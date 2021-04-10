@@ -1,10 +1,12 @@
 from abc import ABC, abstractmethod
+import threading
 import requests
 from requests.compat import urljoin
-from typing import Union, Any, Iterable, Optional, Dict, List
+from typing import Union, Any, Iterable, Optional, Dict, List, Tuple
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
+import pymysql
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
@@ -55,13 +57,13 @@ class CohdTrapi(ABC):
 
     # Default options
     default_method = 'obsExpRatio'
-    default_min_cooccurrence = 0
+    default_min_cooccurrence = 50
     default_confidence_interval = 0.99
     default_dataset_id = 3
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
-    default_max_results = 50
+    default_max_results = 500
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
@@ -459,6 +461,9 @@ class BiolinkConceptMapper:
         'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
     }
 
+    # Update Flask cache. When True, flask cache will be updated for the given (parameter-sensitive) call
+    update_cache = False
+
     @staticmethod
     def map_blm_prefixes_to_oxo_prefixes(s):
         """ Attempts to map the Biolink Model prefix to OxO prefix, e.g., 'ICD10' to 'ICD10CM'. If the mapping is not
@@ -678,23 +683,69 @@ class BiolinkConceptMapper:
         return None
 
     @staticmethod
-    def build_cache_map_from() -> int:
+    def clear_cache():
+        """ Clears the Flask cache
+        """
+        cache.clear()
+
+    @staticmethod
+    def build_cache_map_from() -> Tuple[str, int]:
+        """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
+
+        This function starts another thread to run the build.
+
+        Returns
+        -------
+        Number of concepts
+        """
+        thread = threading.Thread(target=BiolinkConceptMapper._build_cache_map_from, daemon=True)
+        thread.start()
+        return 'Build started.', 200
+
+    @staticmethod
+    def _build_cache_map_from() -> int:
         """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
 
         Returns
         -------
         Number of concepts
         """
+        # Check if there is already a thread running this build
+        if BiolinkConceptMapper.update_cache:
+            # There is already a thread running a build
+            print('_build_cache_map_from already running. Will not start another thread.')
+            return
+
+        BiolinkConceptMapper.update_cache = True
         print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
+
         mapper = BiolinkConceptMapper(biolink_mappings=None, distance=CohdTrapi.default_mapping_distance,
                                       local_oxo=CohdTrapi.default_local_oxo)
         concepts = query_active_concepts()
+        error_count = 0
         for i, concept in enumerate(concepts):
-            blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
-            mapper.map_from_omop(concept['concept_id'], blm_category)
+            try:
+                blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
+                mapper.map_from_omop(concept['concept_id'], blm_category)
+            except pymysql.err.Error as e:
+                # Occasionally, MySQL server has issues. Log the issue and move on
+                print(e)
+                error_count += 1
+                if error_count >= 10:
+                    # Stop if we encounter too many errors
+                    print('BiolinkConceptMapper::build_cache_map_from encountered multiple consecutive errors. '
+                          'Stopping build. ')
+                    break
+            else:
+                # Reset the error count
+                error_count = 0
+
             if i % 1000 == 0:
                 print(f'{datetime.now()}: {i} / {len(concepts)} concepts mapped')
+
         print(f'{datetime.now()}: Cache build complete.')
+
+        BiolinkConceptMapper.update_cache = False
         return len(concepts)
 
 
