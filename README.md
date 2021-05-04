@@ -20,7 +20,10 @@ A database of frequencies of clinical concepts observed at Columbia University M
 1.  Run the COHD docker container  
     `docker run -d -p <HOST:PORT>:80 -p <HOST:PORT>:443 --name=COHD cohd_image`
 1.  [Optional] If necessary, use tools like certbot to enable HTTPS. In the COHD container:
-    1.  `certbot certonly --webroot -w /root/certbot -d <url>`
+    1.  Start a shell to the COHD container  
+        `docker container exec -it cohd bash`
+    1.  Use certbot to generate trusted SSL certificates  
+        `certbot certonly --webroot -w /root/certbot -d <url>`
     1.  Update the nginx configuration file: 
         1.  `vi /etc/nginx/nginx.conf`
         1.  Uncomment the ssl server block to listen on port 443

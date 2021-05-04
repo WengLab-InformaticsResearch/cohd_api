@@ -2,5 +2,5 @@
 host = 127.0.0.1
 port = 3306
 user = cohd_user
-password = nf831nas
+password = CHANGE_ME
 database = cohd
