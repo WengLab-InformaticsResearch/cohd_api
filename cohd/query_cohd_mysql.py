@@ -8,7 +8,7 @@ from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop
 from .cohd_utilities import ln_ratio_ci, rel_freq_ci
 
 # Configuration
-CONFIG_FILE = "cohd_mysql.cnf"  # log-in credentials for database
+CONFIG_FILE = "database.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
 DEFAULT_CONFIDENCE = 0.99
