@@ -955,11 +955,12 @@ def test_translator_query_093():
     }
     resp, query = cr.translator_query_093(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
                                           method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
-                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True)
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True,
+                                          timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_092.validate_Message(json, timeout=300)
+    reasoner_validator_092.validate_Message(json)
 
     # There should be 10 results
     assert len(json['results']) == 10
