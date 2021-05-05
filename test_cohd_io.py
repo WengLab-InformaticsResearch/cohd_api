@@ -971,7 +971,7 @@ def test_translator_query():
     print(f'test_cohd_io: testing /translator/query on {server}..... ')
     resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
                                        dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                       max_results=10, local_oxo=True)
+                                       max_results=10, local_oxo=True, timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
@@ -994,7 +994,7 @@ def test_translator_query_093():
     resp, query = translator_query_093(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
                                        dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                        max_results=10, biolink_only=True, ontology_targets=ontology_targets,
-                                       local_oxo=True)
+                                       local_oxo=True, timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API

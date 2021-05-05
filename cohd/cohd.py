@@ -39,10 +39,15 @@ from . import scheduled_tasks
 
 
 @app.route('/')
+def website():
+    google_analytics(endpoint='/')
+    return redirect("site/index.html", code=302)
+
+
 @app.route('/api')
 @app.route('/api/')
 def api_cohd():
-    google_analytics(endpoint='/')
+    google_analytics(endpoint='/api')
     return redirect("https://cohd.smart-api.info/", code=302)
 
 
