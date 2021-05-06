@@ -5,11 +5,16 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 
 from flask import jsonify
 from semantic_version import Version
+from bmt import Toolkit
 
 from . import cohd_trapi_093
 from . import cohd_trapi_100
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
+
+
+# Static instance of the Biolink Model Toolkit
+bm_toolkit = Toolkit()
 
 
 def translator_predicates():
@@ -55,6 +60,55 @@ def translator_predicates():
             'biolink:Procedure': ['biolink:correlated_with'],
             'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
         },
+    })
+
+
+def translator_meta_knowledge_graph():
+    """ Implementation of /meta_knowledge_graph for Translator Reasoner API to provide supported nodes and edges
+
+    Returns
+    -------
+    json response object
+    """
+    # Supported categories
+    categories = ['biolink:ChemicalSubstance', 'biolink:DiseaseOrPhenotypicFeature',
+                  'biolink:Drug', 'biolink:Procedure']
+
+    # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
+    nodes = dict()
+    for cat in categories:
+        # Most nodes can be added using just the id_prefixes returned by the Biolink Model Toolkit
+        prefixes = bm_toolkit.get_element(cat).id_prefixes
+        if prefixes is not None and len(prefixes) >= 1:
+            nodes[cat] = {'id_prefixes': prefixes}
+        else:
+            # Some categories do not have any id_prefixes defined in biolink
+            if cat == 'biolink:DiseaseOrPhenotypicFeature':
+                # Use the union of biolink:Disease and biolink:PhenotypicFeature
+                prefixes_dis = bm_toolkit.get_element('biolink:Disease').id_prefixes
+                prefixes_phe = bm_toolkit.get_element('biolink:PhenotypicFeature').id_prefixes
+                nodes['biolink:DiseaseOrPhenotypicFeature'] = {
+                    'id_prefixes': list(set(prefixes_dis).union(prefixes_phe))
+                }
+            elif cat == 'biolink:Procedure':
+                # ICD and SNOMED used for biolink:Disease, so for now, use these vocabularies for procedure, also
+                nodes['biolink:Procedure'] = {
+                    'id_prefixes': ['ICD10PCS', 'SNOMEDCT']
+                }
+
+    # Add the supported edges
+    edges = list()
+    for subject in categories:
+        for object in categories:
+            edges.append({
+                'subject': subject,
+                'object': object,
+                'predicate': 'biolink:correlated_with'
+            })
+
+    return jsonify({
+        'nodes': nodes,
+        'edges': edges
     })
 
 
