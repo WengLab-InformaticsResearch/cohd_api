@@ -5,16 +5,15 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 
 from flask import jsonify
 from semantic_version import Version
-from bmt import Toolkit
 
 from . import cohd_trapi_093
 from . import cohd_trapi_100
+from . import cohd_trapi_110
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
-
-# Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit()
+# Get the static instance of the Biolink Model Toolkit from cohd_trapi
+from .cohd_trapi import bm_toolkit
 
 
 def translator_predicates():
@@ -70,9 +69,8 @@ def translator_meta_knowledge_graph():
     -------
     json response object
     """
-    # Supported categories
-    categories = ['biolink:ChemicalSubstance', 'biolink:DiseaseOrPhenotypicFeature',
-                  'biolink:Drug', 'biolink:Procedure']
+    # Supported categories in most recent TRAPI implementation
+    categories = cohd_trapi_110.CohdTrapi110.supported_categories
 
     # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
     nodes = dict()
@@ -128,14 +126,17 @@ def translator_query(request, version=None):
     requested version
     """
     if version is None:
-        version = '1.0.0'
+        version = '1.1.0'
 
     try:
         version = Version(version)
     except ValueError:
         return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.0.0', 400
 
-    if Version('1.0.0-beta') <= version < Version('1.1.0'):
+    if Version('1.1.0-beta') <= version < Version('1.2.0-alpha'):
+        trapi = cohd_trapi_110.CohdTrapi110(request)
+        return trapi.operate()
+    elif Version('1.0.0-beta') <= version < Version('1.1.0-alpha'):
         trapi = cohd_trapi_100.CohdTrapi100(request)
         return trapi.operate()
     elif version == Version('0.9.3'):
