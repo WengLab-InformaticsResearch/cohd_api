@@ -11,6 +11,8 @@ implemented in Flask
 (c) 2017 Tatonetti Lab
 """
 
+import logging
+import logging.config
 from flask import Flask, request, redirect
 from flask_cors import CORS
 from flask_caching import Cache
@@ -26,12 +28,30 @@ CORS(app)
 app.config.from_pyfile('cohd_flask.conf')
 cache = Cache(app)
 
+# Logging config for logfile (not TRAPI log) (see: https://flask.palletsprojects.com/en/1.1.x/logging/)
+logging.config.dictConfig({
+    'version': 1,
+    'formatters': {'default': {
+        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    }},
+    'handlers': {'wsgi': {
+        'class': 'logging.StreamHandler',
+        'stream': 'ext://flask.logging.wsgi_errors_stream',
+        'formatter': 'default'
+    }},
+    'root': {
+        'level': 'INFO',
+        'handlers': ['wsgi']
+    }
+})
+
 # Some of the above objects need to be created before loading other COHD modules
 from . import query_cohd_mysql
 from . import cohd_temporal
 from . import cohd_translator
 from . import cohd_trapi
 from . import scheduled_tasks
+
 
 ##########
 # ROUTES #

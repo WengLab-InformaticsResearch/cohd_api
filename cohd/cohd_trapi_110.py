@@ -1,5 +1,6 @@
 from datetime import datetime
 from numbers import Number
+import logging
 
 from flask import jsonify
 from jsonschema import ValidationError
@@ -50,10 +51,32 @@ class CohdTrapi110(CohdTrapi):
             'nodes': {},
             'edges': {}
         }
+        self._cohd_results = []
         self._results = []
+        self._logs = []
+        self._log_level = CohdTrapi.default_log_level
 
         # Determine how the query should be performed
         self._interpret_query()
+
+    def log(self, message, code=None, level=logging.DEBUG):
+        # Add to TRAPI log if above desired log level
+        if level >= self._log_level:
+            level_str = {
+                logging.DEBUG: 'DEBUG',
+                logging.INFO: 'INFO',
+                logging.WARNING: 'WARNING',
+                logging.ERROR: 'ERROR'
+            }
+            self._logs.append({
+                'timestamp': datetime.now().isoformat(),
+                'level': level_str[level],
+                'code': code,
+                'message': message
+            })
+
+        # Also pass the message to the root logger
+        logging.log(level=level, msg=message)
 
     def _check_query_input(self):
         """ Check that the input JSON data has the expected fields
@@ -78,6 +101,7 @@ class CohdTrapi110(CohdTrapi):
         # Use TRAPI Reasoner Validator to validate the query
         try:
             reasoner_validator.validate_Query(self._json_data)
+            self.log('Query passed reasoner validator')
         except ValidationError as err:
             self._valid_query = False
             self._invalid_query_response = (str(err), 400)
@@ -162,6 +186,18 @@ class CohdTrapi110(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
+        # Get the log level
+        self._json_data = self._request.get_json()
+        log_level = self._json_data.get('log_level')
+        if log_level is not None:
+            log_level_enum = {
+                'DEBUG': logging.DEBUG,
+                'INFO': logging.INFO,
+                'WARNING': logging.WARNING,
+                'ERROR': logging.ERROR
+            }
+            self._log_level = log_level_enum.get(log_level, CohdTrapi.default_log_level)
+
         # Check that the query input has the correct structure
         input_check = self._check_query_input()
         if not input_check[0]:
@@ -315,7 +351,9 @@ class CohdTrapi110(CohdTrapi):
                 self._concept_1_qnode_curie = curie
                 self._concept_1_mapping = node_mappings[curie]
                 self._concept_1_omop_id = self._concept_1_mapping['omop_concept_id']
+
                 # Keep track of this mapping in the query_graph for the response
+                self.log(f'{curie} mapped to  OMOP concept ID {self._concept_1_omop_id}', level=logging.INFO)
                 concept_1_qnode['mapped_omop_concept'] = self._concept_1_mapping
                 found = True
                 break
@@ -348,7 +386,9 @@ class CohdTrapi110(CohdTrapi):
                     self._concept_2_qnode_curie = curie
                     self._concept_2_mapping = node_mappings[curie]
                     self._concept_2_omop_id = self._concept_2_mapping['omop_concept_id']
+
                     # Keep track of this mapping in the query_graph for the response
+                    self.log(f'{curie} mapped to  OMOP concept ID {self._concept_2_omop_id}', level=logging.INFO)
                     concept_2_qnode['mapped_omop_concept'] = self._concept_2_mapping
                     found = True
 
@@ -372,6 +412,7 @@ class CohdTrapi110(CohdTrapi):
                 self._concept_2_qnode_curie = None
                 self._concept_2_omop_id = None
                 self._domain_class_pairs = None
+                self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
             else:
                 self._domain_class_pairs = set()
                 # Check if any of the categories supported by COHD are included in the categories list (or one of their
@@ -380,9 +421,8 @@ class CohdTrapi110(CohdTrapi):
                     supported_cat_name = bm_toolkit.get_element(supported_cat).name
                     for queried_cat in self._concept_2_qnode_categories:
                         if supported_cat_name in bm_toolkit.get_descendants(queried_cat):
-                            self._domain_class_pairs = self._domain_class_pairs.union(
-                                map_blm_class_to_omop_domain(supported_cat))
-                            continue
+                            dc_pair = map_blm_class_to_omop_domain(supported_cat)
+                            self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
 
                 if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
                     # None of the categories for this QNode were mapped to OMOP
@@ -392,6 +432,13 @@ class CohdTrapi110(CohdTrapi):
                     response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
                     self._invalid_query_response = response, 200
                     return self._valid_query, self._invalid_query_response
+
+                for dc_pair in self._domain_class_pairs:
+                    if dc_pair.concept_class_id is not None:
+                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' \
+                                 f'{dc_pair.concept_class_id}', level=logging.INFO)
+                    else:
+                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}', level=logging.INFO)
         else:
             # No CURIE or type specified, query for associations against all concepts
             self._concept_2_qnode_curie = None
@@ -443,7 +490,7 @@ class CohdTrapi110(CohdTrapi):
         """
         # Check if the query is valid
         if self._valid_query:
-            results = []
+            self._cohd_results = []
             if self._concept_2_omop_id is None and self._domain_class_pairs:
                 # Node 2 not specified, but node 2's type was specified. Query associations between Node 1 and the
                 # requested types (domains)
@@ -456,7 +503,7 @@ class CohdTrapi110(CohdTrapi):
                                                                      concept_class_id=concept_class_id,
                                                                      confidence=self._confidence_interval)
                     if new_results:
-                        results.extend(new_results['results'])
+                        self._cohd_results.extend(new_results['results'])
             else:
                 # Either Node 2 was specified by a CURIE or no type (domain) was specified for type 2. Query the
                 # associations between Node 1 and Node 2 or between Node 1 and all domains
@@ -466,13 +513,13 @@ class CohdTrapi110(CohdTrapi):
                                                                   dataset_id=self._dataset_id,
                                                                   domain_id=None,
                                                                   confidence=self._confidence_interval)
-                results = json_results['results']
+                self._cohd_results = json_results['results']
 
             # Results within each query call should be sorted, but still need to be sorted across query calls
-            results = sort_cohd_results(results)
+            self._cohd_results = sort_cohd_results(self._cohd_results)
 
             # Convert results from COHD format to Translator Reasoner standard
-            return self._serialize_trapi_response(results)
+            return self._serialize_trapi_response()
         else:
             # Invalid query. Return the invalid query response
             return self._invalid_query_response
@@ -775,17 +822,15 @@ class CohdTrapi110(CohdTrapi):
         return kg_node_1, kg_node_2, kg_edge, ke_id
 
     def _serialize_trapi_response(self,
-                                  cohd_results: List[Dict[str, Any]],
-                                  status: TrapiStatusCode = TrapiStatusCode.SUCCESS,
-                                  logs: Optional[List[str]] = None):
+                                  status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
         """ Creates the response message with JSON data in Reasoner Std API format
 
         Returns
         -------
         Response message with JSON data in Reasoner Std API format
         """
-        if cohd_results is not None:
-            for result in cohd_results:
+        if self._cohd_results is not None:
+            for result in self._cohd_results:
                 self._add_cohd_result(result, self._criteria)
 
                 # Don't add more than the maximum number of results
@@ -810,8 +855,8 @@ class CohdTrapi110(CohdTrapi):
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
-        if logs is not None and logs:
-            response['logs'] = logs
+        if self._logs is not None and self._logs:
+            response['logs'] = self._logs
         return jsonify(response)
 
     def _trapi_mini_response(self,

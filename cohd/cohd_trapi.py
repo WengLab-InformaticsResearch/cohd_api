@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import threading
+import logging
 import requests
 from requests.compat import urljoin
 from typing import Union, Any, Iterable, Optional, Dict, List, Tuple
@@ -70,6 +71,7 @@ class CohdTrapi(ABC):
     default_mapping_distance = 3
     default_biolink_only = True
     default_max_results = 500
+    default_log_level = logging.WARNING
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
