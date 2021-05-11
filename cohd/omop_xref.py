@@ -1005,7 +1005,7 @@ class ConceptMapper:
 
         return targets_omop, targets_oxo
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=3628800, cache_none=True)
     def map_to_omop(self, curie):
         """ Map to OMOP concept from ontology
 
@@ -1158,7 +1158,7 @@ class ConceptMapper:
 
         return mappings
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=3628800, cache_none=True)
     def map_from_omop_to_target(self,
                                 concept_id: Union[str, int],
                                 target_ontologies: Iterable[str]) -> List[Dict[str, Any]]:

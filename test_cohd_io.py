@@ -8,8 +8,7 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers.cohd_requests import *
-from trapi import reasoner_validator_092
-from trapi import reasoner_validator_10x
+from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -965,10 +964,10 @@ def test_relativeFrequency():
     print('...passed')
 
 
-def test_translator_query():
+def test_translator_query_100():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
-    print(f'test_cohd_io: testing /translator/query on {server}..... ')
+    print(f'test_cohd_io: testing /1.0.0/query on {server}..... ')
     resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
                                        dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                        max_results=10, local_oxo=True, timeout=300)
@@ -983,24 +982,20 @@ def test_translator_query():
     print('...passed')
 
 
-def test_translator_query_093():
-    """ Check the /0.9.3/translator/query endpoint mapping functionality
+def test_translator_query_11x():
+    """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema and that
+    COHD properly applies simple deductions on biolink:MolecularEntity.
     """
-    print(f'test_cohd_io: testing TRAPI 0.9.3 at /0.9.3/translator/query on {server}..... ')
-    ontology_targets = {
-        'biolink:Disease': ['SNOMEDCT', 'DOID'],
-        'biolink:Procedure': ['CPT4']
-    }
-    resp, query = translator_query_093(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                       max_results=10, biolink_only=True, ontology_targets=ontology_targets,
-                                       local_oxo=True, timeout=300)
+    print(f'test_cohd_io: testing /query TRAPI 1.1) on {server}..... ')
+    resp, query = translator_query_110(node_1_curies='DOID:9053', node_2_categories='biolink:MolecularEntity',
+                                       method='obsExpRatio', dataset_id=3, confidence_interval=0.99,
+                                       min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True, timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_092.validate_Message(json)
+    reasoner_validator_11x.validate_Response(json)
 
     # There should be 10 results
-    assert len(json['results']) == 10
+    assert len(json['message']['results']) == 10
 
     print('...passed')

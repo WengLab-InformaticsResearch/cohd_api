@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import threading
+import logging
 import requests
 from requests.compat import urljoin
 from typing import Union, Any, Iterable, Optional, Dict, List, Tuple
@@ -7,11 +8,17 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 import pymysql
+from bmt import Toolkit
+from numpy import argsort
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper
 from .cohd import cache
 from .query_cohd_mysql import query_active_concepts
+
+
+# Static instance of the Biolink Model Toolkit
+bm_toolkit = Toolkit()
 
 
 class TrapiStatusCode(Enum):
@@ -64,18 +71,12 @@ class CohdTrapi(ABC):
     default_mapping_distance = 3
     default_biolink_only = True
     default_max_results = 500
+    default_log_level = logging.WARNING
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
     supported_edge_types = [
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
-        'biolink:related_to',  # Ancestor of biolink:correlated_with
-        # Allow edge without biolink prefix
-        'correlated_with',
-        'related_to',
-        # Old documentation incorrectly suggested using 'association'. Permit this for now, but remove in future
-        'biolink:association',
-        'association',
     ]
 
     # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
@@ -286,12 +287,10 @@ def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     mappings = {
         'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
-        'biolink:Disease': [DomainClass('Condition', None)],
         'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Drug': [DomainClass('Drug', None)],
         'biolink:Phenomenon': [DomainClass('Measurement', None),
                                DomainClass('Observation', None)],
-        'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:PopulationOfIndividualOrganisms': [DomainClass('Ethnicity', None),
                                                     DomainClass('Gender', None),
                                                     DomainClass('Race', None)],
@@ -569,7 +568,7 @@ class BiolinkConceptMapper:
         }
         return str(d)
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=3628800, cache_none=True)
     def map_to_omop(self, curies: List[str]) -> Optional[Dict[str, Any]]:
         """ Map to OMOP concept from ontology
 
@@ -611,7 +610,7 @@ class BiolinkConceptMapper:
 
         return omop_mappings
 
-    @cache.memoize(timeout=2419200, cache_none=True)
+    @cache.memoize(timeout=3628800, cache_none=True)
     def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Dict[str, Any]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
@@ -796,3 +795,42 @@ class SriNodeNormalizer:
             else:
                 canonical[curie] = None
         return canonical
+
+
+def sort_cohd_results(cohd_results, sort_field=None, ascending=None):
+    """ Sort the COHD results
+
+    Parameters
+    ----------
+    cohd_results
+    sort_field - String: name of dictionary key to sort by
+    ascending - Bool:
+
+    Returns
+    -------
+    Sorted COHD results
+    """
+    if cohd_results is None or len(cohd_results) == 0:
+        return cohd_results
+
+    if sort_field is None or len(sort_field) == 0:
+        # See what fields are in the first result, assume the rest are the same
+        r = cohd_results[0]
+        if 'p-value' in r:
+            sort_field = 'p-value'
+            if ascending is None:
+                ascending = False
+        elif 'ln_ratio' in r:
+            sort_field = 'ln_ratio'
+            if ascending is None:
+                ascending = False
+        elif 'relative_frequency' in r:
+            sort_field  = 'relative_frequency'
+            if ascending is None:
+                ascending = False
+
+    sort_values = [x[sort_field] for x in cohd_results]
+    results_sorted = [cohd_results[i] for i in argsort(sort_values)]
+    if not ascending:
+        results_sorted = list(reversed(results_sorted))
+    return results_sorted
