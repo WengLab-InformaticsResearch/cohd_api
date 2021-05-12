@@ -143,11 +143,7 @@ class CohdTrapi110(CohdTrapi):
         assert self._query_graph is not None and query_node_id,\
             'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - empty query_graph or query_node_id'
 
-        assert query_node_id in self._query_graph['nodes'], \
-            ('cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - '
-             f'{query_node_id} not in {",".join(self._query_graph["nodes"].keys())}')
-
-        return self._query_graph['nodes'][query_node_id]
+        return self._query_graph['nodes'].get(query_node_id)
 
     @staticmethod
     def _process_qnode_category(categories: Union[str, Iterable]) -> List[str]:
@@ -186,8 +182,13 @@ class CohdTrapi110(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        # Get the log level
         self._json_data = self._request.get_json()
+        if self._json_data is None:
+            self._valid_query = False
+            self._invalid_query_response = ('Missing JSON payload', 400)
+            return self._valid_query, self._invalid_query_response
+
+        # Get the log level
         log_level = self._json_data.get('log_level')
         if log_level is not None:
             log_level_enum = {
@@ -219,6 +220,7 @@ class CohdTrapi110(CohdTrapi):
                 self._valid_query = False
                 self._invalid_query_response = ('Query method "{method}" not supported. Options are: {methods}'.format(
                     method=self._method, methods=','.join(CohdTrapi.supported_query_methods)), 400)
+                return self._valid_query, self._invalid_query_response
 
         # Get the query_option for dataset ID
         self._dataset_id = self._query_options.get('dataset_id')
@@ -311,8 +313,16 @@ class CohdTrapi110(CohdTrapi):
         # Note: qnode_key refers to the key identifier for the qnode in the QueryGraph's nodes property, e.g., "n00"
         subject_qnode_key = self._query_edge['subject']
         subject_qnode = self._find_query_node(subject_qnode_key)
+        if subject_qnode is None:
+            self._valid_query = False
+            self._invalid_query_response = (f'QNode id "{subject_qnode_key}" not found in query graph', 400)
+            return self._valid_query, self._invalid_query_response
         object_qnode_key = self._query_edge['object']
         object_qnode = self._find_query_node(object_qnode_key)
+        if object_qnode is None:
+            self._valid_query = False
+            self._invalid_query_response = (f'QNode id "{object_qnode_key}" not found in query graph', 400)
+            return self._valid_query, self._invalid_query_response
 
         # In COHD queries, concept_id_1 must be specified by ID. Figure out which QNode to use for concept_1
         node_ids = set()
