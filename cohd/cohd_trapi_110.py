@@ -3,6 +3,7 @@ from numbers import Number
 import logging
 
 from flask import jsonify
+import werkzeug
 from jsonschema import ValidationError
 
 from . import query_cohd_mysql
@@ -59,7 +60,7 @@ class CohdTrapi110(CohdTrapi):
         # Determine how the query should be performed
         self._interpret_query()
 
-    def log(self, message, code=None, level=logging.DEBUG):
+    def log(self, message: str, code: TrapiStatusCode = None, level=logging.DEBUG):
         # Add to TRAPI log if above desired log level
         if level >= self._log_level:
             level_str = {
@@ -71,7 +72,7 @@ class CohdTrapi110(CohdTrapi):
             self._logs.append({
                 'timestamp': datetime.now().isoformat(),
                 'level': level_str[level],
-                'code': code,
+                'code': None if code is None else code.value,
                 'message': message
             })
 
@@ -92,7 +93,6 @@ class CohdTrapi110(CohdTrapi):
 
         """
         # Check the body contains the proper json request object
-        self._json_data = self._request.get_json()
         if self._json_data is None:
             self._valid_query = False
             self._invalid_query_response = ('Missing JSON request body', 400)
@@ -143,11 +143,7 @@ class CohdTrapi110(CohdTrapi):
         assert self._query_graph is not None and query_node_id,\
             'cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - empty query_graph or query_node_id'
 
-        assert query_node_id in self._query_graph['nodes'], \
-            ('cohd_translator.py::COHDTranslatorReasoner::_find_query_nodes() - '
-             f'{query_node_id} not in {",".join(self._query_graph["nodes"].keys())}')
-
-        return self._query_graph['nodes'][query_node_id]
+        return self._query_graph['nodes'].get(query_node_id)
 
     @staticmethod
     def _process_qnode_category(categories: Union[str, Iterable]) -> List[str]:
@@ -186,8 +182,19 @@ class CohdTrapi110(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
+        try:
+            self._json_data = self._request.get_json()
+        except werkzeug.exceptions.BadRequest:
+            self._valid_query = False
+            self._invalid_query_response = ('Request body is not valid JSON', 400)
+            return self._valid_query, self._invalid_query_response
+
+        if self._json_data is None:
+            self._valid_query = False
+            self._invalid_query_response = ('Missing JSON payload', 400)
+            return self._valid_query, self._invalid_query_response
+
         # Get the log level
-        self._json_data = self._request.get_json()
         log_level = self._json_data.get('log_level')
         if log_level is not None:
             log_level_enum = {
@@ -219,6 +226,7 @@ class CohdTrapi110(CohdTrapi):
                 self._valid_query = False
                 self._invalid_query_response = ('Query method "{method}" not supported. Options are: {methods}'.format(
                     method=self._method, methods=','.join(CohdTrapi.supported_query_methods)), 400)
+                return self._valid_query, self._invalid_query_response
 
         # Get the query_option for dataset ID
         self._dataset_id = self._query_options.get('dataset_id')
@@ -311,8 +319,16 @@ class CohdTrapi110(CohdTrapi):
         # Note: qnode_key refers to the key identifier for the qnode in the QueryGraph's nodes property, e.g., "n00"
         subject_qnode_key = self._query_edge['subject']
         subject_qnode = self._find_query_node(subject_qnode_key)
+        if subject_qnode is None:
+            self._valid_query = False
+            self._invalid_query_response = (f'QNode id "{subject_qnode_key}" not found in query graph', 400)
+            return self._valid_query, self._invalid_query_response
         object_qnode_key = self._query_edge['object']
         object_qnode = self._find_query_node(object_qnode_key)
+        if object_qnode is None:
+            self._valid_query = False
+            self._invalid_query_response = (f'QNode id "{object_qnode_key}" not found in query graph', 400)
+            return self._valid_query, self._invalid_query_response
 
         # In COHD queries, concept_id_1 must be specified by ID. Figure out which QNode to use for concept_1
         node_ids = set()
@@ -360,6 +376,8 @@ class CohdTrapi110(CohdTrapi):
         if not found:
             self._valid_query = False
             description = f'Could not map node {self._concept_1_qnode_key} to OMOP concept'
+            self.log(f'Could not map node {self._concept_1_qnode_key} to OMOP concept',
+                     code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
             response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
@@ -861,8 +879,7 @@ class CohdTrapi110(CohdTrapi):
 
     def _trapi_mini_response(self,
                              status: TrapiStatusCode,
-                             description: str,
-                             logs: Optional[List[str]] = None):
+                             description: str):
         """ Creates a minimal TRAPI response without creating the knowledge graph or results.
         This is useful for situations where some issue occurred but the TRAPI convention expects an HTTP
         Status Code 200 and TRAPI Response object.
@@ -886,6 +903,6 @@ class CohdTrapi110(CohdTrapi):
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
-        if logs is not None and logs:
-            response['logs'] = logs
+        if self._logs is not None and self._logs:
+            response['logs'] = self._logs
         return jsonify(response)
