@@ -59,7 +59,7 @@ class CohdTrapi110(CohdTrapi):
         # Determine how the query should be performed
         self._interpret_query()
 
-    def log(self, message, code=None, level=logging.DEBUG):
+    def log(self, message: str, code: TrapiStatusCode = None, level=logging.DEBUG):
         # Add to TRAPI log if above desired log level
         if level >= self._log_level:
             level_str = {
@@ -71,7 +71,7 @@ class CohdTrapi110(CohdTrapi):
             self._logs.append({
                 'timestamp': datetime.now().isoformat(),
                 'level': level_str[level],
-                'code': code,
+                'code': code.value,
                 'message': message
             })
 
@@ -370,6 +370,8 @@ class CohdTrapi110(CohdTrapi):
         if not found:
             self._valid_query = False
             description = f'Could not map node {self._concept_1_qnode_key} to OMOP concept'
+            self.log(f'Could not map node {self._concept_1_qnode_key} to OMOP concept',
+                     code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
             response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
@@ -871,8 +873,7 @@ class CohdTrapi110(CohdTrapi):
 
     def _trapi_mini_response(self,
                              status: TrapiStatusCode,
-                             description: str,
-                             logs: Optional[List[str]] = None):
+                             description: str):
         """ Creates a minimal TRAPI response without creating the knowledge graph or results.
         This is useful for situations where some issue occurred but the TRAPI convention expects an HTTP
         Status Code 200 and TRAPI Response object.
@@ -896,6 +897,6 @@ class CohdTrapi110(CohdTrapi):
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
-        if logs is not None and logs:
-            response['logs'] = logs
+        if self._logs is not None and self._logs:
+            response['logs'] = self._logs
         return jsonify(response)
