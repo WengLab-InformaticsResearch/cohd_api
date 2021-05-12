@@ -3,6 +3,7 @@ from numbers import Number
 import logging
 
 from flask import jsonify
+import werkzeug
 from jsonschema import ValidationError
 
 from . import query_cohd_mysql
@@ -71,7 +72,7 @@ class CohdTrapi110(CohdTrapi):
             self._logs.append({
                 'timestamp': datetime.now().isoformat(),
                 'level': level_str[level],
-                'code': code.value,
+                'code': None if code is None else code.value,
                 'message': message
             })
 
@@ -92,7 +93,6 @@ class CohdTrapi110(CohdTrapi):
 
         """
         # Check the body contains the proper json request object
-        self._json_data = self._request.get_json()
         if self._json_data is None:
             self._valid_query = False
             self._invalid_query_response = ('Missing JSON request body', 400)
@@ -182,7 +182,13 @@ class CohdTrapi110(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        self._json_data = self._request.get_json()
+        try:
+            self._json_data = self._request.get_json()
+        except werkzeug.exceptions.BadRequest:
+            self._valid_query = False
+            self._invalid_query_response = ('Request body is not valid JSON', 400)
+            return self._valid_query, self._invalid_query_response
+
         if self._json_data is None:
             self._valid_query = False
             self._invalid_query_response = ('Missing JSON payload', 400)
