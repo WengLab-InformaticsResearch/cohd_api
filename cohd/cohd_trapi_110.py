@@ -294,15 +294,16 @@ class CohdTrapi110(CohdTrapi):
         if edge_predicates is not None:
             edge_supported = False
             for edge_predicate in edge_predicates:
+                # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
-                    # Not a proper biolink predicate
                     self._valid_query = False
                     self._invalid_query_response = (f'{edge_predicate} was not recognized as a biolink predicate', 400)
                     return self._valid_query, self._invalid_query_response
+
                 # Check if any of the predicates are an ancestor of biolink:correlated_with
-                predicate_descendants = bm_toolkit.get_descendants(edge_predicate)
+                predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
                 for pd in predicate_descendants:
-                    if bm_toolkit.get_element(pd).slot_uri in CohdTrapi110.supported_edge_types:
+                    if pd in CohdTrapi110.supported_edge_types:
                         edge_supported = True
                         self._query_edge_predicates = edge_predicates
                         break
@@ -436,9 +437,16 @@ class CohdTrapi110(CohdTrapi):
                 # Check if any of the categories supported by COHD are included in the categories list (or one of their
                 # descendants)
                 for supported_cat in CohdTrapi110.supported_categories:
-                    supported_cat_name = bm_toolkit.get_element(supported_cat).name
                     for queried_cat in self._concept_2_qnode_categories:
-                        if supported_cat_name in bm_toolkit.get_descendants(queried_cat):
+                        # Check if this is a valid biolink category
+                        if not bm_toolkit.is_category(queried_cat):
+                            self._valid_query = False
+                            self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
+                                                            400)
+                            return self._valid_query, self._invalid_query_response
+
+                        # Check if the COHD supported categories are descendants of the queried categories
+                        if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
                             dc_pair = map_blm_class_to_omop_domain(supported_cat)
                             self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
 
