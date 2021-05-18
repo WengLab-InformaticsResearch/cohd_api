@@ -30,6 +30,7 @@ class CohdTrapi110(CohdTrapi):
         self._valid_query = False
         self._invalid_query_response = None
         self._json_data = None
+        self._response = None
         self._query_graph = None
         self._concept_1_qnode_key = None
         self._concept_2_qnode_key = None
@@ -517,19 +518,22 @@ class CohdTrapi110(CohdTrapi):
         # Check if the query is valid
         if self._valid_query:
             self._cohd_results = []
+            self._initialize_trapi_response()
+            new_cohd_results = []
+
             if self._concept_2_omop_id is None and self._domain_class_pairs:
                 # Node 2 not specified, but node 2's type was specified. Query associations between Node 1 and the
                 # requested types (domains)
                 for domain_id, concept_class_id in self._domain_class_pairs:
-                    new_results = query_cohd_mysql.query_association(method=self._method,
-                                                                     concept_id_1=self._concept_1_omop_id,
-                                                                     concept_id_2=self._concept_2_omop_id,
-                                                                     dataset_id=self._dataset_id,
-                                                                     domain_id=domain_id,
-                                                                     concept_class_id=concept_class_id,
-                                                                     confidence=self._confidence_interval)
-                    if new_results:
-                        self._cohd_results.extend(new_results['results'])
+                    json_results = query_cohd_mysql.query_association(method=self._method,
+                                                                      concept_id_1=self._concept_1_omop_id,
+                                                                      concept_id_2=self._concept_2_omop_id,
+                                                                      dataset_id=self._dataset_id,
+                                                                      domain_id=domain_id,
+                                                                      concept_class_id=concept_class_id,
+                                                                      confidence=self._confidence_interval)
+                    if json_results:
+                        new_cohd_results.extend(json_results['results'])
             else:
                 # Either Node 2 was specified by a CURIE or no type (domain) was specified for type 2. Query the
                 # associations between Node 1 and Node 2 or between Node 1 and all domains
@@ -539,13 +543,15 @@ class CohdTrapi110(CohdTrapi):
                                                                   dataset_id=self._dataset_id,
                                                                   domain_id=None,
                                                                   confidence=self._confidence_interval)
-                self._cohd_results = json_results['results']
+                if json_results:
+                    new_cohd_results.extend(json_results['results'])
 
             # Results within each query call should be sorted, but still need to be sorted across query calls
-            self._cohd_results = sort_cohd_results(self._cohd_results)
+            new_cohd_results = sort_cohd_results(new_cohd_results)
 
             # Convert results from COHD format to Translator Reasoner standard
-            return self._serialize_trapi_response()
+            self._add_results_to_trapi(new_cohd_results)
+            return self._finalize_trapi_response()
         else:
             # Invalid query. Return the invalid query response
             return self._invalid_query_response
@@ -847,8 +853,19 @@ class CohdTrapi110(CohdTrapi):
 
         return kg_node_1, kg_node_2, kg_edge, ke_id
 
-    def _serialize_trapi_response(self,
-                                  status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
+    def _initialize_trapi_response(self):
+        """ Starts the TRAPI response message
+        """
+        self._response = {
+            # From TRAPI Extended
+            'reasoner_id': 'COHD',
+            'tool_version': 'COHD 4.0.0',
+            'schema_version': '1.1.0',
+            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'query_options': self._query_options,
+        }
+
+    def _add_results_to_trapi(self, new_cohd_results):
         """ Creates the response message with JSON data in Reasoner Std API format
 
         Returns
@@ -856,34 +873,42 @@ class CohdTrapi110(CohdTrapi):
         Response message with JSON data in Reasoner Std API format
         """
         if self._cohd_results is not None:
-            for result in self._cohd_results:
+            self._cohd_results.extend(new_cohd_results)
+            n_cohd_results = len(new_cohd_results)
+            for i, result in enumerate(new_cohd_results):
                 self._add_cohd_result(result, self._criteria)
 
                 # Don't add more than the maximum number of results
                 if len(self._results) >= self._max_results:
+                    if i < (n_cohd_results - 1):
+                        # Inform the user that there may be additional results
+                        self.log(f'Results limit ({self._max_results}) reached. There may be additional associations.',
+                                 level=logging.INFO)
                     break
 
+    def _finalize_trapi_response(self, status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
+        """ Finalizes the TRAPI response
+
+        Returns
+        -------
+        JSON TRAPI response
+        """
         if len(self._results) == 0:
             status = TrapiStatusCode.NO_RESULTS
+        self._response['status'] = status.value
 
-        response = {
-            'status': status.value,
-            'description': f'COHD returned {len(self._results)} results.',
-            'message': {
-                'results': self._results,
-                'query_graph': self._query_graph,
-                'knowledge_graph': self._knowledge_graph
-            },
-            # From TRAPI Extended
-            'reasoner_id': 'COHD',
-            'tool_version': 'COHD 3.0.0',
-            'schema_version': '1.0.0',
-            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'query_options': self._query_options,
+        self._response['description'] = f'COHD returned {len(self._results)} results.'
+
+        self._response['message'] = {
+            'results': self._results,
+            'query_graph': self._query_graph,
+            'knowledge_graph': self._knowledge_graph
         }
+
         if self._logs is not None and self._logs:
-            response['logs'] = self._logs
-        return jsonify(response)
+            self._response['logs'] = self._logs
+
+        return jsonify(self._response)
 
     def _trapi_mini_response(self,
                              status: TrapiStatusCode,
