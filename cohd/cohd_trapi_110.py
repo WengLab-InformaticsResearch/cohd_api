@@ -368,12 +368,11 @@ class CohdTrapi110(CohdTrapi):
                 # Found an OMOP mapping. Use this CURIE
                 self._concept_1_qnode_curie = curie
                 self._concept_1_mapping = node_mappings[curie]
-                self._concept_1_omop_id = self._concept_1_mapping['omop_concept_id']
-
-                # Keep track of this mapping in the query_graph for the response
-                self.log(f'{curie} mapped to  OMOP concept ID {self._concept_1_omop_id}', level=logging.INFO)
-                concept_1_qnode['mapped_omop_concept'] = self._concept_1_mapping
+                self._concept_1_omop_id = int(self._concept_1_mapping.output_id.split(':')[1])
                 found = True
+
+                # Create a KG node now with the curie and mapping specified
+                self._get_kg_node(self._concept_1_omop_id, query_node_curie=curie, mapping=node_mappings[curie])
                 break
         if not found:
             self._valid_query = False
@@ -405,12 +404,11 @@ class CohdTrapi110(CohdTrapi):
                     # Found an OMOP mapping. Use this CURIE
                     self._concept_2_qnode_curie = curie
                     self._concept_2_mapping = node_mappings[curie]
-                    self._concept_2_omop_id = self._concept_2_mapping['omop_concept_id']
-
-                    # Keep track of this mapping in the query_graph for the response
-                    self.log(f'{curie} mapped to  OMOP concept ID {self._concept_2_omop_id}', level=logging.INFO)
-                    concept_2_qnode['mapped_omop_concept'] = self._concept_2_mapping
+                    self._concept_2_omop_id = int(self._concept_2_mapping.output_id.split(':')[1])
                     found = True
+
+                    # Create a KG node now with the curie and mapping specified
+                    self._get_kg_node(self._concept_2_omop_id, query_node_curie=curie, mapping=node_mappings[curie])
 
                     # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
                     self._domain_class_pairs = None
@@ -640,7 +638,7 @@ class CohdTrapi110(CohdTrapi):
         return result
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
-                     query_node_categories=None):
+                     query_node_categories=None, mapping: Mapping = None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
@@ -652,6 +650,7 @@ class CohdTrapi110(CohdTrapi):
         concept_class: OMOP concept class ID
         query_node_curie: CURIE used in the QNode corresponding to this KG Node
         query_node_categories: list of categories for this QNode
+        mapping: mapping between OMOP and Biolink
 
         Returns
         -------
@@ -683,8 +682,7 @@ class CohdTrapi110(CohdTrapi):
             # Map to Biolink Model or other target ontologies
             blm_category = map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)
             mapped_to_blm = False
-            mapping = None
-            if self._concept_mapper:
+            if mapping is None and self._concept_mapper:
                 mapping = self._concept_mapper.map_from_omop(concept_id, blm_category)
 
             if query_node_curie is not None and query_node_curie:
@@ -693,12 +691,12 @@ class CohdTrapi110(CohdTrapi):
                 primary_curie = query_node_curie
                 # Find the label from the mappings
                 if mapping is not None:
-                    primary_label = mapping['target_label']
+                    primary_label = mapping.output_label
             elif mapping is not None:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
                 # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                primary_curie = mapping['target_curie']
-                primary_label = mapping['target_label']
+                primary_curie = mapping.output_id
+                primary_label = mapping.output_label
                 mapped_to_blm = True
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
@@ -740,6 +738,17 @@ class CohdTrapi110(CohdTrapi):
                     ]
                 }
             }
+
+            # Add the OMOP-Biolink mapping
+            if mapping is not None:
+                node['kg_node']['attributes'].append({
+                            'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                            'original_attribute_name': 'Database cross-mapping',
+                            'value': mapping.history,
+                            'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                            'attribute_source': 'COHD',
+                        })
+
             self._kg_nodes[concept_id] = node
 
         return node

@@ -12,7 +12,7 @@ from bmt import Toolkit
 from numpy import argsort
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
-from .omop_xref import ConceptMapper
+from .omop_xref import ConceptMapper, Mapping
 from .cohd import cache
 from .query_cohd_mysql import query_active_concepts
 
@@ -569,7 +569,7 @@ class BiolinkConceptMapper:
         return str(d)
 
     @cache.memoize(timeout=3628800, cache_none=True)
-    def map_to_omop(self, curies: List[str]) -> Optional[Dict[str, Any]]:
+    def map_to_omop(self, curies: List[str]) -> Dict[str, Mapping]:
         """ Map to OMOP concept from ontology
 
         Parameters
@@ -578,14 +578,7 @@ class BiolinkConceptMapper:
 
         Returns
         -------
-        Dict like:
-        {curie: {
-            "omop_concept_name": "Osteoarthritis",
-            "omop_concept_id": 80180,
-            "distance": 2
-            }
-        }
-        or None
+        Dict of Mapping objects
         """
         # Get equivalent identifiers from SRI Node Normalizer
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
@@ -594,24 +587,42 @@ class BiolinkConceptMapper:
         for curie in curies:
             # First, try mapping via OxO on the provided CURIE
             oxo_curie = BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(curie)
-            omop_mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
+            mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
 
-            if omop_mapping is None and normalized_nodes is not None and curie in normalized_nodes and \
+            if mapping is None and normalized_nodes is not None and curie in normalized_nodes and \
                     normalized_nodes[curie] is not None:
                 # Try OxO on each of the equivalent identifiers from SRI Node Normalizer
                 equivalent_ids = normalized_nodes[curie]['equivalent_identifiers']
                 for identifier in equivalent_ids:
+                    # The original CURIE was already tried above, skip it
+                    if identifier == curie:
+                        continue
+
                     oxo_curie = BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(identifier['identifier'])
-                    omop_mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
-                    if omop_mapping is not None:
+                    mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
+                    if mapping is not None:
+                        # Find the input label from SRI Normalizer
+                        input_label = None
+                        for sri_mapping in equivalent_ids:
+                            if sri_mapping['identifier'] == curie:
+                                input_label = sri_mapping['label']
+                                break
+
+                        # Edit the mapping object to add the SRI Node Normalizer as the first step
+                        mapping.add_history(input_id=curie, output_id=mapping.input_id, source='SRI Normalizer',
+                                            input_label=input_label, output_label=identifier.get('label'),
+                                            distance=1, index=0)
+                        mapping.input_id = curie
+                        mapping.input_label = input_label
+
                         break
 
-            omop_mappings[curie] = omop_mapping
+            omop_mappings[curie] = mapping
 
         return omop_mappings
 
     @cache.memoize(timeout=3628800, cache_none=True)
-    def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Dict[str, Any]]:
+    def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Mapping]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
@@ -621,13 +632,7 @@ class BiolinkConceptMapper:
 
         Returns
         -------
-        Dict like:
-        {
-            "target_curie": "UMLS:C0154091",
-            "target_label": "Carcinoma in situ of bladder",
-            "distance": 1
-        }
-        or None
+        Mapping object or None
         """
         if blm_category not in self.biolink_mappings_as_oxo:
             # No target ontologies defined for this Biolink category
@@ -644,24 +649,31 @@ class BiolinkConceptMapper:
         for mapping in mappings:
             # Convert from OxO prefix to BLM prefix. If the prefix isn't in the mappings between BLM and OxO, keep the
             # OxO prefix
-            mapping['target_curie'] = BiolinkConceptMapper.map_oxo_prefixes_to_blm_prefixes(mapping['target_curie'])
+            mapping.output_id = BiolinkConceptMapper.map_oxo_prefixes_to_blm_prefixes(mapping.output_id)
 
         # Get the canonical BLM ID for each curie from the OxO mapping
-        curies = [x['target_curie'] for x in mappings]
+        curies = [x.output_id for x in mappings]
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
 
         # Find the mapping with the shortest distance canonical mapping
         if normalized_nodes is not None:
             for d in range(self.distance + 1):
                 # Get all mappings with the current distance
-                m_d = [m for m in mappings if m['distance'] == d]
+                m_d = [m for m in mappings if m.get_distance() == d]
                 for m in m_d:
-                    cm_target_curie = m['target_curie']
+                    cm_target_curie = m.output_id
                     if cm_target_curie in normalized_nodes and normalized_nodes[cm_target_curie] is not None:
                         canonical_node = normalized_nodes[cm_target_curie]['id']
-                        m['target_curie'] = canonical_node['identifier']
+
+                        # If SRI normalizer suggests a different ID as canonical, add the mapping provenance
+                        if canonical_node['identifier'] != m.output_id:
+                            m.add_history(input_id=m.output_id, output_id=canonical_node['identifier'],
+                                          source='SRI Normalizer', input_label=m.output_label,
+                                          output_label=canonical_node.get('label'), distance=1)
+                            m.output_id = canonical_node['identifier']
                         if 'label' in canonical_node:
-                            m['target_label'] = canonical_node['label']
+                            m.output_label = canonical_node['label']
+
                         return m
 
         # Did not find any canonical nodes from SRI Node Normalizer
@@ -670,12 +682,12 @@ class BiolinkConceptMapper:
         blm_prefixes = self.biolink_mappings.get(blm_category, [])
         for d in range(self.distance + 1):
             # Get all mappings with the current distance
-            m_d = [m for m in mappings if m['distance'] == d]
+            m_d = [m for m in mappings if m.get_distance() == d]
 
             # Look for the first matching prefix in the list of biolink prefixes
             for prefix in blm_prefixes:
                 for m in m_d:
-                    if m['target_curie'].split(':')[0] == prefix:
+                    if m.output_id.split(':')[0] == prefix:
                         # Found the priority prefix with the shortest distance. Return the mapping
                         return m
 
