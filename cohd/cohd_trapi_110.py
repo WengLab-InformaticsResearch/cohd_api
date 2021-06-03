@@ -356,6 +356,68 @@ class CohdTrapi110(CohdTrapi):
             self._invalid_query_response = ('COHD TRAPI requires at least one node to have an ID', 400)
             return self._valid_query, self._invalid_query_response
 
+        # Get qnode categories and check the formatting
+        self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
+        if self._concept_1_qnode_categories is not None:
+            self._concept_1_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_1_qnode_categories)
+
+            # Check if any of the categories supported by COHD are included in the categories list (or one of their
+            # descendants)
+            found_supported_cat = False
+            for supported_cat in CohdTrapi110.supported_categories:
+                for queried_cat in self._concept_1_qnode_categories:
+                    # Check if this is a valid biolink category
+                    if not bm_toolkit.is_category(queried_cat):
+                        self._valid_query = False
+                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
+                                                        400)
+                        return self._valid_query, self._invalid_query_response
+
+                    # Check if the COHD supported categories are descendants of the queried categories
+                    if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
+                        found_supported_cat = True
+                        break
+
+            if not found_supported_cat:
+                # None of the categories for this QNode were mapped to OMOP
+                self._valid_query = False
+                description = f"None of QNode {self._concept_1_qnode_key}'s categories " \
+                              f"({self._concept_1_qnode_categories}) are supported by COHD"
+                response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
+
+        self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
+        if self._concept_2_qnode_categories is not None:
+            self._concept_2_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_2_qnode_categories)
+            concept_2_qnode['categories'] = self._concept_2_qnode_categories
+
+            # Check if any of the categories supported by COHD are included in the categories list (or one of their
+            # descendants)
+            self._domain_class_pairs = set()
+            for supported_cat in CohdTrapi110.supported_categories:
+                for queried_cat in self._concept_2_qnode_categories:
+                    # Check if this is a valid biolink category
+                    if not bm_toolkit.is_category(queried_cat):
+                        self._valid_query = False
+                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
+                                                        400)
+                        return self._valid_query, self._invalid_query_response
+
+                    # Check if the COHD supported categories are descendants of the queried categories
+                    if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
+                        dc_pair = map_blm_class_to_omop_domain(supported_cat)
+                        self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
+
+            if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
+                # None of the categories for this QNode were mapped to OMOP
+                self._valid_query = False
+                description = f"None of QNode {self._concept_2_qnode_key}'s categories " \
+                              f"({self._concept_2_qnode_categories}) are supported by COHD"
+                response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
+
         # Find BLM - OMOP mappings for all identified query nodes
         node_mappings = self._concept_mapper.map_to_omop(node_ids)
 
@@ -377,21 +439,10 @@ class CohdTrapi110(CohdTrapi):
         if not found:
             self._valid_query = False
             description = f'Could not map node {self._concept_1_qnode_key} to OMOP concept'
-            self.log(f'Could not map node {self._concept_1_qnode_key} to OMOP concept',
-                     code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
+            self.log(description, code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
             response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
-
-        # Get qnode categories and check the formatting
-        self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
-        if self._concept_1_qnode_categories is not None:
-            self._concept_1_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_1_qnode_categories)
-            concept_1_qnode['categories'] = self._concept_1_qnode_categories
-        self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
-        if self._concept_2_qnode_categories is not None:
-            self._concept_2_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_2_qnode_categories)
-            concept_2_qnode['categories'] = self._concept_2_qnode_categories
 
         # Get the desired association concept or category
         ids = concept_2_qnode.get('ids')
@@ -432,35 +483,9 @@ class CohdTrapi110(CohdTrapi):
                 self._domain_class_pairs = None
                 self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
             else:
-                self._domain_class_pairs = set()
-                # Check if any of the categories supported by COHD are included in the categories list (or one of their
-                # descendants)
-                for supported_cat in CohdTrapi110.supported_categories:
-                    for queried_cat in self._concept_2_qnode_categories:
-                        # Check if this is a valid biolink category
-                        if not bm_toolkit.is_category(queried_cat):
-                            self._valid_query = False
-                            self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
-                                                            400)
-                            return self._valid_query, self._invalid_query_response
-
-                        # Check if the COHD supported categories are descendants of the queried categories
-                        if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
-                            dc_pair = map_blm_class_to_omop_domain(supported_cat)
-                            self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
-
-                if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
-                    # None of the categories for this QNode were mapped to OMOP
-                    self._valid_query = False
-                    description = f"None of QNode {self._concept_2_qnode_key}'s categories " \
-                                  f"({self._concept_2_qnode_categories}) are supported by COHD"
-                    response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
-                    self._invalid_query_response = response, 200
-                    return self._valid_query, self._invalid_query_response
-
                 for dc_pair in self._domain_class_pairs:
                     if dc_pair.concept_class_id is not None:
-                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' \
+                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' 
                                  f'{dc_pair.concept_class_id}', level=logging.INFO)
                     else:
                         self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}', level=logging.INFO)
@@ -469,8 +494,9 @@ class CohdTrapi110(CohdTrapi):
             self._concept_2_qnode_curie = None
             self._concept_2_omop_id = None
             self._domain_class_pairs = None
+            self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
 
-        if 'contraints' in concept_1_qnode:
+        if 'constraints' in concept_1_qnode:
             self._valid_query = False
             self._invalid_query_response = 'COHD does not support constraints on a QNode with ids specified', 400
             return self._valid_query, self._invalid_query_response

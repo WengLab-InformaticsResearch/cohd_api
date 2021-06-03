@@ -6,14 +6,24 @@ Intended to be run with pytest: pytest -s test_cohd_io.py
 """
 from collections import namedtuple
 from pprint import pformat
+import requests
+import json as j
 
-from notebooks.cohd_helpers.cohd_requests import *
+from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
+from cohd.cohd_trapi import bm_toolkit
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
 """
 _s = namedtuple('_s', ['key', 'type'])
+
+# Choose which server to test
+cr.server = 'https://dev.cohd.io/api'
+
+# Proxy for main TRAPI version
+reasoner_validator = reasoner_validator_11x
+translator_query = cr.translator_query_110
 
 
 def check_results_schema(json, schema):
@@ -82,8 +92,8 @@ def test_datasets():
     Checks that the response json conforms to the expected schema.
     Checks that there are at least 3 data sets described.
     """
-    print(f'test_cohd_io: testing /metadata/datasets on {server}..... ')
-    json, df = datasets()
+    print(f'test_cohd_io: testing /metadata/datasets on {cr.server}..... ')
+    json, df = cr.datasets()
 
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
@@ -100,8 +110,8 @@ def test_domain_counts():
     """ Check the /metadata/domainCounts endpoint for dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/domainCounts on {server}..... ')
-    json, df = domain_counts(dataset_id=1)
+    print(f'test_cohd_io: testing /metadata/domainCounts on {cr.server}..... ')
+    json, df = cr.domain_counts(dataset_id=1)
 
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
@@ -134,8 +144,8 @@ def test_domain_pair_counts():
     """ Check the /metadata/domainPairCounts endpoint for dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/domainPairCounts on {server}..... ')
-    json, df = domain_pair_counts(dataset_id=2)
+    print(f'test_cohd_io: testing /metadata/domainPairCounts on {cr.server}..... ')
+    json, df = cr.domain_pair_counts(dataset_id=2)
 
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
@@ -171,8 +181,8 @@ def test_patientCount():
     """ Check the /metadata/patientCount endpoint for dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/patientCount on {server}..... ')
-    json, df = patient_count(dataset_id=3)
+    print(f'test_cohd_io: testing /metadata/patientCount on {cr.server}..... ')
+    json, df = cr.patient_count(dataset_id=3)
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
               _s('count', int)]
@@ -197,8 +207,8 @@ def test_conceptAncestors():
     concept_class_id=Ingredient, and dataset_id=3
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/conceptAncestors on {server}..... ')
-    json, df = concept_ancestors(concept_id=19019073, dataset_id=3, vocabulary_id='RxNorm',
+    print(f'test_cohd_io: testing /omop/conceptAncestors on {cr.server}..... ')
+    json, df = cr.concept_ancestors(concept_id=19019073, dataset_id=3, vocabulary_id='RxNorm',
                                  concept_class_id='Ingredient')
 
     # Check that the results adhere to the expected schema
@@ -241,8 +251,8 @@ def test_conceptDescendants():
     """ Check the /omop/conceptDescendants endpoint with concept_id=313217 and dataset_id=3
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/conceptDescendants on {server}..... ')
-    json, df = concept_descendants(concept_id=313217, dataset_id=3)
+    print(f'test_cohd_io: testing /omop/conceptDescendants on {cr.server}..... ')
+    json, df = cr.concept_descendants(concept_id=313217, dataset_id=3)
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_class_id', str),
@@ -296,8 +306,8 @@ def test_concepts():
     """ Check the /omop/concepts endpoint with concept_id=192855,2008271
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/concepts on {server}..... ')
-    json, df = concept([192855, 2008271])
+    print(f'test_cohd_io: testing /omop/concepts on {cr.server}..... ')
+    json, df = cr.concept([192855, 2008271])
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_class_id', str),
@@ -339,8 +349,8 @@ def test_findConceptIDs():
     """ Check the /omop/findConceptIDs endpoint. Search for cancer condition concepts in dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/findConceptIDs on {server}.... ')
-    json, df = find_concept(concept_name='cancer', dataset_id=1, domain='Condition', min_count=1)
+    print(f'test_cohd_io: testing /omop/findConceptIDs on {cr.server}.... ')
+    json, df = cr.find_concept(concept_name='cancer', dataset_id=1, domain='Condition', min_count=1)
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_class_id', str),
@@ -386,8 +396,8 @@ def test_mapFromStandardConceptID():
     (Localized osteoarthrosis uncertain if primary OR secondary)
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/mapFromStandardConceptID on {server}..... ')
-    json, df = map_from_standard_concept_id(concept_id=72990, vocabulary_id='ICD9CM')
+    print(f'test_cohd_io: testing /omop/mapFromStandardConceptID on {cr.server}..... ')
+    json, df = cr.map_from_standard_concept_id(concept_id=72990, vocabulary_id='ICD9CM')
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_class_id', str),
@@ -433,8 +443,8 @@ def test_mapToStandardConceptID():
     specified whether primary or secondary) to OMOP
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/mapToStandardConceptID on {server}..... ')
-    json, df = map_to_standard_concept_id(concept_code='715.3', vocabulary_id='ICD9CM')
+    print(f'test_cohd_io: testing /omop/mapToStandardConceptID on {cr.server}..... ')
+    json, df = cr.map_to_standard_concept_id(concept_code='715.3', vocabulary_id='ICD9CM')
 
     # Check that the results adhere to the expected schema
     schema = [_s('source_concept_code', str),
@@ -474,8 +484,8 @@ def test_vocabularies():
     """ Check the /omop/vocabularies endpoint to retrieve the list of vocabularies used.
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/vocabularies on {server}..... ')
-    json, df = vocabularies()
+    print(f'test_cohd_io: testing /omop/vocabularies on {cr.server}..... ')
+    json, df = cr.vocabularies()
 
     # Check that the results adhere to the expected schema
     schema = [_s('vocabulary_id', str)]
@@ -511,8 +521,8 @@ def test_xrefFromOMOP():
     with max distance 2.
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/xrefFromOMOP on {server}..... ')
-    json, df = xref_from_omop(concept_id=192855, mapping_targets=['UMLS'], distance=2, local=True, recommend=False)
+    print(f'test_cohd_io: testing /omop/xrefFromOMOP on {cr.server}..... ')
+    json, df = cr.xref_from_omop(concept_id=192855, mapping_targets=['UMLS'], distance=2, local=True, recommend=False)
 
     # Check that the results adhere to the expected schema
     schema = [_s('intermediate_omop_concept_code', str),
@@ -582,8 +592,8 @@ def test_xrefToOMOP():
     implementation, recommended mapping, and max distance 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/xrefToOMOP on {server}..... ')
-    json, df = xref_to_omop(curie='DOID:8398', distance=2, local=True, recommend=True)
+    print(f'test_cohd_io: testing /omop/xrefToOMOP on {cr.server}..... ')
+    json, df = cr.xref_to_omop(curie='DOID:8398', distance=2, local=True, recommend=True)
 
     # Check that the results adhere to the expected schema
     schema = [_s('intermediate_oxo_id', str),
@@ -625,8 +635,8 @@ def test_singleConceptFreq():
     obstructive pulmonary disease with acute lower respiratory infection) from dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/singleConceptFreq on {server}..... ')
-    json, df = concept_frequency(concept_ids=[4110056], dataset_id=2)
+    print(f'test_cohd_io: testing /frequencies/singleConceptFreq on {cr.server}..... ')
+    json, df = cr.concept_frequency(concept_ids=[4110056], dataset_id=2)
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_id', int),
@@ -656,8 +666,8 @@ def test_mostFrequentConcepts():
     """ Check the /frequencies/mostFrequentConcepts endpoints. Get the most frequent 50 procedures for dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/mostFrequentConcepts on {server}..... ')
-    json, df = most_frequent_concepts(limit=50, dataset_id=1, domain_id='Procedure')
+    print(f'test_cohd_io: testing /frequencies/mostFrequentConcepts on {cr.server}..... ')
+    json, df = cr.most_frequent_concepts(limit=50, dataset_id=1, domain_id='Procedure')
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_class_id', str),
@@ -708,8 +718,8 @@ def test_pairedConceptFreq():
     urinary bladder) and 2008271 (Injection or infusion of cancer chemotherapeutic substance) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/pairedConceptFreq on {server}..... ')
-    json, df = paired_concepts_frequency(concept_id_1=192855, concept_id_2=2008271, dataset_id=1)
+    print(f'test_cohd_io: testing /frequencies/pairedConceptFreq on {cr.server}..... ')
+    json, df = cr.paired_concepts_frequency(concept_id_1=192855, concept_id_2=2008271, dataset_id=1)
 
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
@@ -742,8 +752,8 @@ def test_associatedConceptFreq():
     Potassium 500 MG Oral Tablet) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/associatedConceptFreq on {server}..... ')
-    json, df = associated_concepts_freq(concept_id=19133905, dataset_id=1)
+    print(f'test_cohd_io: testing /frequencies/associatedConceptFreq on {cr.server}..... ')
+    json, df = cr.associated_concepts_freq(concept_id=19133905, dataset_id=1)
 
     # Check that the results adhere to the expected schema
     schema = [_s('associated_concept_id', int),
@@ -789,8 +799,8 @@ def test_associatedConceptDomainFreq():
     (Penicillin V Potassium 500 MG Oral Tablet) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/associatedConceptDomainFreq on {server}..... ')
-    json, df = associated_concept_domain_freq(concept_id=19133905, domain_id='Condition', dataset_id=1)
+    print(f'test_cohd_io: testing /frequencies/associatedConceptDomainFreq on {cr.server}..... ')
+    json, df = cr.associated_concept_domain_freq(concept_id=19133905, domain_id='Condition', dataset_id=1)
 
     # Check that the results adhere to the expected schema
     schema = [_s('associated_concept_id', int),
@@ -836,8 +846,8 @@ def test_chiSquare():
     UNT/ML Injectable Solution) and 4193704 (Type 2 diabetes mellitus without complication) from dataset 3
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/chiSquare on {server}..... ')
-    json, df = chi_square(concept_id_1=19078558, concept_id_2=4193704, dataset_id=3)
+    print(f'test_cohd_io: testing /association/chiSquare on {cr.server}..... ')
+    json, df = cr.chi_square(concept_id_1=19078558, concept_id_2=4193704, dataset_id=3)
 
     # Check that the results adhere to the expected schema
     schema = [_s('chi_square', float),
@@ -884,8 +894,8 @@ def test_obsExpRatio():
     from dataset 3
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/obsExpRatio on {server}..... ')
-    json, df = obs_exp_ratio(concept_id_1=19078558, concept_id_2=4193704, dataset_id=3)
+    print(f'test_cohd_io: testing /association/obsExpRatio on {cr.server}..... ')
+    json, df = cr.obs_exp_ratio(concept_id_1=19078558, concept_id_2=4193704, dataset_id=3)
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_id_1', int),
@@ -919,8 +929,8 @@ def test_relativeFrequency():
     frequency in dataset 3. Checks the response json conforms to the expected schema and includes the expected results
     (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/relativeFrequency on {server}..... ')
-    json, df = relative_frequency(concept_id_1=19078558, domain_id='Condition', dataset_id=3)
+    print(f'test_cohd_io: testing /association/relativeFrequency on {cr.server}..... ')
+    json, df = cr.relative_frequency(concept_id_1=19078558, domain_id='Condition', dataset_id=3)
 
     # Check that the results adhere to the expected schema
     schema = [_s('concept_2_count', int),
@@ -967,13 +977,16 @@ def test_relativeFrequency():
 def test_translator_query_100():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
-    print(f'test_cohd_io: testing /1.0.0/query on {server}..... ')
-    resp, query = translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-                                       dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                       max_results=10, local_oxo=True, timeout=300)
-    json = resp.json()
+    print(f'test_cohd_io: testing /1.0.0/query on {cr.server}..... ')
+    resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+                                          dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+                                          max_results=10, local_oxo=True, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
     reasoner_validator_10x.validate_Response(json)
 
     # There should be 10 results
@@ -982,20 +995,280 @@ def test_translator_query_100():
     print('...passed')
 
 
-def test_translator_query_11x():
-    """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema and that
-    COHD properly applies simple deductions on biolink:MolecularEntity.
+def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
+    """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
+    q2_categories.
     """
-    print(f'test_cohd_io: testing /query TRAPI 1.1) on {server}..... ')
-    resp, query = translator_query_110(node_1_curies='DOID:9053', node_2_categories='biolink:MolecularEntity',
-                                       method='obsExpRatio', dataset_id=3, confidence_interval=0.99,
-                                       min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True, timeout=300)
-    json = resp.json()
+    print(f'test_cohd_io: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
+    resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
+                                   dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+                                   max_results=max_results, local_oxo=True, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_11x.validate_Response(json)
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
+
+    # Check that all results are subclasses of qnode2
+    descendants = bm_toolkit.get_descendants(q2_category, formatted=True, reflexive=True)
+    kg_nodes = json['message']['knowledge_graph']['nodes']
+    for result in json['message']['results']:
+        obj_node_id = result['node_bindings']['n01'][0]['id']
+
+        assert obj_node_id in kg_nodes
+        obj_node = kg_nodes[obj_node_id]
+
+        # Check that at least one of the categories is a descendant of the requested node category
+        found = False
+        for cat in obj_node['categories']:
+            if cat in descendants:
+                found = True
+                break
+
+        assert found, f"{obj_node['categories']} not a descendant of {q2_category}"
+
+    print('...passed')
+
+
+def test_translator_query_named_thing():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:NamedThing
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:NamedThing')
+
+
+def test_translator_query_11x_named_disease_phenotypic():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:DiseaseOrPhenotypicFeature
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:DiseaseOrPhenotypicFeature')
+
+
+def test_translator_query_11x_named_drug():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:Drug
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Drug')
+
+
+def test_translator_query_11x_named_chemical():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:ChemicalSubstance
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:ChemicalSubstance')
+
+
+def test_translator_query_11x_named_procedure():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:Procedure
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
+
+
+def test_translator_query_11x_molecular_entity():
+    """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
+    biolink:ChemicalSubstance. COHD should return types that are a subclass
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
+
+
+def test_translator_query_unsupported_category():
+    """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
+    with no results.
+    """
+    print(f'test_cohd_io: testing TRAPI query with an unsupported category on {cr.server}..... ')
+    resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
+
+    # Should have 200 status response code
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 0 results or null
+    results = json['message']['results']
+    assert results is None or len(results) == 0, 'Found results when expecting none'
+
+    print('...passed')
+
+
+def test_translator_query_bad_category():
+    """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
+    """
+    print(f'test_cohd_io: testing TRAPI query with a non-biolink category on {cr.server}..... ')
+    resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
+
+    # Should have 200 status response code
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
+
+    print('...passed')
+
+
+def test_translator_query_no_predicate():
+    """ Check the TRAPI endpoint when not using a predicate. Expect results to be returned. """
+    print(f'test_cohd_io: testing TRAPI query without a predicate on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    },
+                    "obj": {
+                        "ids": ["DOID:9053"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj"
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 10 results
+    assert len(json['message']['results']) == 10
+
+    print('...passed')
+
+
+def test_translator_query_related_to():
+    """ Check the TRAPI endpoint when using a generic predicate (biolink:related_to). Expect results to be returned. """
+    print(f'test_cohd_io: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    },
+                    "obj": {
+                        "ids": ["DOID:9053"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:related_to"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 10 results
+    assert len(json['message']['results']) == 10
+
+    print('...passed')
+
+
+def test_translator_query_unsupported_predicate():
+    """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
+    print(f'test_cohd_io: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    },
+                    "obj": {
+                        "ids": ["DOID:9053"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:affects"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 400 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
+
+    print('...passed')
+
+
+def test_translator_query_bad_predicate():
+    """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
+    print(f'test_cohd_io: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    },
+                    "obj": {
+                        "ids": ["DOID:9053"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
 
     print('...passed')

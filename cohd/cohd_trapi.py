@@ -13,7 +13,7 @@ from numpy import argsort
 
 from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper, Mapping
-from .cohd import cache
+from .app import cache
 from .query_cohd_mysql import query_active_concepts
 
 
