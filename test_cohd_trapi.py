@@ -7,10 +7,13 @@ Intended to be run with pytest: pytest -s test_cohd_trapi.py
 from collections import namedtuple
 import requests
 import json as j
+from bmt import Toolkit
 
 from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
-from cohd.cohd_trapi import bm_toolkit
+
+# Static instance of the Biolink Model Toolkit
+bm_toolkit = Toolkit()
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
