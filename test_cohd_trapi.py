@@ -323,3 +323,289 @@ def test_translator_query_bad_predicate():
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
 
     print('...passed')
+
+
+def test_translator_query_q1_multiple_ids():
+    """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3 results """
+    print(f'test_cohd_io: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+                    },
+                    "obj": {
+                        "ids": ["DOID:9053"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 3 results
+    assert len(json['message']['results']) == 3
+
+    # All three results should be from the original queried CURIE list
+    ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+    for result in json['message']['results']:
+        id = result['node_bindings']['subj'][0]['id']
+        assert id in ids, f'Result subject {id} is not one of the original IDs {ids}'
+
+    print('...passed')
+
+
+def test_translator_query_q2_multiple_ids():
+    """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3 results """
+    print(f'test_cohd_io: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"]
+                    },
+                    "obj": {
+                        "ids": ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 3 results
+    assert len(json['message']['results']) == 3
+
+    # All three results should be from the original queried CURIE list
+    ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+    for result in json['message']['results']:
+        id = result['node_bindings']['obj'][0]['id']
+        assert id in ids, f'Result object {id} is not one of the original IDs {ids}'
+
+    print('...passed')
+
+
+def test_translator_query_q1_q2_multiple_ids():
+    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12
+    results """
+    print(f'test_cohd_io: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+                    },
+                    "obj": {
+                        "ids": ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 400 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be 12 results
+    assert len(json['message']['results']) == 12
+
+    # All three results should be from the original queried CURIE list
+    subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+    obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+    for result in json['message']['results']:
+        subj_id = result['node_bindings']['subj'][0]['id']
+        assert subj_id in subj_ids, f'Result subject {subj_id} is not one of the original IDs {subj_ids}'
+        obj_id = result['node_bindings']['obj'][0]['id']
+        assert obj_id in obj_ids, f'Result object {obj_id} is not one of the original IDs {obj_ids}'
+
+    print('...passed')
+
+
+def test_translator_query_multiple_categories():
+    """ Check the TRAPI endpoint when using multiple categories in the object node. UMLS:C0451709 is "Toxic liver
+    disease with acute hepatitis", which has low prevalence in COHD, hence will have few correlations (much less than
+    500). Run multiple queries with individual categories to get counts, and then run it with multiple categories to
+    make sure we're getting more results back. """
+    print(f'test_cohd_io: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query_disease = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["UMLS:C0451709"]
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 500
+        }
+    }
+    '''
+    resp_disease = requests.post(url, json=j.loads(query_disease), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp_disease.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json_disease = resp_disease.json()
+    reasoner_validator.validate_Response(json_disease)
+
+    num_results_disease = len(json_disease['message']['results'])
+
+    query_procedure = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["UMLS:C0451709"]
+                    },
+                    "obj": {
+                        "categories": ["biolink:Procedure"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 500
+        }
+    }
+    '''
+    resp_procedure = requests.post(url, json=j.loads(query_procedure), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp_procedure.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json_procedure = resp_procedure.json()
+    reasoner_validator.validate_Response(json_procedure)
+
+    num_results_procedure = len(json_procedure['message']['results'])
+
+    query_combined = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["UMLS:C0451709"]
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature", "biolink:Procedure"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 500
+        }
+    }
+    '''
+    resp_combined = requests.post(url, json=j.loads(query_combined), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp_combined.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json_combined = resp_combined.json()
+    reasoner_validator.validate_Response(json_combined)
+
+    num_results_combined = len(json_combined['message']['results'])
+
+    assert num_results_disease <= num_results_combined and num_results_procedure <= num_results_combined and \
+        num_results_combined <= (num_results_disease + num_results_procedure), \
+        'Number of results outside of expected range'
+
+    print('...passed')

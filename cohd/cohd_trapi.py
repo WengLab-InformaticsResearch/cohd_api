@@ -605,7 +605,7 @@ class BiolinkConceptMapper:
                         input_label = None
                         for sri_mapping in equivalent_ids:
                             if sri_mapping['identifier'] == curie:
-                                input_label = sri_mapping['label']
+                                input_label = sri_mapping.get('label')
                                 break
 
                         # Edit the mapping object to add the SRI Node Normalizer as the first step
