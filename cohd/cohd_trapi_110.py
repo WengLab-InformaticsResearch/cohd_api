@@ -30,13 +30,14 @@ class CohdTrapi110(CohdTrapi):
         self._valid_query = False
         self._invalid_query_response = None
         self._json_data = None
+        self._response = None
         self._query_graph = None
         self._concept_1_qnode_key = None
         self._concept_2_qnode_key = None
         self._query_options = None
         self._method = None
-        self._concept_1_omop_id = None
-        self._concept_2_omop_id = None
+        self._concept_1_omop_ids = None
+        self._concept_2_omop_ids = None
         self._dataset_id = None
         self._domain_class_pairs = None
         self._threshold = None
@@ -294,15 +295,16 @@ class CohdTrapi110(CohdTrapi):
         if edge_predicates is not None:
             edge_supported = False
             for edge_predicate in edge_predicates:
+                # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
-                    # Not a proper biolink predicate
                     self._valid_query = False
                     self._invalid_query_response = (f'{edge_predicate} was not recognized as a biolink predicate', 400)
                     return self._valid_query, self._invalid_query_response
+
                 # Check if any of the predicates are an ancestor of biolink:correlated_with
-                predicate_descendants = bm_toolkit.get_descendants(edge_predicate)
+                predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
                 for pd in predicate_descendants:
-                    if bm_toolkit.get_element(pd).slot_uri in CohdTrapi110.supported_edge_types:
+                    if pd in CohdTrapi110.supported_edge_types:
                         edge_supported = True
                         self._query_edge_predicates = edge_predicates
                         break
@@ -341,10 +343,12 @@ class CohdTrapi110(CohdTrapi):
             concept_2_qnode = object_qnode
             node_ids = node_ids.union(subject_qnode['ids'])
         if 'ids' in object_qnode:
-            self._concept_1_qnode_key = object_qnode_key
-            concept_1_qnode = object_qnode
-            self._concept_2_qnode_key = subject_qnode_key
-            concept_2_qnode = subject_qnode
+            if 'ids' not in subject_qnode:
+                # Swap the subj/obj mapping to concept1/2 if only the obj node has IDs
+                self._concept_1_qnode_key = object_qnode_key
+                concept_1_qnode = object_qnode
+                self._concept_2_qnode_key = subject_qnode_key
+                concept_2_qnode = subject_qnode
             node_ids = node_ids.union(object_qnode['ids'])
         node_ids = list(node_ids)
 
@@ -354,116 +358,156 @@ class CohdTrapi110(CohdTrapi):
             self._invalid_query_response = ('COHD TRAPI requires at least one node to have an ID', 400)
             return self._valid_query, self._invalid_query_response
 
-        # Find BLM - OMOP mappings for all identified query nodes
-        node_mappings = self._concept_mapper.map_to_omop(node_ids)
-
-        # Get concept_id_1. QNode IDs is a list. For now, just use the first ID that can map to OMOP
-        # Todo: ID list needs to be handled properly
-        found = False
-        ids = concept_1_qnode['ids']
-        for curie in ids:
-            if node_mappings[curie] is not None:
-                # Found an OMOP mapping. Use this CURIE
-                self._concept_1_qnode_curie = curie
-                self._concept_1_mapping = node_mappings[curie]
-                self._concept_1_omop_id = self._concept_1_mapping['omop_concept_id']
-
-                # Keep track of this mapping in the query_graph for the response
-                self.log(f'{curie} mapped to  OMOP concept ID {self._concept_1_omop_id}', level=logging.INFO)
-                concept_1_qnode['mapped_omop_concept'] = self._concept_1_mapping
-                found = True
-                break
-        if not found:
-            self._valid_query = False
-            description = f'Could not map node {self._concept_1_qnode_key} to OMOP concept'
-            self.log(f'Could not map node {self._concept_1_qnode_key} to OMOP concept',
-                     code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
-            response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-
         # Get qnode categories and check the formatting
         self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
         if self._concept_1_qnode_categories is not None:
             self._concept_1_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_1_qnode_categories)
-            concept_1_qnode['categories'] = self._concept_1_qnode_categories
+
+            # Check if any of the categories supported by COHD are included in the categories list (or one of their
+            # descendants)
+            found_supported_cat = False
+            for supported_cat in CohdTrapi110.supported_categories:
+                for queried_cat in self._concept_1_qnode_categories:
+                    # Check if this is a valid biolink category
+                    if not bm_toolkit.is_category(queried_cat):
+                        self._valid_query = False
+                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
+                                                        400)
+                        return self._valid_query, self._invalid_query_response
+
+                    # Check if the COHD supported categories are descendants of the queried categories
+                    if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
+                        found_supported_cat = True
+                        break
+
+            if not found_supported_cat:
+                # None of the categories for this QNode were mapped to OMOP
+                self._valid_query = False
+                description = f"None of QNode {self._concept_1_qnode_key}'s categories " \
+                              f"({self._concept_1_qnode_categories}) are supported by COHD"
+                response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
+
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
             self._concept_2_qnode_categories = CohdTrapi110._process_qnode_category(self._concept_2_qnode_categories)
             concept_2_qnode['categories'] = self._concept_2_qnode_categories
 
+            # Check if any of the categories supported by COHD are included in the categories list (or one of their
+            # descendants)
+            self._domain_class_pairs = set()
+            for supported_cat in CohdTrapi110.supported_categories:
+                for queried_cat in self._concept_2_qnode_categories:
+                    # Check if this is a valid biolink category
+                    if not bm_toolkit.is_category(queried_cat):
+                        self._valid_query = False
+                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
+                                                        400)
+                        return self._valid_query, self._invalid_query_response
+
+                    # Check if the COHD supported categories are descendants of the queried categories
+                    if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
+                        dc_pair = map_blm_class_to_omop_domain(supported_cat)
+                        self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
+
+            if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
+                # None of the categories for this QNode were mapped to OMOP
+                self._valid_query = False
+                description = f"None of QNode {self._concept_2_qnode_key}'s categories " \
+                              f"({self._concept_2_qnode_categories}) are supported by COHD"
+                response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
+
+        # Find BLM - OMOP mappings for all identified query nodes
+        node_mappings = self._concept_mapper.map_to_omop(node_ids)
+
+        # Get concept_id_1. QNode IDs is a list. Map as many IDs to OMOP as possible
+        self._concept_1_omop_ids = list()
+        found = False
+        ids = concept_1_qnode['ids']
+        for curie in ids:
+            if node_mappings[curie] is not None:
+                # Found an OMOP mapping. Use this CURIE
+                concept_1_mapping = node_mappings[curie]
+                concept_1_omop_id = int(concept_1_mapping.output_id.split(':')[1])
+                self._concept_1_omop_ids.append(concept_1_omop_id)
+                found = True
+
+                # Create a KG node now with the curie and mapping specified
+                self._get_kg_node(concept_1_omop_id, query_node_curie=curie, mapping=concept_1_mapping)
+
+                # Debug logging
+                message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
+                self.log(message, level=logging.DEBUG)
+            else:
+                message = f"Could not map node '{self._concept_1_qnode_key}' ID {curie} to OMOP concept"
+                self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
+        if not found:
+            self._valid_query = False
+            description = f"Could not map node '{self._concept_1_qnode_key}' to OMOP concept"
+            self.log(description, code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
+            response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+
         # Get the desired association concept or category
         ids = concept_2_qnode.get('ids')
         if ids is not None and ids:
-            # IDs were specified for the second QNode also
-            # QNode IDs can be a list. For now, just use the first ID that can map to OMOP. Todo: handle list properly
+            # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
+            self._domain_class_pairs = None
+
+            # Map as many of the QNode IDs to OMOP as we can
+            self._concept_2_omop_ids = list()
             found = False
             for curie in ids:
                 if node_mappings[curie] is not None:
                     # Found an OMOP mapping. Use this CURIE
-                    self._concept_2_qnode_curie = curie
-                    self._concept_2_mapping = node_mappings[curie]
-                    self._concept_2_omop_id = self._concept_2_mapping['omop_concept_id']
-
-                    # Keep track of this mapping in the query_graph for the response
-                    self.log(f'{curie} mapped to  OMOP concept ID {self._concept_2_omop_id}', level=logging.INFO)
-                    concept_2_qnode['mapped_omop_concept'] = self._concept_2_mapping
+                    concept_2_mapping = node_mappings[curie]
+                    concept_2_omop_id = int(concept_2_mapping.output_id.split(':')[1])
+                    self._concept_2_omop_ids.append(concept_2_omop_id)
                     found = True
 
-                    # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
-                    self._domain_class_pairs = None
-                    break
+                    # Create a KG node now with the curie and mapping specified
+                    self._get_kg_node(concept_2_omop_id, query_node_curie=curie, mapping=concept_2_mapping)
+
+                    # Debug logging
+                    message = f"Mapped node '{self._concept_2_qnode_key}' ID {curie} to OMOP:{concept_2_omop_id}"
+                    self.log(message, level=logging.DEBUG)
+                else:
+                    message = f"Could not map node '{self._concept_2_qnode_key}' ID {curie} to OMOP concept"
+                    self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
             if not found:
                 self._valid_query = False
-                description = f'Could not map node {self._concept_2_qnode_key} to OMOP concept'
+                description = f"Could not map node '{self._concept_2_qnode_key}' to OMOP concept"
+                self.log(description, code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
                 response = self._trapi_mini_response(TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
         elif self._concept_2_qnode_categories is not None and self._concept_2_qnode_categories:
             # If CURIE is not specified and target node's category is specified, then query the association
             # between concept_1 and all concepts in the domain
-            self._concept_2_qnode_curie = None
-            self._concept_2_omop_id = None
+            self._concept_2_omop_ids = None
 
             # If biolink:NamedThing is in the list of categories, query for associations against all concepts
             if 'biolink:NamedThing' in self._concept_2_qnode_categories:
-                self._concept_2_qnode_curie = None
-                self._concept_2_omop_id = None
                 self._domain_class_pairs = None
                 self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
             else:
-                self._domain_class_pairs = set()
-                # Check if any of the categories supported by COHD are included in the categories list (or one of their
-                # descendants)
-                for supported_cat in CohdTrapi110.supported_categories:
-                    supported_cat_name = bm_toolkit.get_element(supported_cat).name
-                    for queried_cat in self._concept_2_qnode_categories:
-                        if supported_cat_name in bm_toolkit.get_descendants(queried_cat):
-                            dc_pair = map_blm_class_to_omop_domain(supported_cat)
-                            self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
-
-                if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
-                    # None of the categories for this QNode were mapped to OMOP
-                    self._valid_query = False
-                    description = f"None of QNode {self._concept_2_qnode_key}'s categories " \
-                                  f"({self._concept_2_qnode_categories}) are supported by COHD"
-                    response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
-                    self._invalid_query_response = response, 200
-                    return self._valid_query, self._invalid_query_response
-
                 for dc_pair in self._domain_class_pairs:
                     if dc_pair.concept_class_id is not None:
-                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' \
+                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' 
                                  f'{dc_pair.concept_class_id}', level=logging.INFO)
                     else:
                         self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}', level=logging.INFO)
         else:
             # No CURIE or type specified, query for associations against all concepts
-            self._concept_2_qnode_curie = None
-            self._concept_2_omop_id = None
+            self._concept_2_omop_ids = None
             self._domain_class_pairs = None
+            self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
 
-        if 'contraints' in concept_1_qnode:
+        if 'constraints' in concept_1_qnode:
             self._valid_query = False
             self._invalid_query_response = 'COHD does not support constraints on a QNode with ids specified', 400
             return self._valid_query, self._invalid_query_response
@@ -509,35 +553,55 @@ class CohdTrapi110(CohdTrapi):
         # Check if the query is valid
         if self._valid_query:
             self._cohd_results = []
-            if self._concept_2_omop_id is None and self._domain_class_pairs:
-                # Node 2 not specified, but node 2's type was specified. Query associations between Node 1 and the
-                # requested types (domains)
-                for domain_id, concept_class_id in self._domain_class_pairs:
-                    new_results = query_cohd_mysql.query_association(method=self._method,
-                                                                     concept_id_1=self._concept_1_omop_id,
-                                                                     concept_id_2=self._concept_2_omop_id,
-                                                                     dataset_id=self._dataset_id,
-                                                                     domain_id=domain_id,
-                                                                     concept_class_id=concept_class_id,
-                                                                     confidence=self._confidence_interval)
-                    if new_results:
-                        self._cohd_results.extend(new_results['results'])
-            else:
-                # Either Node 2 was specified by a CURIE or no type (domain) was specified for type 2. Query the
-                # associations between Node 1 and Node 2 or between Node 1 and all domains
-                json_results = query_cohd_mysql.query_association(method=self._method,
-                                                                  concept_id_1=self._concept_1_omop_id,
-                                                                  concept_id_2=self._concept_2_omop_id,
-                                                                  dataset_id=self._dataset_id,
-                                                                  domain_id=None,
-                                                                  confidence=self._confidence_interval)
-                self._cohd_results = json_results['results']
+            self._initialize_trapi_response()
+            new_cohd_results = []
+
+            for concept_1_omop_id in self._concept_1_omop_ids:
+                if self._concept_2_omop_ids is None:
+                    # Node 2's IDs were not specified
+                    if self._domain_class_pairs:
+                        # Node 2's category was specified. Query associations between Node 1 and the requested
+                        # categories (domains)
+                        for domain_id, concept_class_id in self._domain_class_pairs:
+                            json_results = query_cohd_mysql.query_association(method=self._method,
+                                                                              concept_id_1=concept_1_omop_id,
+                                                                              concept_id_2=None,
+                                                                              dataset_id=self._dataset_id,
+                                                                              domain_id=domain_id,
+                                                                              concept_class_id=concept_class_id,
+                                                                              confidence=self._confidence_interval)
+                            if json_results:
+                                new_cohd_results.extend(json_results['results'])
+                    else:
+                        # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
+                        # domains
+                        json_results = query_cohd_mysql.query_association(method=self._method,
+                                                                          concept_id_1=concept_1_omop_id,
+                                                                          concept_id_2=None,
+                                                                          dataset_id=self._dataset_id,
+                                                                          domain_id=None,
+                                                                          confidence=self._confidence_interval)
+                        if json_results:
+                            new_cohd_results.extend(json_results['results'])
+
+                else:
+                    # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
+                    for concept_2_id in self._concept_2_omop_ids:
+                        json_results = query_cohd_mysql.query_association(method=self._method,
+                                                                          concept_id_1=concept_1_omop_id,
+                                                                          concept_id_2=concept_2_id,
+                                                                          dataset_id=self._dataset_id,
+                                                                          domain_id=None,
+                                                                          confidence=self._confidence_interval)
+                        if json_results:
+                            new_cohd_results.extend(json_results['results'])
 
             # Results within each query call should be sorted, but still need to be sorted across query calls
-            self._cohd_results = sort_cohd_results(self._cohd_results)
+            new_cohd_results = sort_cohd_results(new_cohd_results)
 
             # Convert results from COHD format to Translator Reasoner standard
-            return self._serialize_trapi_response()
+            self._add_results_to_trapi(new_cohd_results)
+            return self._finalize_trapi_response()
         else:
             # Invalid query. Return the invalid query response
             return self._invalid_query_response
@@ -561,8 +625,7 @@ class CohdTrapi110(CohdTrapi):
 
         # Get node for concept 1
         concept_1_id = cohd_result['concept_id_1']
-        node_1 = self._get_kg_node(concept_1_id, query_node_curie=self._concept_1_qnode_curie,
-                                   query_node_categories=self._concept_1_qnode_categories)
+        node_1 = self._get_kg_node(concept_1_id, query_node_categories=self._concept_1_qnode_categories)
 
         if self._biolink_only and not node_1.get('biolink_compliant', False):
             # Only include results when node_1 maps to biolink
@@ -573,7 +636,6 @@ class CohdTrapi110(CohdTrapi):
         concept_2_name = cohd_result.get('concept_2_name')
         concept_2_domain = cohd_result.get('concept_2_domain')
         node_2 = self._get_kg_node(concept_2_id, concept_2_name, concept_2_domain,
-                                   query_node_curie=self._concept_2_qnode_curie,
                                    query_node_categories=self._concept_2_qnode_categories)
 
         if self._biolink_only and not node_2.get('biolink_compliant', False):
@@ -626,7 +688,7 @@ class CohdTrapi110(CohdTrapi):
         return result
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
-                     query_node_categories=None):
+                     query_node_categories=None, mapping: Mapping = None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
@@ -638,6 +700,7 @@ class CohdTrapi110(CohdTrapi):
         concept_class: OMOP concept class ID
         query_node_curie: CURIE used in the QNode corresponding to this KG Node
         query_node_categories: list of categories for this QNode
+        mapping: mapping between OMOP and Biolink
 
         Returns
         -------
@@ -669,8 +732,7 @@ class CohdTrapi110(CohdTrapi):
             # Map to Biolink Model or other target ontologies
             blm_category = map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)
             mapped_to_blm = False
-            mapping = None
-            if self._concept_mapper:
+            if mapping is None and self._concept_mapper:
                 mapping = self._concept_mapper.map_from_omop(concept_id, blm_category)
 
             if query_node_curie is not None and query_node_curie:
@@ -679,12 +741,12 @@ class CohdTrapi110(CohdTrapi):
                 primary_curie = query_node_curie
                 # Find the label from the mappings
                 if mapping is not None:
-                    primary_label = mapping['target_label']
+                    primary_label = mapping.output_label
             elif mapping is not None:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
                 # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                primary_curie = mapping['target_curie']
-                primary_label = mapping['target_label']
+                primary_curie = mapping.output_id
+                primary_label = mapping.output_label
                 mapped_to_blm = True
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
@@ -726,6 +788,17 @@ class CohdTrapi110(CohdTrapi):
                     ]
                 }
             }
+
+            # Add the OMOP-Biolink mapping
+            if mapping is not None:
+                node['kg_node']['attributes'].append({
+                            'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                            'original_attribute_name': 'Database cross-mapping',
+                            'value': mapping.history,
+                            'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                            'attribute_source': 'COHD',
+                        })
+
             self._kg_nodes[concept_id] = node
 
         return node
@@ -839,8 +912,19 @@ class CohdTrapi110(CohdTrapi):
 
         return kg_node_1, kg_node_2, kg_edge, ke_id
 
-    def _serialize_trapi_response(self,
-                                  status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
+    def _initialize_trapi_response(self):
+        """ Starts the TRAPI response message
+        """
+        self._response = {
+            # From TRAPI Extended
+            'reasoner_id': 'COHD',
+            'tool_version': 'COHD 4.0.0',
+            'schema_version': '1.1.0',
+            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'query_options': self._query_options,
+        }
+
+    def _add_results_to_trapi(self, new_cohd_results):
         """ Creates the response message with JSON data in Reasoner Std API format
 
         Returns
@@ -848,34 +932,42 @@ class CohdTrapi110(CohdTrapi):
         Response message with JSON data in Reasoner Std API format
         """
         if self._cohd_results is not None:
-            for result in self._cohd_results:
+            self._cohd_results.extend(new_cohd_results)
+            n_cohd_results = len(new_cohd_results)
+            for i, result in enumerate(new_cohd_results):
                 self._add_cohd_result(result, self._criteria)
 
                 # Don't add more than the maximum number of results
                 if len(self._results) >= self._max_results:
+                    if i < (n_cohd_results - 1):
+                        # Inform the user that there may be additional results
+                        self.log(f'Results limit ({self._max_results}) reached. There may be additional associations.',
+                                 level=logging.INFO)
                     break
 
+    def _finalize_trapi_response(self, status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
+        """ Finalizes the TRAPI response
+
+        Returns
+        -------
+        JSON TRAPI response
+        """
         if len(self._results) == 0:
             status = TrapiStatusCode.NO_RESULTS
+        self._response['status'] = status.value
 
-        response = {
-            'status': status.value,
-            'description': f'COHD returned {len(self._results)} results.',
-            'message': {
-                'results': self._results,
-                'query_graph': self._query_graph,
-                'knowledge_graph': self._knowledge_graph
-            },
-            # From TRAPI Extended
-            'reasoner_id': 'COHD',
-            'tool_version': 'COHD 3.0.0',
-            'schema_version': '1.0.0',
-            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'query_options': self._query_options,
+        self._response['description'] = f'COHD returned {len(self._results)} results.'
+
+        self._response['message'] = {
+            'results': self._results,
+            'query_graph': self._query_graph,
+            'knowledge_graph': self._knowledge_graph
         }
+
         if self._logs is not None and self._logs:
-            response['logs'] = self._logs
-        return jsonify(response)
+            self._response['logs'] = self._logs
+
+        return jsonify(self._response)
 
     def _trapi_mini_response(self,
                              status: TrapiStatusCode,

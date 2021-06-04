@@ -220,8 +220,8 @@ def omop_to_biolink(request):
     normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
     for omop_id in omop_ids:
         normalized_mapping = None
-        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id]['target_curie']] is not None:
-            normalized_mapping = normalized_nodes[mappings[omop_id]['target_curie']]
+        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].output_id] is not None:
+            normalized_mapping = normalized_nodes[mappings[omop_id].output_id]
         normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
