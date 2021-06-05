@@ -941,7 +941,7 @@ def translator_biolink_to_omop(curies):
     """
     url = f'{server}/translator/biolink_to_omop'
     response = requests.post(url, json={'curies': curies})
-    return response.json()
+    return response
 
 
 def translator_omop_to_biolink(omop_ids):
@@ -957,4 +957,4 @@ def translator_omop_to_biolink(omop_ids):
     """
     url = f'{server}/translator/omop_to_biolink'
     response = requests.post(url, json={'omop_ids': omop_ids})
-    return response.json()
+    return response

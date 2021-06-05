@@ -175,13 +175,16 @@ def biolink_to_omop(request):
     # Convert the Mappings object into a dict for return
     mappings_j = dict()
     for curie, mapping in mappings.items():
-        omop_id = int(mapping.output_id.split(':')[1])
-        mappings_j[curie] = {
-            'distance': mapping.get_distance(),
-            'omop_concept_id': omop_id,
-            'omop_concept_name': mapping.output_label,
-            'mapping_history': mapping.history
-        }
+        if mapping is None:
+            mappings_j[curie] = None
+        else:
+            omop_id = int(mapping.output_id.split(':')[1])
+            mappings_j[curie] = {
+                'distance': mapping.get_distance(),
+                'omop_concept_id': omop_id,
+                'omop_concept_name': mapping.output_label,
+                'mapping_history': mapping.history
+            }
 
     return jsonify(mappings_j)
 
@@ -226,6 +229,8 @@ def omop_to_biolink(request):
             blm_category = map_omop_domain_to_blm_class(domain_id, concept_class_id, )
             mapping, _ = concept_mapper.map_from_omop(omop_id, blm_category)
             mappings[omop_id] = mapping
+        else:
+            mappings[omop_id] = None
 
     # Normalize with SRI Node Normalizer
     normalized_mappings = dict()

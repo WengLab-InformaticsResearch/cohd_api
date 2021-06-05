@@ -32,7 +32,7 @@ translator_query = cr.translator_query_110
 # def test_translator_query_100():
 #     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
 #     """
-#     print(f'test_cohd_io: testing /1.0.0/query on {cr.server}..... ')
+#     print(f'test_cohd_trapi: testing /1.0.0/query on {cr.server}..... ')
 #     resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
 #                                           dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
 #                                           max_results=10, local_oxo=True, timeout=300)
@@ -54,7 +54,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
     q2_categories.
     """
-    print(f'test_cohd_io: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
@@ -143,7 +143,7 @@ def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
     with no results.
     """
-    print(f'test_cohd_io: testing TRAPI query with an unsupported category on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with an unsupported category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
 
     # Should have 200 status response code
@@ -163,7 +163,7 @@ def test_translator_query_unsupported_category():
 def test_translator_query_bad_category():
     """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
     """
-    print(f'test_cohd_io: testing TRAPI query with a non-biolink category on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with a non-biolink category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
 
     # Should have 200 status response code
@@ -174,7 +174,7 @@ def test_translator_query_bad_category():
 
 def test_translator_query_no_predicate():
     """ Check the TRAPI endpoint when not using a predicate. Expect results to be returned. """
-    print(f'test_cohd_io: testing TRAPI query without a predicate on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query without a predicate on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -219,7 +219,7 @@ def test_translator_query_no_predicate():
 
 def test_translator_query_related_to():
     """ Check the TRAPI endpoint when using a generic predicate (biolink:related_to). Expect results to be returned. """
-    print(f'test_cohd_io: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -265,7 +265,7 @@ def test_translator_query_related_to():
 
 def test_translator_query_unsupported_predicate():
     """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
-    print(f'test_cohd_io: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -304,7 +304,7 @@ def test_translator_query_unsupported_predicate():
 
 def test_translator_query_bad_predicate():
     """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
-    print(f'test_cohd_io: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -343,7 +343,7 @@ def test_translator_query_bad_predicate():
 
 def test_translator_query_q1_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3 results """
-    print(f'test_cohd_io: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -395,7 +395,7 @@ def test_translator_query_q1_multiple_ids():
 
 def test_translator_query_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3 results """
-    print(f'test_cohd_io: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -448,7 +448,7 @@ def test_translator_query_q2_multiple_ids():
 def test_translator_query_q1_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12
     results """
-    print(f'test_cohd_io: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -506,7 +506,7 @@ def test_translator_query_multiple_categories():
     disease with acute hepatitis", which has low prevalence in COHD, hence will have few correlations (much less than
     500). Run multiple queries with individual categories to get counts, and then run it with multiple categories to
     make sure we're getting more results back. """
-    print(f'test_cohd_io: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query_disease = '''
@@ -623,5 +623,79 @@ def test_translator_query_multiple_categories():
     assert num_results_disease <= num_results_combined and num_results_procedure <= num_results_combined and \
         num_results_combined <= (num_results_disease + num_results_procedure), \
         'Number of results outside of expected range'
+
+    print('...passed')
+
+
+def test_biolink_to_omop():
+    """ Check that the /translator/biolink_to_omop is functioning with good CURIEs """
+    print(f'test_cohd_trapi: testing /translator/biolink_to_omop on {cr.server}..... ')
+
+    curies = ['HP:0002907', 'MONDO:0001187']
+    response = cr.translator_biolink_to_omop(curies)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each curie has a non-null mapping
+    j = response.json()
+    for curie in curies:
+        assert j.get(curie) is not None, f'Did not find a mapping for curie {curie}'
+
+    print('...passed')
+    
+
+def test_biolink_to_omop_bad():
+    """ Check /translator/biolink_to_omop with bad CURIEs """
+    print(f'test_cohd_trapi: testing /translator/biolink_to_omop with bad CURIEs on {cr.server}..... ')
+
+    curies = ['HP:0002907BAD', 'MONDO:0001187BAD']
+    response = cr.translator_biolink_to_omop(curies)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each curie has a null mapping
+    j = response.json()
+    for curie in curies:
+        assert curie in j, f'Did not find curie {curie} in response'
+        assert j[curie] is None, f'Found a non-null mapping for curie {curie}'
+
+    print('...passed')
+
+
+def test_omop_to_biolink():
+    """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
+    print(f'test_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
+
+    omop_ids = ['78472', '197508']
+    response = cr.translator_omop_to_biolink(omop_ids)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each OMOP ID has a non-null mapping
+    j = response.json()
+    for omop_id in omop_ids:
+        assert j.get(omop_id) is not None, f'Did not find a mapping for OMOP ID {omop_id}'
+
+    print('...passed')
+
+
+def test_omop_to_biolink_bad():
+    """ Check /translator/omop_to_biolink with bad OMOP IDs """
+    print(f'test_cohd_trapi: testing /translator/omop_to_biolink with bad OMOP IDs on {cr.server}..... ')
+
+    omop_ids = ['78472197508']
+    response = cr.translator_omop_to_biolink(omop_ids)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each OMOP ID has a non-null mapping
+    j = response.json()
+    for omop_id in omop_ids:
+        assert omop_id in j, f'Did not find OMOP ID {omop_id} in response'
+        assert j[omop_id] is None, f'Found a non-null mapping for OMOP ID {omop_id}'
 
     print('...passed')
