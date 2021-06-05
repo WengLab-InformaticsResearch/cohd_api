@@ -243,6 +243,7 @@ def fix_blm_category(blm_category):
         'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
         'biolink:drug': 'biolink:Drug',
         'biolink:phenomenon': 'biolink:Phenomenon',
+        'biolink:phenotypic_feature': 'biolink:PhenotypicFeature',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
         'biolink:procedure': 'biolink:Procedure'
     }
@@ -263,8 +264,10 @@ def suggest_blm_category(blm_category: str) -> Optional[str]:
     The preferred Biolink category, or None
     """
     suggestions = {
-        # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease.
-        'biolink:Disease': 'biolink:DiseaseOrPhenotypicFeature'
+        # OMOP conditions are better represented as DiseaseOrPhenotypicFeature than as Disease. We used to replace
+        # biolink:Disease with biolink:DiseaseOrPhenotypicFeature. However, now we won't make the replacement anymore
+        # and will rely on the category suggested by SRI to distinguish between Disease and PhenotypicFeature.
+        # 'biolink:Disease': 'biolink:DiseaseOrPhenotypicFeature'
     }
     return suggestions.get(blm_category)
 
@@ -288,6 +291,8 @@ def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
         'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
         'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
+        'biolink:Disease': [DomainClass('Condition', None)],
+        'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Drug': [DomainClass('Drug', None)],
         'biolink:Phenomenon': [DomainClass('Measurement', None),
                                DomainClass('Observation', None)],
@@ -569,7 +574,7 @@ class BiolinkConceptMapper:
         return str(d)
 
     @cache.memoize(timeout=3628800, cache_none=True)
-    def map_to_omop(self, curies: List[str]) -> Dict[str, Mapping]:
+    def map_to_omop(self, curies: List[str]) -> Tuple[Dict[str, Mapping], Optional[Dict[str, Any]]]:
         """ Map to OMOP concept from ontology
 
         Parameters
@@ -578,7 +583,7 @@ class BiolinkConceptMapper:
 
         Returns
         -------
-        Dict of Mapping objects
+        Tuple (Dict of Mapping objects, normalized curies from SRI)
         """
         # Get equivalent identifiers from SRI Node Normalizer
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
@@ -619,10 +624,10 @@ class BiolinkConceptMapper:
 
             omop_mappings[curie] = mapping
 
-        return omop_mappings
+        return omop_mappings, normalized_nodes
 
     @cache.memoize(timeout=3628800, cache_none=True)
-    def map_from_omop(self, concept_id: int, blm_category: str) -> Optional[Mapping]:
+    def map_from_omop(self, concept_id: int, blm_category: str) -> Tuple[Optional[Mapping], Optional[List]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
@@ -632,18 +637,18 @@ class BiolinkConceptMapper:
 
         Returns
         -------
-        Mapping object or None
+        tuple: (Mapping object or None, list of categories or None)
         """
         if blm_category not in self.biolink_mappings_as_oxo:
             # No target ontologies defined for this Biolink category
-            return None
+            return None, None
 
         # Get mappings from ConceptMapper
         target_ontologies = self.biolink_mappings_as_oxo[blm_category]
         mappings = self._oxo_concept_mapper.map_from_omop_to_target(concept_id, target_ontologies)
 
         if mappings is None:
-            return mappings
+            return None, None
 
         # For each of the mappings, change the prefix to the Biolink Model convention
         for mapping in mappings:
@@ -663,7 +668,9 @@ class BiolinkConceptMapper:
                 for m in m_d:
                     cm_target_curie = m.output_id
                     if cm_target_curie in normalized_nodes and normalized_nodes[cm_target_curie] is not None:
-                        canonical_node = normalized_nodes[cm_target_curie]['id']
+                        normalized_node = normalized_nodes[cm_target_curie]
+                        canonical_node = normalized_node['id']
+                        normalized_categories = normalized_node['type']
 
                         # If SRI normalizer suggests a different ID as canonical, add the mapping provenance
                         if canonical_node['identifier'] != m.output_id:
@@ -674,7 +681,7 @@ class BiolinkConceptMapper:
                         if 'label' in canonical_node:
                             m.output_label = canonical_node['label']
 
-                        return m
+                        return m, normalized_categories
 
         # Did not find any canonical nodes from SRI Node Normalizer
         # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
@@ -689,9 +696,9 @@ class BiolinkConceptMapper:
                 for m in m_d:
                     if m.output_id.split(':')[0] == prefix:
                         # Found the priority prefix with the shortest distance. Return the mapping
-                        return m
+                        return m, None
 
-        return None
+        return None, None
 
     @staticmethod
     def clear_cache():
@@ -765,7 +772,7 @@ class SriNodeNormalizer:
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
 
     @staticmethod
-    def get_normalized_nodes(curies: List[str]) -> Union[Dict[str, Any], None]:
+    def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, Any]]:
         """ Straightforward call to get_normalized_nodes. Returns json from response.
 
         Parameters

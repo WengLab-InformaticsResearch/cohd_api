@@ -27,26 +27,27 @@ cr.server = 'https://cohd.io/api'
 reasoner_validator = reasoner_validator_11x
 translator_query = cr.translator_query_110
 
-
-def test_translator_query_100():
-    """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
-    """
-    print(f'test_cohd_io: testing /1.0.0/query on {cr.server}..... ')
-    resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-                                          dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                          max_results=10, local_oxo=True, timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    reasoner_validator_10x.validate_Response(json)
-
-    # There should be 10 results
-    assert len(json['message']['results']) == 10
-
-    print('...passed')
+# No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
+# between TRAPI 1.1 to 1.2
+# def test_translator_query_100():
+#     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
+#     """
+#     print(f'test_cohd_io: testing /1.0.0/query on {cr.server}..... ')
+#     resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+#                                           dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+#                                           max_results=10, local_oxo=True, timeout=300)
+#
+#     # Expect HTTP 200 status response
+#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+#
+#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+#     json = resp.json()
+#     reasoner_validator_10x.validate_Response(json)
+#
+#     # There should be 10 results
+#     assert len(json['message']['results']) == 10
+#
+#     print('...passed')
 
 
 def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
@@ -95,31 +96,43 @@ def test_translator_query_named_thing():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:NamedThing')
 
 
-def test_translator_query_11x_disease_phenotypic():
+def test_translator_query_disease_phenotypic():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:DiseaseOrPhenotypicFeature
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:DiseaseOrPhenotypicFeature')
 
 
-def test_translator_query_11x_drug():
+def test_translator_query_disease():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:Disease
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Disease')
+
+
+def test_translator_query_phenotypic():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:DiseaseOrPhenotypicFeature
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:PhenotypicFeature')
+
+
+def test_translator_query_drug():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Drug
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Drug')
 
 
-def test_translator_query_11x_chemical():
+def test_translator_query_chemical():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:ChemicalSubstance
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:ChemicalSubstance')
 
 
-def test_translator_query_11x_procedure():
+def test_translator_query_procedure():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Procedure
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
 
 
-def test_translator_query_11x_molecular_entity():
+def test_translator_query_molecular_entity():
     """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
     biolink:ChemicalSubstance. COHD should return types that are a subclass
     """

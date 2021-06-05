@@ -18,8 +18,8 @@ class CohdTrapi110(CohdTrapi):
     """
 
     # Biolink categories that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
-    supported_categories = ['biolink:ChemicalSubstance', 'biolink:DiseaseOrPhenotypicFeature',
-                            'biolink:Drug', 'biolink:Procedure']
+    supported_categories = ['biolink:ChemicalSubstance', 'biolink:Disease', 'biolink:Drug', 'biolink:PhenotypicFeature',
+                            'biolink:Procedure']
 
     # Biolink predicates that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with']
@@ -421,7 +421,7 @@ class CohdTrapi110(CohdTrapi):
                 return self._valid_query, self._invalid_query_response
 
         # Find BLM - OMOP mappings for all identified query nodes
-        node_mappings = self._concept_mapper.map_to_omop(node_ids)
+        node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(node_ids)
 
         # Get concept_id_1. QNode IDs is a list. Map as many IDs to OMOP as possible
         self._concept_1_omop_ids = list()
@@ -435,8 +435,15 @@ class CohdTrapi110(CohdTrapi):
                 self._concept_1_omop_ids.append(concept_1_omop_id)
                 found = True
 
+                # If category wasn't specified in QNode, try to get it from SRI Node Normalizer results
+                qnode_categories = self._concept_1_qnode_categories
+                if self._concept_1_qnode_categories is None and normalized_nodes is not None \
+                        and normalized_nodes.get(curie) is not None:
+                    qnode_categories = normalized_nodes[curie].get('type', None)
+
                 # Create a KG node now with the curie and mapping specified
-                self._get_kg_node(concept_1_omop_id, query_node_curie=curie, mapping=concept_1_mapping)
+                self._get_kg_node(concept_1_omop_id, query_node_curie=curie,
+                                  query_node_categories=qnode_categories, mapping=concept_1_mapping)
 
                 # Debug logging
                 message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
@@ -469,8 +476,15 @@ class CohdTrapi110(CohdTrapi):
                     self._concept_2_omop_ids.append(concept_2_omop_id)
                     found = True
 
+                    # If category wasn't specified in QNode, try to get it from SRI Node Normalizer results
+                    qnode_categories = self._concept_2_qnode_categories
+                    if self._concept_2_qnode_categories is None and normalized_nodes is not None \
+                            and normalized_nodes.get(curie) is not None:
+                        qnode_categories = normalized_nodes[curie].get('type', None)
+
                     # Create a KG node now with the curie and mapping specified
-                    self._get_kg_node(concept_2_omop_id, query_node_curie=curie, mapping=concept_2_mapping)
+                    self._get_kg_node(concept_2_omop_id, query_node_curie=curie,
+                                      query_node_categories=qnode_categories, mapping=concept_2_mapping)
 
                     # Debug logging
                     message = f"Mapped node '{self._concept_2_qnode_key}' ID {curie} to OMOP:{concept_2_omop_id}"
@@ -627,8 +641,9 @@ class CohdTrapi110(CohdTrapi):
         concept_1_id = cohd_result['concept_id_1']
         node_1 = self._get_kg_node(concept_1_id, query_node_categories=self._concept_1_qnode_categories)
 
-        if self._biolink_only and not node_1.get('biolink_compliant', False):
-            # Only include results when node_1 maps to biolink
+        if not node_1.get('query_category_compliant', False) or \
+                (self._biolink_only and not node_1.get('biolink_compliant', False)):
+            # Only include results when node_1 maps to biolink and matches the queried category
             return
 
         # Get node for concept 2
@@ -638,8 +653,9 @@ class CohdTrapi110(CohdTrapi):
         node_2 = self._get_kg_node(concept_2_id, concept_2_name, concept_2_domain,
                                    query_node_categories=self._concept_2_qnode_categories)
 
-        if self._biolink_only and not node_2.get('biolink_compliant', False):
-            # Only include results when node_2 maps to biolink
+        if not node_2.get('query_category_compliant', False) or \
+                (self._biolink_only and not node_2.get('biolink_compliant', False)):
+            # Only include results when node_2 maps to biolink and matches the queried category
             return
 
         # Add nodes and edge to knowledge graph
@@ -728,26 +744,48 @@ class CohdTrapi110(CohdTrapi):
             omop_curie = omop_concept_curie(concept_id)
             primary_curie = omop_curie
             primary_label = concept_name
-
-            # Map to Biolink Model or other target ontologies
-            blm_category = map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)
+            # Whether or not this node has been mapped to biolink
             mapped_to_blm = False
-            if mapping is None and self._concept_mapper:
-                mapping = self._concept_mapper.map_from_omop(concept_id, blm_category)
+            # Whether or not this node's category fits the queried category (queries for biolink:Disease use OMOP query
+            # for Condition which may return diseases and phenotypic features)
+            query_category_compliant = False
 
             if query_node_curie is not None and query_node_curie:
                 # The CURIE was specified for this node in the query_graph, use that CURIE to identify this node
                 mapped_to_blm = True
+                query_category_compliant = True
                 primary_curie = query_node_curie
+
                 # Find the label from the mappings
                 if mapping is not None:
                     primary_label = mapping.output_label
-            elif mapping is not None:
-                # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
-                # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                primary_curie = mapping.output_id
-                primary_label = mapping.output_label
-                mapped_to_blm = True
+
+                if query_node_categories:
+                    # The query specified both the ID and the category. Use the specified category
+                    blm_categories = query_node_categories
+                else:
+                    blm_categories = [map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)]
+            else:
+                # Map to Biolink Model or other target ontologies
+                blm_category = map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)
+                blm_categories = [blm_category]
+                if self._concept_mapper:
+                    mapping, normalized_categories = self._concept_mapper.map_from_omop(concept_id, blm_category)
+                    if mapping is not None:
+                        primary_curie = mapping.output_id
+                        primary_label = mapping.output_label
+                        mapped_to_blm = True
+
+                    if normalized_categories is not None:
+                        blm_categories = normalized_categories
+
+                # Check if at least 1 of the blm_categories is a descendant of the queried category
+                for query_category in query_node_categories:
+                    desc = bm_toolkit.get_descendants(query_category, reflexive=True, formatted=True)
+                    for blm_category in blm_categories:
+                        if blm_category in desc:
+                            query_category_compliant = True
+                            break
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
             internal_id = '{id:06d}'.format(id=len(self._kg_nodes))
@@ -759,9 +797,10 @@ class CohdTrapi110(CohdTrapi):
                 'primary_curie': primary_curie,
                 'in_kgraph': False,
                 'biolink_compliant': mapped_to_blm,
+                'query_category_compliant': query_category_compliant,
                 'kg_node': {
                     'name': primary_label,
-                    'categories': [blm_category],
+                    'categories': blm_categories,
                     'attributes': [
                         {
                             'attribute_type_id': 'EDAM:data_1087',  # Ontology concept ID

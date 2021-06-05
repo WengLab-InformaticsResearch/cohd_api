@@ -170,7 +170,20 @@ def biolink_to_omop(request):
         return 'Bad request', 400
 
     concept_mapper = BiolinkConceptMapper()
-    return jsonify(concept_mapper.map_to_omop(curies))
+    mappings, _ = concept_mapper.map_to_omop(curies)
+
+    # Convert the Mappings object into a dict for return
+    mappings_j = dict()
+    for curie, mapping in mappings.items():
+        omop_id = int(mapping.output_id.split(':')[1])
+        mappings_j[curie] = {
+            'distance': mapping.get_distance(),
+            'omop_concept_id': omop_id,
+            'omop_concept_name': mapping.output_label,
+            'mapping_history': mapping.history
+        }
+
+    return jsonify(mappings_j)
 
 
 def omop_to_biolink(request):
@@ -211,17 +224,19 @@ def omop_to_biolink(request):
             domain_id = concept_definitions[omop_id]['domain_id']
             concept_class_id = concept_definitions[omop_id]['concept_class_id']
             blm_category = map_omop_domain_to_blm_class(domain_id, concept_class_id, )
-            mapping = concept_mapper.map_from_omop(omop_id, blm_category)
+            mapping, _ = concept_mapper.map_from_omop(omop_id, blm_category)
             mappings[omop_id] = mapping
 
     # Normalize with SRI Node Normalizer
     normalized_mappings = dict()
-    curies = [x['target_curie'] for x in mappings.values() if x is not None]
+    curies = [x.output_id for x in mappings.values() if x is not None]
     normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
     for omop_id in omop_ids:
         normalized_mapping = None
         if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].output_id] is not None:
-            normalized_mapping = normalized_nodes[mappings[omop_id].output_id]
+            m = mappings[omop_id]
+            normalized_mapping = normalized_nodes[m.output_id]
+            normalized_mapping['mapping_history'] = m.history
         normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
