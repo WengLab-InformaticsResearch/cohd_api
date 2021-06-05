@@ -5,6 +5,7 @@ checking the results against known values.
 Intended to be run with pytest: pytest -s test_cohd_trapi.py
 """
 from collections import namedtuple
+from itertools import product
 import requests
 import json as j
 from bmt import Toolkit
@@ -27,33 +28,34 @@ cr.server = 'https://cohd.io/api'
 reasoner_validator = reasoner_validator_11x
 translator_query = cr.translator_query_110
 
-
-def test_translator_query_100():
-    """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
-    """
-    print(f'test_cohd_io: testing /1.0.0/query on {cr.server}..... ')
-    resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-                                          dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-                                          max_results=10, local_oxo=True, timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    reasoner_validator_10x.validate_Response(json)
-
-    # There should be 10 results
-    assert len(json['message']['results']) == 10
-
-    print('...passed')
+# No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
+# between TRAPI 1.1 to 1.2
+# def test_translator_query_100():
+#     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
+#     """
+#     print(f'test_cohd_trapi: testing /1.0.0/query on {cr.server}..... ')
+#     resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
+#                                           dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
+#                                           max_results=10, local_oxo=True, timeout=300)
+#
+#     # Expect HTTP 200 status response
+#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+#
+#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+#     json = resp.json()
+#     reasoner_validator_10x.validate_Response(json)
+#
+#     # There should be 10 results
+#     assert len(json['message']['results']) == 10
+#
+#     print('...passed')
 
 
 def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
     q2_categories.
     """
-    print(f'test_cohd_io: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
@@ -95,31 +97,43 @@ def test_translator_query_named_thing():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:NamedThing')
 
 
-def test_translator_query_11x_disease_phenotypic():
+def test_translator_query_disease_phenotypic():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:DiseaseOrPhenotypicFeature
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:DiseaseOrPhenotypicFeature')
 
 
-def test_translator_query_11x_drug():
+def test_translator_query_disease():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:Disease
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Disease')
+
+
+def test_translator_query_phenotypic():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:DiseaseOrPhenotypicFeature
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:PhenotypicFeature')
+
+
+def test_translator_query_drug():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Drug
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Drug')
 
 
-def test_translator_query_11x_chemical():
+def test_translator_query_chemical():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:ChemicalSubstance
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:ChemicalSubstance')
 
 
-def test_translator_query_11x_procedure():
+def test_translator_query_procedure():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Procedure
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
 
 
-def test_translator_query_11x_molecular_entity():
+def test_translator_query_molecular_entity():
     """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
     biolink:ChemicalSubstance. COHD should return types that are a subclass
     """
@@ -130,7 +144,7 @@ def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
     with no results.
     """
-    print(f'test_cohd_io: testing TRAPI query with an unsupported category on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with an unsupported category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
 
     # Should have 200 status response code
@@ -150,7 +164,7 @@ def test_translator_query_unsupported_category():
 def test_translator_query_bad_category():
     """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
     """
-    print(f'test_cohd_io: testing TRAPI query with a non-biolink category on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with a non-biolink category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
 
     # Should have 200 status response code
@@ -161,7 +175,7 @@ def test_translator_query_bad_category():
 
 def test_translator_query_no_predicate():
     """ Check the TRAPI endpoint when not using a predicate. Expect results to be returned. """
-    print(f'test_cohd_io: testing TRAPI query without a predicate on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query without a predicate on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -206,7 +220,7 @@ def test_translator_query_no_predicate():
 
 def test_translator_query_related_to():
     """ Check the TRAPI endpoint when using a generic predicate (biolink:related_to). Expect results to be returned. """
-    print(f'test_cohd_io: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -252,7 +266,7 @@ def test_translator_query_related_to():
 
 def test_translator_query_unsupported_predicate():
     """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
-    print(f'test_cohd_io: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -291,7 +305,7 @@ def test_translator_query_unsupported_predicate():
 
 def test_translator_query_bad_predicate():
     """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
-    print(f'test_cohd_io: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -329,8 +343,8 @@ def test_translator_query_bad_predicate():
 
 
 def test_translator_query_q1_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3 results """
-    print(f'test_cohd_io: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
+    """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3+ results """
+    print(f'test_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -368,21 +382,21 @@ def test_translator_query_q1_multiple_ids():
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 3 results
-    assert len(json['message']['results']) == 3
+    # There should be at least 3 results
+    assert len(json['message']['results']) >= 3
 
-    # All three results should be from the original queried CURIE list
+    # All three queried CURIEs should appear in the results
     ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    for result in json['message']['results']:
-        id = result['node_bindings']['subj'][0]['id']
-        assert id in ids, f'Result subject {id} is not one of the original IDs {ids}'
+    result_object_ids = [r['node_bindings']['subj'][0]['id'] for r in json['message']['results']]
+    for qid in ids:
+        assert qid in result_object_ids, f'Result subject {qid} is not one of the original IDs {ids}'
 
     print('...passed')
 
 
 def test_translator_query_q2_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3 results """
-    print(f'test_cohd_io: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
+    """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3+ results """
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -420,22 +434,22 @@ def test_translator_query_q2_multiple_ids():
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 3 results
-    assert len(json['message']['results']) == 3
+    # There should be at least 3 results
+    assert len(json['message']['results']) >= 3
 
-    # All three results should be from the original queried CURIE list
+    # All three queried CURIEs should appear in the results
     ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    for result in json['message']['results']:
-        id = result['node_bindings']['obj'][0]['id']
-        assert id in ids, f'Result object {id} is not one of the original IDs {ids}'
+    result_object_ids = [r['node_bindings']['obj'][0]['id'] for r in json['message']['results']]
+    for qid in ids:
+        assert qid in result_object_ids, f'Result object {qid} is not one of the original IDs {ids}'
 
     print('...passed')
 
 
 def test_translator_query_q1_q2_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12
+    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
     results """
-    print(f'test_cohd_io: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -467,23 +481,22 @@ def test_translator_query_q1_q2_multiple_ids():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 400 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 12 results
-    assert len(json['message']['results']) == 12
+    # There should be at least 12 results
+    assert len(json['message']['results']) >= 12
 
-    # All three results should be from the original queried CURIE list
+    # All pairs of the queried IDs should appear in at least one of the results
     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
     obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
-    for result in json['message']['results']:
-        subj_id = result['node_bindings']['subj'][0]['id']
-        assert subj_id in subj_ids, f'Result subject {subj_id} is not one of the original IDs {subj_ids}'
-        obj_id = result['node_bindings']['obj'][0]['id']
-        assert obj_id in obj_ids, f'Result object {obj_id} is not one of the original IDs {obj_ids}'
+    result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
+                       for r in json['message']['results']]
+    for pair in product(subj_ids, obj_ids):
+        assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.'
 
     print('...passed')
 
@@ -493,7 +506,7 @@ def test_translator_query_multiple_categories():
     disease with acute hepatitis", which has low prevalence in COHD, hence will have few correlations (much less than
     500). Run multiple queries with individual categories to get counts, and then run it with multiple categories to
     make sure we're getting more results back. """
-    print(f'test_cohd_io: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
+    print(f'test_cohd_trapi: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query_disease = '''
@@ -610,5 +623,127 @@ def test_translator_query_multiple_categories():
     assert num_results_disease <= num_results_combined and num_results_procedure <= num_results_combined and \
         num_results_combined <= (num_results_disease + num_results_procedure), \
         'Number of results outside of expected range'
+
+    print('...passed')
+
+
+def test_biolink_to_omop():
+    """ Check that the /translator/biolink_to_omop is functioning with good CURIEs """
+    print(f'test_cohd_trapi: testing /translator/biolink_to_omop on {cr.server}..... ')
+
+    curies = ['HP:0002907', 'MONDO:0001187']
+    response = cr.translator_biolink_to_omop(curies)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each curie has a non-null mapping
+    j = response.json()
+    for curie in curies:
+        assert j.get(curie) is not None, f'Did not find a mapping for curie {curie}'
+
+    print('...passed')
+    
+
+def test_biolink_to_omop_bad():
+    """ Check /translator/biolink_to_omop with bad CURIEs """
+    print(f'test_cohd_trapi: testing /translator/biolink_to_omop with bad CURIEs on {cr.server}..... ')
+
+    curies = ['HP:0002907BAD', 'MONDO:0001187BAD']
+    response = cr.translator_biolink_to_omop(curies)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each curie has a null mapping
+    j = response.json()
+    for curie in curies:
+        assert curie in j, f'Did not find curie {curie} in response'
+        assert j[curie] is None, f'Found a non-null mapping for curie {curie}'
+
+    print('...passed')
+
+
+def test_omop_to_biolink():
+    """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
+    print(f'test_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
+
+    omop_ids = ['78472', '197508']
+    response = cr.translator_omop_to_biolink(omop_ids)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each OMOP ID has a non-null mapping
+    j = response.json()
+    for omop_id in omop_ids:
+        assert j.get(omop_id) is not None, f'Did not find a mapping for OMOP ID {omop_id}'
+
+    print('...passed')
+
+
+def test_omop_to_biolink_bad():
+    """ Check /translator/omop_to_biolink with bad OMOP IDs """
+    print(f'test_cohd_trapi: testing /translator/omop_to_biolink with bad OMOP IDs on {cr.server}..... ')
+
+    omop_ids = ['78472197508']
+    response = cr.translator_omop_to_biolink(omop_ids)
+
+    # Expect HTTP 200 status response
+    assert response.status_code == 200, 'Expected a 200 status response code'
+
+    # Expect that each OMOP ID has a non-null mapping
+    j = response.json()
+    for omop_id in omop_ids:
+        assert omop_id in j, f'Did not find OMOP ID {omop_id} in response'
+        assert j[omop_id] is None, f'Found a non-null mapping for OMOP ID {omop_id}'
+
+    print('...passed')
+
+
+def test_translator_query_qnode_subclasses():
+    """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
+    a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["MONDO:0005015"]
+                    },
+                    "obj": {
+                        "ids": ["CHEMBL.COMPOUND:CHEMBL1481"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be more than 1 result
+    assert len(json['message']['results']) > 1
 
     print('...passed')
