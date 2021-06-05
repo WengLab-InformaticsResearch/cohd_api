@@ -420,13 +420,32 @@ class CohdTrapi110(CohdTrapi):
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
-        # Find BLM - OMOP mappings for all identified query nodes
-        node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(node_ids)
-
-        # Get concept_id_1. QNode IDs is a list. Map as many IDs to OMOP as possible
+        # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
         ids = concept_1_qnode['ids']
+
+        # Get subclasses for all CURIEs using ontology KP
+        descendants = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
+        if descendants is not None:
+            # Add new descendant CURIEs to the end of IDs list
+            new_ids = list(set(descendants.keys()) - set(ids))
+            if len(new_ids) > 0:
+                ids.extend(new_ids)
+                self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {new_ids}.",
+                         level=logging.INFO)
+            else:
+                self.log(f"No descendants found from Ontology KP for QNode '{self._concept_1_qnode_key}'.",
+                         level=logging.INFO)
+        else:
+            # Add a warning that we didn't get descendants from Ontology KP
+            self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
+                     level=logging.WARNING)
+
+        # Find BLM - OMOP mappings for all identified query nodes
+        node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(ids)
+
+        # Map as many IDs to OMOP as possible
         for curie in ids:
             if node_mappings[curie] is not None:
                 # Found an OMOP mapping. Use this CURIE
@@ -464,6 +483,26 @@ class CohdTrapi110(CohdTrapi):
         if ids is not None and ids:
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
+
+            # Get subclasses for all CURIEs using ontology KP
+            descendants = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
+            if descendants is not None:
+                # Add new descendant CURIEs to the end of IDs list
+                new_ids = list(set(descendants.keys()) - set(ids))
+                if len(new_ids) > 0:
+                    ids.extend(new_ids)
+                    self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {new_ids}.",
+                             level=logging.INFO)
+                else:
+                    self.log(f"No descendants found from Ontology KP for QNode '{self._concept_2_qnode_key}'.",
+                             level=logging.INFO)
+            else:
+                # Add a warning that we didn't get descendants from Ontology KP
+                self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
+                         level=logging.WARNING)
+
+            # Find BLM - OMOP mappings for all identified query nodes
+            node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(ids)
 
             # Map as many of the QNode IDs to OMOP as we can
             self._concept_2_omop_ids = list()
@@ -568,9 +607,9 @@ class CohdTrapi110(CohdTrapi):
         if self._valid_query:
             self._cohd_results = []
             self._initialize_trapi_response()
-            new_cohd_results = []
 
             for concept_1_omop_id in self._concept_1_omop_ids:
+                new_cohd_results = []
                 if self._concept_2_omop_ids is None:
                     # Node 2's IDs were not specified
                     if self._domain_class_pairs:
@@ -610,11 +649,14 @@ class CohdTrapi110(CohdTrapi):
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
 
-            # Results within each query call should be sorted, but still need to be sorted across query calls
-            new_cohd_results = sort_cohd_results(new_cohd_results)
+                # Results within each query call should be sorted, but still need to be sorted across query calls
+                new_cohd_results = sort_cohd_results(new_cohd_results)
 
-            # Convert results from COHD format to Translator Reasoner standard
-            self._add_results_to_trapi(new_cohd_results)
+                # Convert results from COHD format to Translator Reasoner standard
+                results_limit_reached = self._add_results_to_trapi(new_cohd_results)
+                if results_limit_reached:
+                    break
+
             return self._finalize_trapi_response()
         else:
             # Invalid query. Return the invalid query response
@@ -968,7 +1010,7 @@ class CohdTrapi110(CohdTrapi):
 
         Returns
         -------
-        Response message with JSON data in Reasoner Std API format
+        boolean: True if results limit reached, otherwise False
         """
         if self._cohd_results is not None:
             self._cohd_results.extend(new_cohd_results)
@@ -982,7 +1024,8 @@ class CohdTrapi110(CohdTrapi):
                         # Inform the user that there may be additional results
                         self.log(f'Results limit ({self._max_results}) reached. There may be additional associations.',
                                  level=logging.INFO)
-                    break
+                    return True
+        return False
 
     def _finalize_trapi_response(self, status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
         """ Finalizes the TRAPI response

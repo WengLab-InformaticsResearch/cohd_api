@@ -5,6 +5,7 @@ checking the results against known values.
 Intended to be run with pytest: pytest -s test_cohd_trapi.py
 """
 from collections import namedtuple
+from itertools import product
 import requests
 import json as j
 from bmt import Toolkit
@@ -342,7 +343,7 @@ def test_translator_query_bad_predicate():
 
 
 def test_translator_query_q1_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3 results """
+    """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3+ results """
     print(f'test_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
@@ -381,20 +382,20 @@ def test_translator_query_q1_multiple_ids():
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 3 results
-    assert len(json['message']['results']) == 3
+    # There should be at least 3 results
+    assert len(json['message']['results']) >= 3
 
-    # All three results should be from the original queried CURIE list
+    # All three queried CURIEs should appear in the results
     ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    for result in json['message']['results']:
-        id = result['node_bindings']['subj'][0]['id']
-        assert id in ids, f'Result subject {id} is not one of the original IDs {ids}'
+    result_object_ids = [r['node_bindings']['subj'][0]['id'] for r in json['message']['results']]
+    for qid in ids:
+        assert qid in result_object_ids, f'Result subject {qid} is not one of the original IDs {ids}'
 
     print('...passed')
 
 
 def test_translator_query_q2_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3 results """
+    """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3+ results """
     print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
@@ -433,20 +434,20 @@ def test_translator_query_q2_multiple_ids():
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 3 results
-    assert len(json['message']['results']) == 3
+    # There should be at least 3 results
+    assert len(json['message']['results']) >= 3
 
-    # All three results should be from the original queried CURIE list
+    # All three queried CURIEs should appear in the results
     ids = ["UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    for result in json['message']['results']:
-        id = result['node_bindings']['obj'][0]['id']
-        assert id in ids, f'Result object {id} is not one of the original IDs {ids}'
+    result_object_ids = [r['node_bindings']['obj'][0]['id'] for r in json['message']['results']]
+    for qid in ids:
+        assert qid in result_object_ids, f'Result object {qid} is not one of the original IDs {ids}'
 
     print('...passed')
 
 
 def test_translator_query_q1_q2_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12
+    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
     results """
     print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
@@ -480,23 +481,22 @@ def test_translator_query_q1_q2_multiple_ids():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 400 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be 12 results
-    assert len(json['message']['results']) == 12
+    # There should be at least 12 results
+    assert len(json['message']['results']) >= 12
 
-    # All three results should be from the original queried CURIE list
+    # All pairs of the queried IDs should appear in at least one of the results
     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
     obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
-    for result in json['message']['results']:
-        subj_id = result['node_bindings']['subj'][0]['id']
-        assert subj_id in subj_ids, f'Result subject {subj_id} is not one of the original IDs {subj_ids}'
-        obj_id = result['node_bindings']['obj'][0]['id']
-        assert obj_id in obj_ids, f'Result object {obj_id} is not one of the original IDs {obj_ids}'
+    result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
+                       for r in json['message']['results']]
+    for pair in product(subj_ids, obj_ids):
+        assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.'
 
     print('...passed')
 
@@ -697,5 +697,53 @@ def test_omop_to_biolink_bad():
     for omop_id in omop_ids:
         assert omop_id in j, f'Did not find OMOP ID {omop_id} in response'
         assert j[omop_id] is None, f'Found a non-null mapping for OMOP ID {omop_id}'
+
+    print('...passed')
+
+
+def test_translator_query_qnode_subclasses():
+    """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
+    a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
+    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["MONDO:0005015"]
+                    },
+                    "obj": {
+                        "ids": ["CHEMBL.COMPOUND:CHEMBL1481"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be more than 1 result
+    assert len(json['message']['results']) > 1
 
     print('...passed')

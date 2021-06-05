@@ -816,6 +816,74 @@ class SriNodeNormalizer:
         return canonical
 
 
+class OntologyKP:
+    base_url = 'https://stars-app.renci.org/sparql-kp/'
+    endpoint_query = 'query'
+
+    @staticmethod
+    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+        """ Get descendant CURIEs from Ontology KP
+
+        Parameters
+        ----------
+        curies - list of curies
+        categories - list of biolink categories, or None
+
+        Returns
+        -------
+        All knowledge graph nodes returned by the Ontology KP. If any errors, an emtpy dict is returned.
+        """
+        # Ontology KP doesn't seem to like it when categories is null. Replace it with NamedThing for functionally
+        # equivalent TRAPI
+        if categories is None:
+            categories = ['biolink:NamedThing']
+
+        try:
+            # Query Ontology KP for descendants
+            m = {
+                "message": {
+                    "query_graph": {
+                        "nodes": {
+                            "a": {
+                                "ids": curies
+                            },
+                            "b": {
+                                "categories": categories
+                            }
+                        },
+                        "edges": {
+                            "ab": {
+                                "subject": "b",
+                                "object": "a",
+                                "predicate": "biolink:subclass_of"
+                            }
+                        }
+                    }
+                }
+            }
+            url = urljoin(OntologyKP.base_url, OntologyKP.endpoint_query)
+            response = requests.post(url=url, json=m)
+            if response.status_code == 200:
+                j = response.json()
+                if 'message' in j and 'knowledge_graph' in j['message']:
+                    nodes = j['message']['knowledge_graph'].get('nodes')
+                    if nodes is not None:
+                        # Return all nodes in KG, including reflexive CURIE node
+                        return nodes
+                    else:
+                        # Return an empty dict, indicating no descendants found
+                        return dict()
+            else:
+                logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
+        except requests.RequestException:
+            # Return None, indicating an error occurred
+            logging.warning('Encountered an RequestException when querying descendants from Ontology KP')
+            return None
+
+        # Return None, indicating an error occurred
+        return None
+
+
 def sort_cohd_results(cohd_results, sort_field=None, ascending=None):
     """ Sort the COHD results
 
