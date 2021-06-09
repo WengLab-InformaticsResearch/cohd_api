@@ -55,13 +55,14 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
     q2_categories.
     """
-    print(f'test_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -144,11 +145,12 @@ def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
     with no results.
     """
-    print(f'test_cohd_trapi: testing TRAPI query with an unsupported category on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with an unsupported category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
 
     # Should have 200 status response code
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -164,18 +166,19 @@ def test_translator_query_unsupported_category():
 def test_translator_query_bad_category():
     """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
     """
-    print(f'test_cohd_trapi: testing TRAPI query with a non-biolink category on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with a non-biolink category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
 
     # Should have 200 status response code
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     print('...passed')
 
 
 def test_translator_query_no_predicate():
     """ Check the TRAPI endpoint when not using a predicate. Expect results to be returned. """
-    print(f'test_cohd_trapi: testing TRAPI query without a predicate on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query without a predicate on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -206,7 +209,8 @@ def test_translator_query_no_predicate():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -220,7 +224,7 @@ def test_translator_query_no_predicate():
 
 def test_translator_query_related_to():
     """ Check the TRAPI endpoint when using a generic predicate (biolink:related_to). Expect results to be returned. """
-    print(f'test_cohd_trapi: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -252,7 +256,8 @@ def test_translator_query_related_to():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -266,7 +271,7 @@ def test_translator_query_related_to():
 
 def test_translator_query_unsupported_predicate():
     """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
-    print(f'test_cohd_trapi: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -298,14 +303,15 @@ def test_translator_query_unsupported_predicate():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     print('...passed')
 
 
 def test_translator_query_bad_predicate():
     """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
-    print(f'test_cohd_trapi: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -337,14 +343,15 @@ def test_translator_query_bad_predicate():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code'
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     print('...passed')
 
 
 def test_translator_query_q1_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3+ results """
-    print(f'test_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -376,7 +383,8 @@ def test_translator_query_q1_multiple_ids():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -396,7 +404,7 @@ def test_translator_query_q1_multiple_ids():
 
 def test_translator_query_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3+ results """
-    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -428,7 +436,8 @@ def test_translator_query_q2_multiple_ids():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -449,7 +458,7 @@ def test_translator_query_q2_multiple_ids():
 def test_translator_query_q1_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
     results """
-    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -481,7 +490,8 @@ def test_translator_query_q1_q2_multiple_ids():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
@@ -506,7 +516,7 @@ def test_translator_query_multiple_categories():
     disease with acute hepatitis", which has low prevalence in COHD, hence will have few correlations (much less than
     500). Run multiple queries with individual categories to get counts, and then run it with multiple categories to
     make sure we're getting more results back. """
-    print(f'test_cohd_trapi: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query_disease = '''
@@ -538,7 +548,8 @@ def test_translator_query_multiple_categories():
     resp_disease = requests.post(url, json=j.loads(query_disease), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp_disease.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp_disease.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                            f'Received {resp_disease.status_code}: {resp_disease.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_disease = resp_disease.json()
@@ -575,7 +586,8 @@ def test_translator_query_multiple_categories():
     resp_procedure = requests.post(url, json=j.loads(query_procedure), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp_procedure.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp_procedure.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                              f'Received {resp_procedure.status_code}: {resp_procedure.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_procedure = resp_procedure.json()
@@ -612,7 +624,8 @@ def test_translator_query_multiple_categories():
     resp_combined = requests.post(url, json=j.loads(query_combined), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp_combined.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp_combined.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                             f'Received {resp_combined.status_code}: {resp_combined.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_combined = resp_combined.json()
@@ -629,13 +642,14 @@ def test_translator_query_multiple_categories():
 
 def test_biolink_to_omop():
     """ Check that the /translator/biolink_to_omop is functioning with good CURIEs """
-    print(f'test_cohd_trapi: testing /translator/biolink_to_omop on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing /translator/biolink_to_omop on {cr.server}..... ')
 
     curies = ['HP:0002907', 'MONDO:0001187']
     response = cr.translator_biolink_to_omop(curies)
 
     # Expect HTTP 200 status response
-    assert response.status_code == 200, 'Expected a 200 status response code'
+    assert response.status_code == 200, 'Expected a 200 status response code' \
+                                        f'Received {response.status_code}: {response.text}'
 
     # Expect that each curie has a non-null mapping
     j = response.json()
@@ -647,13 +661,14 @@ def test_biolink_to_omop():
 
 def test_biolink_to_omop_bad():
     """ Check /translator/biolink_to_omop with bad CURIEs """
-    print(f'test_cohd_trapi: testing /translator/biolink_to_omop with bad CURIEs on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing /translator/biolink_to_omop with bad CURIEs on {cr.server}..... ')
 
     curies = ['HP:0002907BAD', 'MONDO:0001187BAD']
     response = cr.translator_biolink_to_omop(curies)
 
     # Expect HTTP 200 status response
-    assert response.status_code == 200, 'Expected a 200 status response code'
+    assert response.status_code == 200, 'Expected a 200 status response code'\
+                                        f'Received {response.status_code}: {response.text}'
 
     # Expect that each curie has a null mapping
     j = response.json()
@@ -666,13 +681,14 @@ def test_biolink_to_omop_bad():
 
 def test_omop_to_biolink():
     """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
-    print(f'test_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
 
     omop_ids = ['78472', '197508']
     response = cr.translator_omop_to_biolink(omop_ids)
 
     # Expect HTTP 200 status response
-    assert response.status_code == 200, 'Expected a 200 status response code'
+    assert response.status_code == 200, 'Expected a 200 status response code.' \
+                                        f'Received {response.status_code}: {response.text}'
 
     # Expect that each OMOP ID has a non-null mapping
     j = response.json()
@@ -684,13 +700,14 @@ def test_omop_to_biolink():
 
 def test_omop_to_biolink_bad():
     """ Check /translator/omop_to_biolink with bad OMOP IDs """
-    print(f'test_cohd_trapi: testing /translator/omop_to_biolink with bad OMOP IDs on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing /translator/omop_to_biolink with bad OMOP IDs on {cr.server}..... ')
 
     omop_ids = ['78472197508']
     response = cr.translator_omop_to_biolink(omop_ids)
 
     # Expect HTTP 200 status response
-    assert response.status_code == 200, 'Expected a 200 status response code'
+    assert response.status_code == 200, 'Expected a 200 status response code.' \
+                                        f'Received {response.status_code}: {response.text}'
 
     # Expect that each OMOP ID has a non-null mapping
     j = response.json()
@@ -705,7 +722,7 @@ def test_translator_query_qnode_subclasses():
     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
     a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
     we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
-    print(f'test_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -737,7 +754,8 @@ def test_translator_query_qnode_subclasses():
     resp = requests.post(url, json=j.loads(query), timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()

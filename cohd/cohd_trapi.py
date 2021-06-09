@@ -768,7 +768,7 @@ class BiolinkConceptMapper:
 
 
 class SriNodeNormalizer:
-    base_url = 'https://nodenormalization-sri.renci.org'
+    base_url = 'https://nodenormalization-sri.renci.org/1.1/'
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
 
     @staticmethod
