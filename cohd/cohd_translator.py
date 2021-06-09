@@ -236,6 +236,10 @@ def omop_to_biolink(request):
     normalized_mappings = dict()
     curies = [x.output_id for x in mappings.values() if x is not None]
     normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
+
+    if normalized_nodes is None:
+        return 'Unexpected response or no response received from SRI Node Normalizer', 503
+
     for omop_id in omop_ids:
         normalized_mapping = None
         if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].output_id] is not None:

@@ -1,6 +1,7 @@
 numpy
 scipy
 requests
+uwsgi
 flask
 flask_cors
 flask-caching
