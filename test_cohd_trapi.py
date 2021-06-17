@@ -765,3 +765,53 @@ def test_translator_query_qnode_subclasses():
     assert len(json['message']['results']) > 1
 
     print('...passed')
+
+
+def test_translator_query_qnode_null_constraint():
+    """ Check the TRAPI endpoint to make sure it allows null constraints on QNodes. The null constraints should be
+    ignored regardless of whether or not COHD implements constraints. """
+    print(f'\ntest_cohd_trapi: testing TRAPI query with null constraints on QNodes {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["MONDO:0005015"],
+                        "constraints": null
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
+                        "constraints": null
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be more than 1 result
+    assert len(json['message']['results']) > 1
+
+    print('...passed')

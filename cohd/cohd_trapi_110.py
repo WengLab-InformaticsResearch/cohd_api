@@ -560,7 +560,7 @@ class CohdTrapi110(CohdTrapi):
             self._domain_class_pairs = None
             self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
 
-        if 'constraints' in concept_1_qnode:
+        if concept_1_qnode.get('constraints', None) is not None:
             self._valid_query = False
             self._invalid_query_response = 'COHD does not support constraints on a QNode with ids specified', 400
             return self._valid_query, self._invalid_query_response
