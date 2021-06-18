@@ -220,6 +220,11 @@ def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
 
 
+@app.route('/api/dev/clear_biolink_cache', methods=['GET'])
+def api_internal_clear_biolink_cache():
+    return api_call('dev', 'clear_biolink_cache')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -318,6 +323,9 @@ def api_call(service=None, meta=None, query=None, version=None):
             elif meta == 'clear_cache':
                 cache.clear()
                 result = 'Cleared cache', 200
+            elif meta == 'clear_biolink_cache':
+                cohd_trapi.BiolinkConceptMapper.clear_cache()
+                result = 'Cleared Biolink cache', 200
             else:
                 result = 'meta not recognized', 400
         else:

@@ -466,7 +466,7 @@ class BiolinkConceptMapper:
     }
 
     # Update Flask cache. When True, flask cache will be updated for the given (parameter-sensitive) call
-    update_cache = False
+    force_update_cache = False
 
     @staticmethod
     def map_blm_prefixes_to_oxo_prefixes(s):
@@ -573,7 +573,7 @@ class BiolinkConceptMapper:
         }
         return str(d)
 
-    @cache.memoize(timeout=3628800, cache_none=True)
+    @cache.memoize(timeout=7257600, cache_none=True, unless=lambda: BiolinkConceptMapper.force_update_cache)
     def map_to_omop(self, curies: List[str]) -> Tuple[Dict[str, Mapping], Optional[Dict[str, Any]]]:
         """ Map to OMOP concept from ontology
 
@@ -626,7 +626,7 @@ class BiolinkConceptMapper:
 
         return omop_mappings, normalized_nodes
 
-    @cache.memoize(timeout=3628800, cache_none=True)
+    @cache.memoize(timeout=7257600, cache_none=True, unless=lambda: BiolinkConceptMapper.force_update_cache)
     def map_from_omop(self, concept_id: int, blm_category: str) -> Tuple[Optional[Mapping], Optional[List]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
@@ -702,9 +702,10 @@ class BiolinkConceptMapper:
 
     @staticmethod
     def clear_cache():
-        """ Clears the Flask cache
+        """ Clears the Flask cache for BiolinkConceptMapper
         """
-        cache.clear()
+        cache.delete_memoized(BiolinkConceptMapper.map_to_omop)
+        cache.delete_memoized(BiolinkConceptMapper.map_from_omop)
 
     @staticmethod
     def build_cache_map_from() -> Tuple[str, int]:
@@ -720,6 +721,9 @@ class BiolinkConceptMapper:
         thread.start()
         return 'Build started.', 200
 
+    # Flag to indicate that COHD is currently in the process of rebuilding the cache
+    rebuilding_cache = False
+
     @staticmethod
     def _build_cache_map_from() -> int:
         """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
@@ -729,12 +733,12 @@ class BiolinkConceptMapper:
         Number of concepts
         """
         # Check if there is already a thread running this build
-        if BiolinkConceptMapper.update_cache:
+        if BiolinkConceptMapper.rebuilding_cache:
             # There is already a thread running a build
             print('_build_cache_map_from already running. Will not start another thread.')
             return
 
-        BiolinkConceptMapper.update_cache = True
+        BiolinkConceptMapper.rebuilding_cache = True
         print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
 
         mapper = BiolinkConceptMapper(biolink_mappings=None, distance=CohdTrapi.default_mapping_distance,
@@ -743,6 +747,7 @@ class BiolinkConceptMapper:
         error_count = 0
         for i, concept in enumerate(concepts):
             try:
+                BiolinkConceptMapper.force_update_cache = True
                 blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
                 mapper.map_from_omop(concept['concept_id'], blm_category)
             except pymysql.err.Error as e:
@@ -757,13 +762,15 @@ class BiolinkConceptMapper:
             else:
                 # Reset the error count
                 error_count = 0
+            finally:
+                BiolinkConceptMapper.force_update_cache = False
 
             if i % 1000 == 0:
                 print(f'{datetime.now()}: {i} / {len(concepts)} concepts mapped')
 
         print(f'{datetime.now()}: Cache build complete.')
 
-        BiolinkConceptMapper.update_cache = False
+        BiolinkConceptMapper.rebuilding_cache = False
         return len(concepts)
 
 
