@@ -18,7 +18,7 @@ from .query_cohd_mysql import query_active_concepts
 
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit()
+bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml')
 
 
 class TrapiStatusCode(Enum):
