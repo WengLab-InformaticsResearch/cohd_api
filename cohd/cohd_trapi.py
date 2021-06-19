@@ -711,6 +711,24 @@ class BiolinkConceptMapper:
         cache.delete_memoized(BiolinkConceptMapper.map_from_omop)
 
     @staticmethod
+    def set_cache_update(request):
+        """ Sets the force_update_cache setting """
+        update = request.args.get('update')
+        if update is None:
+            return 'No update argument', 400
+        update = update.strip().lower()
+        if update == 'true':
+            update = True
+        elif update == 'false':
+            update = False
+        else:
+            return 'update argument should be "true" or "false"', 400
+
+        original = BiolinkConceptMapper.force_update_cache
+        BiolinkConceptMapper.force_update_cache = update
+        return f'force_update_cache was {original}. force_update_cache now set to {update}.', 200
+
+    @staticmethod
     def build_cache_map_from() -> Tuple[str, int]:
         """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
 
