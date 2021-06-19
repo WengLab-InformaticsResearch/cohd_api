@@ -64,7 +64,7 @@ class CohdTrapi(ABC):
 
     # Default options
     default_method = 'obsExpRatio'
-    default_min_cooccurrence = 50
+    default_min_cooccurrence = 10
     default_confidence_interval = 0.99
     default_dataset_id = 3
     default_local_oxo = False
@@ -197,9 +197,12 @@ def criteria_confidence(cohd_result, confidence):
     -------
     True if significant
     """
-    if 'ln_ratio' in cohd_result:
+    if 'ln_ratio_ci' in cohd_result:
         # obsExpFreq
-        ci = ln_ratio_ci(cohd_result['observed_count'], cohd_result['ln_ratio'], confidence)
+        return ci_significance(cohd_result['ln_ratio_ci'])
+    elif 'ln_ratio' in cohd_result:
+        # obsExpFreq
+        ci = ln_ratio_ci(cohd_result['concept_pair_count'], cohd_result['ln_ratio'], confidence)
         return ci_significance(ci)
     else:
         # relativeFrequency doesn't have a good cutoff for confidence interval, and chiSquare uses
@@ -914,16 +917,31 @@ def sort_cohd_results(cohd_results, sort_field=None, ascending=None):
             sort_field = 'p-value'
             if ascending is None:
                 ascending = False
+        elif 'ln_ratio_ci' in r:
+            sort_field = 'ln_ratio_ci'
+            if ascending is None:
+                ascending = False
         elif 'ln_ratio' in r:
             sort_field = 'ln_ratio'
             if ascending is None:
                 ascending = False
+        elif 'relative_frequency_2_ci' in r:
+            sort_field = 'relative_frequency_2_ci'
+            if ascending is None:
+                ascending = False
+        elif 'relative_frequency_1_ci' in r:
+            sort_field = 'relative_frequency_1_ci'
+            if ascending is None:
+                ascending = False
         elif 'relative_frequency' in r:
-            sort_field  = 'relative_frequency'
+            sort_field = 'relative_frequency'
             if ascending is None:
                 ascending = False
 
-    sort_values = [x[sort_field] for x in cohd_results]
+    if sort_field in ['p-value', 'ln_ratio', 'relative_frequency']:
+        sort_values = [x[sort_field] for x in cohd_results]
+    elif sort_field in ['ln_ratio_ci', 'relative_frequency_2_ci', 'relative_frequency_1_ci']:
+        sort_values = [x[sort_field][0] if x[sort_field][0] >= 0 else x[sort_field][1] for x in cohd_results]
     results_sorted = [cohd_results[i] for i in argsort(sort_values)]
     if not ascending:
         results_sorted = list(reversed(results_sorted))
