@@ -8,7 +8,7 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi import reasoner_validator_092, reasoner_validator_10x
+from cohd.trapi import reasoner_validator_11x
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -17,6 +17,10 @@ _s = namedtuple('_s', ['key', 'type'])
 
 # Test the cohd.covid.io server
 cr.server = 'https://covid.cohd.io/api'
+
+# Proxy for main TRAPI version
+reasoner_validator = reasoner_validator_11x
+translator_query = cr.translator_query_110
 
 
 def check_results_schema(json, schema):
@@ -930,39 +934,20 @@ def test_translator_query():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
     print(f'test_cohd_io: testing /translator/query on {cr.server}..... ')
-    resp, query = cr.translator_query_100(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
-                                          method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
-                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True,
-                                          timeout=300)
-    json = resp.json()
+    resp, query = translator_query(node_1_curies=['MONDO:0021113'], node_2_categories=['biolink:Disease'],
+                                   method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
+                                   min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=False,
+                                   timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_10x.validate_Response(json)
-
-    # There should be 10 results
-    assert len(json['message']['results']) == 10
-
-    print('...passed')
-
-
-def test_translator_query_093():
-    """ Check the /0.9.3/translator/query endpoint mapping functionality
-    """
-    print(f'test_cohd_io: testing TRAPI 0.9.3 at /0.9.3/translator/query on {cr.server}..... ')
-    ontology_targets = {
-        'biolink:Disease': ['SNOMEDCT', 'DOID'],
-        'biolink:Procedure': ['CPT4']
-    }
-    resp, query = cr.translator_query_093(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
-                                          method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
-                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True,
-                                          timeout=300)
     json = resp.json()
+    reasoner_validator.validate_Response(json)
 
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    reasoner_validator_092.validate_Message(json)
-
-    # There should be 10 results
-    assert len(json['results']) == 10
+    # There should be at least 1 result
+    assert len(json['message']['results']) > 0
 
     print('...passed')
