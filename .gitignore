@@ -1,6 +1,7 @@
 temp/*
 *.cnf
 .idea/*
+notebooks/*
 
 *.bak
 *.log
@@ -15,3 +16,15 @@ temp/*
 *.ipynb_checkpoints
 
 *#*#
+
+
+
+# local
+db/*
+live_config_files/*
+prototyping/*
+cohd/cohd_flask_with_GA_TID.conf
+cohd/flask_cache
+cohd/trapi/*.ipynb
+database.cnf
+flask_cache

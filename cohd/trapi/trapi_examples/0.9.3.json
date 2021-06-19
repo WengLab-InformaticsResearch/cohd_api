@@ -1,0 +1,50 @@
+{
+  "max_results": 50,
+  "message": {
+    "query_graph": {
+      "nodes": [
+        {
+          "id": "n00",
+          "curie": "DOID:9053",
+          "type": "biolink:Disease"
+        },
+        {
+          "id": "n01",
+          "type": "biolink:Procedure"
+        }
+      ],
+      "edges": [
+        {
+          "id": "e00",
+          "type": "biolink:correlated_with",
+          "source_id": "n00",
+          "target_id": "n01"
+        }
+      ]
+    }
+  },
+  "query_options": {
+    "method": "obsExpRatio",
+    "dataset_id": 3,
+    "confidence_interval": 0.99,
+    "min_cooccurrence": 50,
+    "threshold": 0.5,
+    "local_oxo": true,
+    "ontology_targets": {
+      "biolink:Disease": [
+        "ICD9",
+        "SNOMEDCT",
+        "DOID"
+      ],
+      "biolink:Drug": [
+        "RxNorm"
+      ],
+      "biolink:Procedure": [
+        "ICD10PCS",
+        "SNOMEDCT"
+      ],
+      "_DEFAULT": []
+    },
+    "biolink_only": true
+  }
+}

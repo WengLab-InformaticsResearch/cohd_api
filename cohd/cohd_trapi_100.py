@@ -308,9 +308,9 @@ class CohdTrapi100(CohdTrapi):
                 # Found an OMOP mapping. Use this CURIE
                 self._concept_1_qnode_curie = curie
                 self._concept_1_mapping = node_mappings[curie]
-                self._concept_1_omop_id = self._concept_1_mapping['omop_concept_id']
+                self._concept_1_omop_id = int(self._concept_1_mapping.output_id.split(':')[1])
                 # Keep track of this mapping in the query_graph for the response
-                concept_1_qnode['mapped_omop_concept'] = self._concept_1_mapping
+                concept_1_qnode['mapped_omop_concept'] = self._concept_1_mapping.history
                 found = True
                 break
         if not found:
@@ -343,9 +343,9 @@ class CohdTrapi100(CohdTrapi):
                     # Found an OMOP mapping. Use this CURIE
                     self._concept_2_qnode_curie = curie
                     self._concept_2_mapping = node_mappings[curie]
-                    self._concept_2_omop_id = self._concept_2_mapping['omop_concept_id']
+                    self._concept_2_omop_id = int(self._concept_2_mapping.output_id.split(':')[1])
                     # Keep track of this mapping in the query_graph for the response
-                    concept_2_qnode['mapped_omop_concept'] = self._concept_2_mapping
+                    concept_2_qnode['mapped_omop_concept'] = self._concept_2_mapping.history
                     found = True
 
                     # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
@@ -586,12 +586,12 @@ class CohdTrapi100(CohdTrapi):
                 primary_curie = query_node_curie
                 # Find the label from the mappings
                 if mapping is not None:
-                    primary_label = mapping['target_label']
+                    primary_label = mapping.output_label
             elif mapping is not None:
                 # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
                 # choose by the order of prefixes listed in the Concept Mapper. If no biolink prefix found, use OMOP
-                primary_curie = mapping['target_curie']
-                primary_label = mapping['target_label']
+                primary_curie = mapping.output_id
+                primary_label = mapping.output_label
                 mapped_to_blm = True
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet

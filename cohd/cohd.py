@@ -11,26 +11,19 @@ implemented in Flask
 (c) 2017 Tatonetti Lab
 """
 
-from flask import Flask, request, redirect
-from flask_cors import CORS
-from flask_caching import Cache
+from flask import request, redirect
 
 from .google_analytics import GoogleAnalytics
 
-#########
-# INITS #
-#########
+# Flask app and cache
+from .app import app, cache
 
-app = Flask(__name__)
-CORS(app)
-app.config.from_pyfile('cohd_flask.conf')
-cache = Cache(app)
-
-# Some of the above objects need to be created before loading other COHD modules
+# app needs to be loaded before loading other COHD modules
 from . import query_cohd_mysql
 from . import cohd_translator
 from . import cohd_trapi
 from . import scheduled_tasks
+
 
 ##########
 # ROUTES #
@@ -38,10 +31,15 @@ from . import scheduled_tasks
 
 
 @app.route('/')
+def website():
+    google_analytics(endpoint='/')
+    return redirect("site/index.html", code=302)
+
+
 @app.route('/api')
 @app.route('/api/')
 def api_cohd():
-    google_analytics(endpoint='/')
+    google_analytics(endpoint='/api')
     return redirect("https://cohdcovid.smart-api.info/", code=302)
 
 
@@ -171,8 +169,14 @@ def api_translator_query_version(version):
 
 @app.route('/api/predicates', methods=['GET'])
 @app.route('/api/translator/predicates', methods=['GET'])
-def api_transator_predicates():
+def api_translator_predicates():
     return api_call('translator', 'predicates')
+
+
+@app.route('/api/meta_knowledge_graph', methods=['GET'])
+@app.route('/api/translator/meta_knowledge_graph', methods=['GET'])
+def api_translator_meta_knowledge_graph():
+    return api_call('translator', 'meta_knowledge_graph')
 
 
 @app.route('/api/translator/omop_to_biolink', methods=['POST'])
@@ -193,6 +197,11 @@ def api_internal_build_cache_map_from():
 @app.route('/api/dev/clear_cache', methods=['GET'])
 def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
+
+
+@app.route('/api/dev/clear_biolink_cache', methods=['GET'])
+def api_internal_clear_biolink_cache():
+    return api_call('dev', 'clear_biolink_cache')
 
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
@@ -269,6 +278,8 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.translator_query(request, version)
         elif meta == 'predicates':
             result = cohd_translator.translator_predicates()
+        elif meta == 'meta_knowledge_graph':
+            result = cohd_translator.translator_meta_knowledge_graph()
         elif meta == 'omop_to_biolink':
             result = cohd_translator.omop_to_biolink(request)
         elif meta == 'biolink_to_omop':
@@ -283,6 +294,9 @@ def api_call(service=None, meta=None, query=None, version=None):
             elif meta == 'clear_cache':
                 cache.clear()
                 result = 'Cleared cache', 200
+            elif meta == 'clear_biolink_cache':
+                cohd_trapi.BiolinkConceptMapper.clear_cache()
+                result = 'Cleared Biolink cache', 200
             else:
                 result = 'meta not recognized', 400
         else:

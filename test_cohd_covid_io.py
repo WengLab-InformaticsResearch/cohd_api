@@ -8,7 +8,7 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from trapi import reasoner_validator_092, reasoner_validator_10x
+from cohd.trapi import reasoner_validator_092, reasoner_validator_10x
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -932,7 +932,8 @@ def test_translator_query():
     print(f'test_cohd_io: testing /translator/query on {cr.server}..... ')
     resp, query = cr.translator_query_100(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
                                           method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
-                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True)
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True,
+                                          timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
@@ -954,7 +955,8 @@ def test_translator_query_093():
     }
     resp, query = cr.translator_query_093(node_1_curie='UMLS:C0011777', node_2_type='biolink:Disease',
                                           method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
-                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True)
+                                          min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=True,
+                                          timeout=300)
     json = resp.json()
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API

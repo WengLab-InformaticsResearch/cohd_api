@@ -5,6 +5,9 @@ on:
   # Schedule this workflow to run twice a day (at 0300 and 1500 UTC)
   schedule:
     - cron: '0 3/12 * * *'
+  
+  # Also allow manually triggering this workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,12 +23,13 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest requests pandas matplotlib reasoner-validator==0.9.2.*
+        pip install pytest requests pandas matplotlib bmt
     - name: Test cohd.io
       # Test cohd.io by running pytest on test_cohd_io.py
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
       run: |
         pytest -s test_cohd_io.py
+        pytest -s test_cohd_trapi.py
     - name: Test covid.cohd.io
       # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)

@@ -4,6 +4,43 @@
 # Columbia Open Health Data API (COHD)
 A database of frequencies of clinical concepts observed at Columbia University Medical Center. Over 17,000 clinical concepts and 8.7M pairs of clinical concepts, including conditions, drugs, and procedures are included. The COHD RESTful API allows users to query the database. 
 
+# Deploy COHD with Docker
+
+1.  Clone the COHD_API github repository  
+    `git clone https://github.com/WengLab-InformaticsResearch/cohd_api.git/`  
+    `cd cohd_api`
+1.  Edit the MySql database configuration file `cohd_api/docker_config_files/database.cnf`  
+    Note: The COHD MySql database has not yet been dockerized. Please request database
+    connection information from Casey Ta (ct2865 [at] cumc [dot] columbia [dot] edu)  
+    A dockerized database will be set up in the near future
+1.  Change `DEV_KEY` in `cohd_api/cohd/cohd_flask.conf`. This key allows certain privileged developer API calls.
+1.  [Optional] If necessary, edit the nginx configuration file `cohd_api/docker_config_files/nginx.conf`
+1.  Build the COHD docker image  
+    `docker build -t cohd_image .`
+1.  Run the COHD docker container  
+    `docker run -d -p <HOST:PORT>:80 -p <HOST:PORT>:443 --name=COHD cohd_image`
+1.  [Optional] If necessary, use tools like certbot to enable HTTPS. In the COHD container:
+    1.  Start a shell to the COHD container  
+        `docker container exec -it cohd bash`
+    1.  Use certbot to generate trusted SSL certificates  
+        `certbot certonly --webroot -w /root/certbot -d <url>`
+    1.  Update the nginx configuration file: 
+        1.  `vi /etc/nginx/nginx.conf`
+        1.  Uncomment the ssl server block to listen on port 443
+        1.  Update the ssl_certificate lines with the correct location of the pubic and private keys
+        1.  Save and exit
+    1.  Test and reload the nginx configuration:  
+        `nginx -t`  
+        `service nginx reload`
+1.  [Recommended] Trigger COHD to build the OMOP-Biolink mapping cache 
+    (this takes a few hours but improves TRAPI query performance)  
+    `curl --request GET 'https://<LOCATION>/api/dev/build_cache_map_from?q=<DEV_KEY_FROM_STEP_3>'`
+
+
+# [DEPRECATED] Instructions for manually deploying COHD 
+
+The instructions below provide guidance for deploying COHD manually to a linux server.
+
 ## Requirements
 
 Python 3

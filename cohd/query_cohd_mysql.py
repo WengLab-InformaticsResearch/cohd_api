@@ -8,7 +8,7 @@ from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop
 from .cohd_utilities import ln_ratio_ci, rel_freq_ci
 
 # Configuration
-CONFIG_FILE = "cohd_mysql.cnf"  # log-in credentials for database
+CONFIG_FILE = "database.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
 DEFAULT_CONFIDENCE = 0.99
@@ -1165,7 +1165,6 @@ def query_concept_pair_count(concept_id_1, concept_id_2, dataset_id=None):
 def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
                       confidence=None):
     """ Calls the desired association method and returns the results
-
     Parameters
     ----------
     method: String - 'chiSquare', 'obsExpRatio', or 'relativeFrequency'
@@ -1175,7 +1174,6 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
     domain_id: (optional) String - OMOP domain ID
     concept_class_id: (optional) String - OMOP concept class ID
     confidence: (optional) String - Confidence level
-
     Returns
     -------
     Dict results
@@ -1201,6 +1199,204 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
 
     response = query_db(service='association', method=method, args=args)
     return response.get_json()
+
+
+def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
+                confidence=DEFAULT_CONFIDENCE):
+    """ Query for TRAPI. Performs the calculations for all association methods
+
+    Parameters
+    ----------
+    concept_id_1: String - OMOP concept ID
+    concept_id_2: (optional) String - OMOP concept ID
+    dataset_id: (optional) String - COHD dataset ID
+    domain_id: (optional) String - OMOP domain ID
+    concept_class_id: (optional) String - OMOP concept class ID
+    confidence: (optional) Float - Confidence level
+
+    Returns
+    -------
+    Dict results
+    """
+    assert concept_id_1 is not None and str(concept_id_1), \
+        'query_cohd_mysql.py::query_trapi() - Bad input. concept_id_1={concept_id_1}'.format(
+            concept_id_1=str(concept_id_1)
+        )
+
+    # Connect to MYSQL database
+    conn = sql_connection()
+    cur = conn.cursor()
+
+    # Get the total number of pairs for Bonferonni adjustment
+    sql = '''SELECT SUM(count) AS pair_count
+        FROM domain_pair_concept_counts
+        WHERE dataset_id = %(dataset_id)s;'''
+    params = {'dataset_id': dataset_id}
+    cur.execute(sql, params)
+    results = cur.fetchall()
+    pair_count = int(results[0]['pair_count'])
+
+    if concept_id_2 is not None:
+        # concept_id_2 is specified, only return the results for the pair (concept_id_1, concept_id_2)
+        concept_id_2 = int(concept_id_2)
+        order = concept_id_1 < concept_id_2
+        sql = '''SELECT 
+                cp.dataset_id, 
+                cp.concept_id_1 AS {rename_id_1}, 
+                cp.concept_id_2 AS {rename_id_2},
+                c1.concept_count AS {rename_count_1},
+                c2.concept_count AS {rename_count_2},
+                cp.concept_count AS concept_pair_count,
+                c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio,
+                cp.concept_count / (c1.concept_count + 0E0) AS {rename_rf1},
+                cp.concept_count / (c2.concept_count + 0E0) AS {rename_rf2},
+                pc.count AS patient_count
+            FROM cohd.concept_pair_counts cp
+            JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+            JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+            JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+            WHERE cp.dataset_id = %(dataset_id)s 
+                AND c1.dataset_id = %(dataset_id)s 
+                AND c2.dataset_id = %(dataset_id)s
+                AND cp.concept_id_1 = %(concept_id_1)s
+                AND cp.concept_id_2 = %(concept_id_2)s;'''
+        params = {
+            'dataset_id': dataset_id,
+            'concept_id_1': concept_id_1 if order else concept_id_2,
+            'concept_id_2': concept_id_2 if order else concept_id_1
+        }
+        rename_id_1 = 'concept_id_1'
+        rename_id_2 = 'concept_id_2'
+        rename_count_1 = 'concept_1_count'
+        rename_count_2 = 'concept_2_count'
+        rename_rf1 = 'relative_frequency_1'
+        rename_rf2 = 'relative_frequency_2'
+        if not order:
+            rename_id_1 = 'concept_id_2'
+            rename_id_2 = 'concept_id_1'
+            rename_count_1 = 'concept_2_count'
+            rename_count_2 = 'concept_1_count'
+            rename_rf1 = 'relative_frequency_2'
+            rename_rf2 = 'relative_frequency_1'
+        sql = sql.format(rename_id_1=rename_id_1, rename_id_2=rename_id_2, rename_count_1=rename_count_1,
+                         rename_count_2=rename_count_2, rename_rf1=rename_rf1, rename_rf2=rename_rf2)
+
+    else:
+        # If concept_id_2 is not specified, get results for all pairs that include concept_id_1
+        sql = '''SELECT * 
+            FROM
+                ((SELECT 
+                    cp.dataset_id, 
+                    cp.concept_id_1, 
+                    cp.concept_id_2,
+                    c1.concept_count AS concept_1_count,
+                    c2.concept_count AS concept_2_count,
+                    cp.concept_count AS concept_pair_count,
+                    c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                    log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio,
+                    cp.concept_count / (c1.concept_count + 0E0) AS relative_frequency_1,
+                    cp.concept_count / (c2.concept_count + 0E0) AS relative_frequency_2,
+                    c.concept_name AS concept_2_name, 
+                    c.domain_id AS concept_2_domain,
+                    pc.count AS patient_count
+                FROM cohd.concept_pair_counts cp
+                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                WHERE cp.dataset_id = %(dataset_id)s 
+                    AND c1.dataset_id = %(dataset_id)s 
+                    AND c2.dataset_id = %(dataset_id)s
+                    AND cp.concept_id_1 = %(concept_id_1)s 
+                    {domain_filter}
+                    {concept_class_filter})
+                UNION
+                (SELECT 
+                    cp.dataset_id, 
+                    cp.concept_id_2 AS concept_id_1, 
+                    cp.concept_id_1 AS concept_id_2,
+                    c2.concept_count AS concept_1_count,
+                    c1.concept_count AS concept_2_count,
+                    cp.concept_count AS concept_pair_count,
+                    c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                    log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) AS ln_ratio,
+                    cp.concept_count / (c2.concept_count + 0E0) AS relative_frequency_1,
+                    cp.concept_count / (c1.concept_count + 0E0) AS relative_frequency_2,
+                    c.concept_name AS concept_2_name, 
+                    c.domain_id AS concept_2_domain,
+                    pc.count AS patient_count
+                FROM cohd.concept_pair_counts cp
+                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                WHERE cp.dataset_id = %(dataset_id)s 
+                    AND c1.dataset_id = %(dataset_id)s 
+                    AND c2.dataset_id = %(dataset_id)s
+                    AND cp.concept_id_2 = %(concept_id_1)s 
+                    {domain_filter}
+                    {concept_class_filter})) x
+            ORDER BY ln_ratio DESC;'''
+        params = {
+            'dataset_id': dataset_id,
+            'concept_id_1': concept_id_1,
+        }
+
+        if domain_id is not None and not domain_id == ['']:
+            # Restrict the associated concept by domain
+            domain_filter = 'AND c.domain_id = %(domain_id)s'
+            params['domain_id'] = domain_id
+        else:
+            # Unrestricted domain
+            domain_filter = ''
+
+        # Filter concepts by concept_class
+        if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
+                concept_class_id.isspace():
+            concept_class_filter = ''
+        else:
+            concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+            params['concept_class_id'] = concept_class_id
+
+        sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter)
+
+    cur.execute(sql, params)
+    json_return = cur.fetchall()
+
+    # Perform calculations for results
+    for row in json_return:
+        cpc = row['concept_pair_count']
+        c1 = row['concept_1_count']
+        c2 = row['concept_2_count']
+
+        # Confidence interval for obsExpRatio
+        ci = ln_ratio_ci(cpc, row['ln_ratio'], confidence)
+        # The lower bound of relative freq may hit -Inf which causes issues with JSON serialization. Limit it to -999
+        row['ln_ratio_ci'] = max(ci[0], -999), ci[1]
+
+        # Confidence intervals for relative frequencies
+        row['relative_frequency_1_ci'] = rel_freq_ci(cpc, c1, confidence)
+        row['relative_frequency_2_ci'] = rel_freq_ci(cpc, c2, confidence)
+
+        # Chi-square
+        cpc = float(cpc)
+        c1 = float(c1)
+        c2 = float(c2)
+        pts = float(row['patient_count'])
+        neg = pts - c1 - c2 + cpc
+        # Create the observed and expected RxC tables and perform chi-square
+        o = [neg, c1 - cpc, c2 - cpc, cpc]
+        e = [(pts - c1) * (pts - c2) / pts, c1 * (pts - c2) / pts, c2 * (pts - c1) / pts, c1 * c2 / pts]
+        cs = chisquare(o, e, 2)
+        row['chi_square_p-value'] = cs.pvalue
+        row['chi_square_p-value_adjusted'] = min(cs.pvalue * pair_count, 1.0)  # Bonferonni adjustment
+
+    cur.close()
+    conn.close()
+
+    json_return = {"results": json_return}
+    return json_return
 
 
 def omop_concept_definition(concept_id):

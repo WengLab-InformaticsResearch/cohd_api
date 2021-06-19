@@ -8,8 +8,12 @@ from semantic_version import Version
 
 from . import cohd_trapi_093
 from . import cohd_trapi_100
+from . import cohd_trapi_110
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
+
+# Get the static instance of the Biolink Model Toolkit from cohd_trapi
+from .cohd_trapi import bm_toolkit
 
 
 def translator_predicates():
@@ -58,6 +62,54 @@ def translator_predicates():
     })
 
 
+def translator_meta_knowledge_graph():
+    """ Implementation of /meta_knowledge_graph for Translator Reasoner API to provide supported nodes and edges
+
+    Returns
+    -------
+    json response object
+    """
+    # Supported categories in most recent TRAPI implementation
+    categories = cohd_trapi_110.CohdTrapi110.supported_categories
+
+    # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
+    nodes = dict()
+    for cat in categories:
+        # Most nodes can be added using just the id_prefixes returned by the Biolink Model Toolkit
+        prefixes = bm_toolkit.get_element(cat).id_prefixes
+        if prefixes is not None and len(prefixes) >= 1:
+            nodes[cat] = {'id_prefixes': prefixes}
+        else:
+            # Some categories do not have any id_prefixes defined in biolink
+            if cat == 'biolink:DiseaseOrPhenotypicFeature':
+                # Use the union of biolink:Disease and biolink:PhenotypicFeature
+                prefixes_dis = bm_toolkit.get_element('biolink:Disease').id_prefixes
+                prefixes_phe = bm_toolkit.get_element('biolink:PhenotypicFeature').id_prefixes
+                nodes['biolink:DiseaseOrPhenotypicFeature'] = {
+                    'id_prefixes': list(set(prefixes_dis).union(prefixes_phe))
+                }
+            elif cat == 'biolink:Procedure':
+                # ICD and SNOMED used for biolink:Disease, so for now, use these vocabularies for procedure, also
+                nodes['biolink:Procedure'] = {
+                    'id_prefixes': ['ICD10PCS', 'SNOMEDCT']
+                }
+
+    # Add the supported edges
+    edges = list()
+    for subject in categories:
+        for object in categories:
+            edges.append({
+                'subject': subject,
+                'object': object,
+                'predicate': 'biolink:correlated_with'
+            })
+
+    return jsonify({
+        'nodes': nodes,
+        'edges': edges
+    })
+
+
 def translator_query(request, version=None):
     """ Implementation of query endpoint for TRAPI
 
@@ -74,14 +126,17 @@ def translator_query(request, version=None):
     requested version
     """
     if version is None:
-        version = '1.0.0'
+        version = '1.1.0'
 
     try:
         version = Version(version)
     except ValueError:
         return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.0.0', 400
 
-    if Version('1.0.0-beta') <= version < Version('1.1.0'):
+    if Version('1.1.0-beta') <= version < Version('1.2.0-alpha'):
+        trapi = cohd_trapi_110.CohdTrapi110(request)
+        return trapi.operate()
+    elif Version('1.0.0-beta') <= version < Version('1.1.0-alpha'):
         trapi = cohd_trapi_100.CohdTrapi100(request)
         return trapi.operate()
     elif version == Version('0.9.3'):
@@ -115,7 +170,23 @@ def biolink_to_omop(request):
         return 'Bad request', 400
 
     concept_mapper = BiolinkConceptMapper()
-    return jsonify(concept_mapper.map_to_omop(curies))
+    mappings, _ = concept_mapper.map_to_omop(curies)
+
+    # Convert the Mappings object into a dict for return
+    mappings_j = dict()
+    for curie, mapping in mappings.items():
+        if mapping is None:
+            mappings_j[curie] = None
+        else:
+            omop_id = int(mapping.output_id.split(':')[1])
+            mappings_j[curie] = {
+                'distance': mapping.get_distance(),
+                'omop_concept_id': omop_id,
+                'omop_concept_name': mapping.output_label,
+                'mapping_history': mapping.history
+            }
+
+    return jsonify(mappings_j)
 
 
 def omop_to_biolink(request):
@@ -156,17 +227,25 @@ def omop_to_biolink(request):
             domain_id = concept_definitions[omop_id]['domain_id']
             concept_class_id = concept_definitions[omop_id]['concept_class_id']
             blm_category = map_omop_domain_to_blm_class(domain_id, concept_class_id, )
-            mapping = concept_mapper.map_from_omop(omop_id, blm_category)
+            mapping, _ = concept_mapper.map_from_omop(omop_id, blm_category)
             mappings[omop_id] = mapping
+        else:
+            mappings[omop_id] = None
 
     # Normalize with SRI Node Normalizer
     normalized_mappings = dict()
-    curies = [x['target_curie'] for x in mappings.values() if x is not None]
+    curies = [x.output_id for x in mappings.values() if x is not None]
     normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
+
+    if normalized_nodes is None:
+        return 'Unexpected response or no response received from SRI Node Normalizer', 503
+
     for omop_id in omop_ids:
         normalized_mapping = None
-        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id]['target_curie']] is not None:
-            normalized_mapping = normalized_nodes[mappings[omop_id]['target_curie']]
+        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].output_id] is not None:
+            m = mappings[omop_id]
+            normalized_mapping = normalized_nodes[m.output_id]
+            normalized_mapping['mapping_history'] = m.history
         normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
