@@ -710,9 +710,10 @@ class CohdTrapi110(CohdTrapi):
         kg_node_1, kg_node_2, kg_edge, kg_edge_id = self._add_kg_edge(subject_node, object_node, cohd_result)
 
         # Add to results
-        self._add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id)
+        score = score_cohd_result(cohd_result)
+        self._add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id, score)
 
-    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id):
+    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score):
         """ Adds a knowledge graph edge to the results list
 
         Parameters
@@ -720,6 +721,7 @@ class CohdTrapi110(CohdTrapi):
         kg_node_1_id: Subject node ID
         kg_node_2_id: Object node ID
         kg_edge_id: edge ID
+        score: result score
 
         Returns
         -------
@@ -738,7 +740,8 @@ class CohdTrapi110(CohdTrapi):
                 self._query_edge_key: [{
                     'id': kg_edge_id
                 }]
-            }
+            },
+            'score': score
         }
         self._results.append(result)
         return result

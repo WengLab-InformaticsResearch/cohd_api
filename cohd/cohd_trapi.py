@@ -894,7 +894,34 @@ class OntologyKP:
         return None
 
 
-def sort_cohd_results(cohd_results, sort_field=None, ascending=None):
+def score_cohd_result(cohd_result):
+    """ Get a score for a cohd result. We will use the absolute value of the smaller bound of the ln_ratio confidence
+    interval. For confidence intervals that span 0 (e.g., [-.5, .5]), the score will be 0. For positive confidence
+    intervals, use the lower bound. For negative confidence intervals, use the upper bound. If the ln_ratio_ci is not
+    found, the score is 0.
+
+    Parameters
+    ----------
+    cohd_result
+
+    Returns
+    -------
+    score (float)
+    """
+    if 'ln_ratio_ci' in cohd_result:
+        ci = cohd_result['ln_ratio_ci']
+        if ci[0] <=0 and ci[1] >= 0:
+            score = 0
+        elif ci[0] > 0:
+            score = ci[0]
+        elif ci[1] < 0:
+            score = abs(ci[1])
+    else:
+        score = 0
+    return score
+
+
+def sort_cohd_results(cohd_results, sort_field='ln_ratio_ci', ascending=False):
     """ Sort the COHD results
 
     Parameters
@@ -910,38 +937,12 @@ def sort_cohd_results(cohd_results, sort_field=None, ascending=None):
     if cohd_results is None or len(cohd_results) == 0:
         return cohd_results
 
-    if sort_field is None or len(sort_field) == 0:
-        # See what fields are in the first result, assume the rest are the same
-        r = cohd_results[0]
-        if 'p-value' in r:
-            sort_field = 'p-value'
-            if ascending is None:
-                ascending = False
-        elif 'ln_ratio_ci' in r:
-            sort_field = 'ln_ratio_ci'
-            if ascending is None:
-                ascending = False
-        elif 'ln_ratio' in r:
-            sort_field = 'ln_ratio'
-            if ascending is None:
-                ascending = False
-        elif 'relative_frequency_2_ci' in r:
-            sort_field = 'relative_frequency_2_ci'
-            if ascending is None:
-                ascending = False
-        elif 'relative_frequency_1_ci' in r:
-            sort_field = 'relative_frequency_1_ci'
-            if ascending is None:
-                ascending = False
-        elif 'relative_frequency' in r:
-            sort_field = 'relative_frequency'
-            if ascending is None:
-                ascending = False
-
     if sort_field in ['p-value', 'ln_ratio', 'relative_frequency']:
         sort_values = [x[sort_field] for x in cohd_results]
-    elif sort_field in ['ln_ratio_ci', 'relative_frequency_2_ci', 'relative_frequency_1_ci']:
-        sort_values = [x[sort_field][0] if x[sort_field][0] >= 0 else x[sort_field][1] for x in cohd_results]
+    elif sort_field == 'ln_ratio_ci':
+        sort_values = [score_cohd_result(x) for x in cohd_results]
+    elif sort_field in ['relative_frequency_1_ci', 'relative_frequency_2_ci']:
+        sort_values = [x[sort_field][0] for x in cohd_results]
     results_sorted = [cohd_results[i] for i in argsort(sort_values)]
     if not ascending:
         results_sorted = list(reversed(results_sorted))
