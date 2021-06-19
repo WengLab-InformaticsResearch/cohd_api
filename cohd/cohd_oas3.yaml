@@ -50,7 +50,7 @@ info:
     url: 'http://chunhualab.org/'
   license:
     name: Apache 2.0
-    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: 'http://cohd.nsides.io/terms/'
   x-accessRestriction: none
   x-implementationLanguage: Python
@@ -66,7 +66,7 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-translator/
   x-trapi:
-    version: 1.1.0
+    version: 1.1.2
     externalDocs:
       description: >-
         The values for version are restricted according to the regex in
@@ -75,6 +75,7 @@ info:
         production/x-trapi/
 servers:
   - url: 'https://cohd.io/api/'
+    description: COHD production server
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services
@@ -2048,7 +2049,7 @@ paths:
     post:
       tags:
         - query
-      summary: 'Query COHD following NCATS Translator Reasoner Standard API'
+      summary: Query COHD following NCATS Translator Reasoner Standard API
       description: >-
         Query the COHD API following the
         [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
@@ -2087,136 +2088,12 @@ paths:
                   }
                 },
                 "query_options": {
-                  "method": "obsExpRatio",
                   "dataset_id": 3,
                   "confidence_interval": 0.99,
                   "min_cooccurrence": 50,
                   "threshold": 0.5,
                   "local_oxo": true,
                   "max_results": 50,
-                  "ontology_targets": {
-                    "biolink:Disease": [
-                      "ICD9",
-                      "SNOMEDCT",
-                      "DOID"
-                    ],
-                    "biolink:Drug": [
-                      "RxNorm"
-                    ],
-                    "biolink:Procedure": [
-                      "ICD10PCS",
-                      "SNOMEDCT"
-                    ],
-                    "_DEFAULT": []
-                  },
-                  "biolink_only": true
-                }
-              }
-      responses:
-        '200':
-          description: >-
-            OK. There may or may not be results. Note that some of the provided
-            identifiers may not have been recognized.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Response'
-        '400':
-          description: >-
-            Bad request. The request is invalid according to this OpenAPI
-            schema OR a specific identifier is believed to be invalid somehow
-            (not just unrecognized).
-          content:
-            application/json:
-              schema:
-                type: string
-        '500':
-          description: >-
-            Internal server error.
-          content:
-            application/json:
-              schema:
-                type: string
-        '501':
-          description: >-
-            Not implemented.
-          content:
-            application/json:
-              schema:
-                type: string
-  /1.0.0/query:
-    post:
-      tags:
-        - translator
-      summary: 'Query COHD following NCATS TRAPI 1.0'
-      description: >-
-        Query the COHD API following the [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
-        Only single hop queries are supported. See the example query_graph.
-        
-        For the subject node, the id must be specified (category is ignored).
-        
-        For the object node, both the id and category are optional. If id is specified for the object node, then the
-        association between the two identified concepts is returned. If id is not specified and category is specified,
-        the associations between the subject node and all concepts with the specified category are returned. If neither
-        are specified, then the associations between the subject node and all concepts are returned.
-        
-        The COHD data are natively represented using OMOP. COHD will attempt to map between Biolink and OMOP both in the
-        input and response.
-        
-        Additional behavior options can be controlled using the optional parameters in query_options.
-      operationId: query
-      requestBody:
-        description: Query information to be submitted
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Query'
-            example: >-
-              {
-                "message": {
-                  "query_graph": {
-                    "nodes": {
-                      "n00": {
-                        "id": "DOID:9053",
-                        "category": "biolink:Disease"
-                      },
-                      "n01": {
-                        "category": "biolink:Procedure"
-                      }
-                    },
-                    "edges": {
-                      "e00": {
-                        "predicate": "biolink:correlated_with",
-                        "subject": "n00",
-                        "object": "n01"
-                      }
-                    }
-                  }
-                },
-                "query_options": {
-                  "method": "obsExpRatio",
-                  "dataset_id": 3,
-                  "confidence_interval": 0.99,
-                  "min_cooccurrence": 50,
-                  "threshold": 0.5,
-                  "local_oxo": true,
-                  "max_results": 50,
-                  "ontology_targets": {
-                    "biolink:Disease": [
-                      "ICD9",
-                      "SNOMEDCT",
-                      "DOID"
-                    ],
-                    "biolink:Drug": [
-                      "RxNorm"
-                    ],
-                    "biolink:Procedure": [
-                      "ICD10PCS",
-                      "SNOMEDCT"
-                    ],
-                    "_DEFAULT": []
-                  },
                   "biolink_only": true
                 }
               }
@@ -2432,10 +2309,6 @@ components:
           description: "The maximum number of results to be returned."
           type: integer
           example: 10
-        method:
-          description: "Type of association method to perform: 'obsExpRatio' (default), 'relativeFrequency', or 'chiSquare'"
-          type: string
-          example: 'obsExpRatio'
         dataset_id:
           description: "The COHD dataset to query"
           type: integer
@@ -2452,28 +2325,6 @@ components:
           description: "Criteria threshold to apply to the association metric. chiSquare: p-value < threshold. obsExpRatio: abs(ln_ratio) >= threshold. relativeFrequency: relative_frequency >= threshold."
           type: number
           example: 0.5
-        ontology_targets:
-          description: >
-            DEPRECATED: COHD is now attempting to map based on the Biolink Model yaml and SRI Node Normalizer.
-            
-            COHD can attempt to map from OMOP concepts to a target ontology. You can identify target ontologies for each
-            Biolink node type. The keys should be Biolink node types (e.g., 'biolink:Disease'). The values should be
-            lists of target ontology prefixes, e.g., ['ICD9', 'UMLS', 'DOID']. An emtpy list indicates not to perform
-            mapping for the specified type. Use the key '_DEFAULT' to indicate a default list of target ontologies for
-            any unspecified types. If a domain is specified, it will override the '_DEFAULT' list. Target ontology
-            prefixes should match the Biolink yaml but may include prefixes outside of Biolink.
-            
-            
-            If ontology_targets is not provided, COHD API will attempt mappings based on the prefixes defined in the
-            Biolink yaml.
-          type: object
-          example:
-            {
-              "biolink:Disease": ["ICD9", "SNOMEDCT", "DOID"],
-              "biolink:Drug": ["RxNorm"],
-              "biolink:Procedure": ["ICD10PCS", "SNOMEDCT"],
-              "_DEFAULT": []
-            }
         local_oxo:
           description: "Whether to use the local implementation of OxO or the real implementation of OxO. Note, the local OxO implementation may contain outdated definitions and xrefs but runs faster. The real OxO has the most updated definitions and xrefs, but is slower (~1-2 seconds/concept). Default: true"
           type: boolean
@@ -2561,7 +2412,9 @@ components:
       properties:
         results:
           description: >-
-            List of all returned Result objects for the query posed
+            List of all returned Result objects for the query posed.
+            The list SHOULD NOT be assumed to be ordered. The 'score' property,
+             if present, MAY be used to infer result rankings.
           type: array
           items:
             $ref: '#/components/schemas/Result'
@@ -2658,6 +2511,14 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/EdgeBinding'
+        score:
+          type: number
+          format: float
+          example: 163.233
+          description: >-
+            A numerical score associated with this result indicating the
+            relevance or confidence of this result relative to others in the
+            returned set. Higher MUST be better.
       additionalProperties: true
       required:
         - node_bindings
@@ -2908,7 +2769,8 @@ components:
             Value of the attribute. May be any data type, including a list.
           example: 0.000153
         value_type_id:
-          $ref: '#/components/schemas/CURIE'
+          allOf:
+            - $ref: '#/components/schemas/CURIE'
           description: >-
             CURIE describing the semantic type of an  attribute's value. Use
             a Biolink class if possible, otherwise a term from an external
@@ -2916,6 +2778,7 @@ components:
             descriptive phrase here and submit the new type for consideration
             by the appropriate authority.
           example: EDAM:data_1187
+          nullable: true
         attribute_source:
           type: string
           description: >-
@@ -3019,19 +2882,25 @@ components:
     MetaKnowledgeGraph:
       type: object
       description: >-
-        Knowledge-map representation of this TRAPI web service.
+        Knowledge-map representation of this TRAPI web service. The meta
+        knowledge graph is composed of the union of most specific categories
+        and predicates for each node and edge.
       properties:
         nodes:
           type: object
           description: >-
-            Collection of node categories provided by this TRAPI web service,
-            indexed by Biolink class CURIEs.
+            Collection of the most specific node categories provided by
+            this TRAPI web service, indexed by Biolink class CURIEs.
+            A node category is only exposed here if there is
+            node for which that is the most specific category available.
           additionalProperties:
             $ref: '#/components/schemas/MetaNode'
         edges:
           type: array
           description: >-
-            List of edges/predicates provided by this TRAPI web service.
+            List of the most specific edges/predicates provided by this TRAPI
+            web service. A predicate is only exposed here if there is an edge
+            for which the predicate is the most specific available.
           items:
             $ref: '#/components/schemas/MetaEdge'
           minItems: 1

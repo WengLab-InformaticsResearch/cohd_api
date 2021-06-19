@@ -4,6 +4,7 @@ from typing import Optional, Union, Dict, List, Tuple, Iterable, Any
 import requests
 from numpy import argsort
 
+from .app import cache
 from .cohd_utilities import DomainClass, omop_concept_curie
 
 
@@ -139,6 +140,7 @@ def omop_map_from_standard(cur, concept_id, vocabularies=None):
     return results
 
 
+@cache.memoize(timeout=10886400)
 def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
     """ Wrapper to the OxO search method.
 

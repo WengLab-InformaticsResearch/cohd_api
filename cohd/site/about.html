@@ -63,6 +63,24 @@
       <li>Press the "Get concept pairs" button</li>
       <li>For results between multiple pairs, links to download the data as JSON or CSV are presented below the results table</li>
     </ol>
+    <h2 class="color-columbia">Association Methods</h2>
+    <h3>Chi-square</h3>
+    <p>Calculates the chi-square statistic and p-value between pairs of concepts. Results are returned in descending
+      order of the chi-square statistic. Note that due to large sample sizes, the chi-square can become very large. An
+      adjusted p-value is also calculated, using Bonferonni correction with the total number of pairs of concepts in the
+      data set. The expected frequencies for the chi-square analysis are calculated based on the single concept
+      frequencies, assuming independence between concepts. P-value is calculated with 1 DOF.</p>
+    <h3>Observed-to-expected frequency ratio</h3>
+    <p>Calculates the natural logarithm of the ratio between the observed count and expected count for the pair of
+      concepts. Expected count is calculated from the single concept frequencies, assuming independence between the
+      concepts. Results are returned in descending order of ln_ratio.</p>
+    <p>expected_count = Count<sub>1&2</sub> * num_patients / (Count<sub>1</sub> * Count<sub>2</sub>)</p>
+    <p>ln_ratio = ln(expected_count)</p>
+    <h3>Relative frequency</h3>
+    <p>Calculates the relative frequency (i.e., conditional probability) between pairs of concepts. Results are returned
+      in descending order of relative frequency. Note that due to the randomization of the counts, the calculated
+      relative frequencies can exceed the limit of 1.0.</p>
+    <p>relative_frequency = Count<sub>1&2</sub> / Count<sub>2</sub></p>
     <h2 class="color-columbia">Examples</h2>
     <div class="cohd-example">
       <h3>Example 1: Atrial fibrillation</h3>

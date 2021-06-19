@@ -55,7 +55,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
     q2_categories.
     """
-    print(f'\ntest_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category}) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query between {q1_curie} and {q2_category} on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
@@ -351,7 +351,7 @@ def test_translator_query_bad_predicate():
 
 def test_translator_query_q1_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3+ results """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with muldiple IDs in subject QNode on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in subject QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -779,7 +779,7 @@ def test_translator_query_qnode_null_constraint():
             "query_graph": {
                 "nodes": {
                     "subj": {
-                        "ids": ["MONDO:0005015"],
+                        "ids": ["DOID:9053"],
                         "constraints": null
                     },
                     "obj": {
@@ -797,7 +797,7 @@ def test_translator_query_qnode_null_constraint():
             }
         },
         "query_options": {
-            "max_results": 50
+            "max_results": 10
         }
     }
     '''
@@ -811,7 +811,7 @@ def test_translator_query_qnode_null_constraint():
     json = resp.json()
     reasoner_validator.validate_Response(json)
 
-    # There should be more than 1 result
-    assert len(json['message']['results']) > 1
+    # There should be at least 1 result
+    assert len(json['message']['results']) >= 1
 
     print('...passed')

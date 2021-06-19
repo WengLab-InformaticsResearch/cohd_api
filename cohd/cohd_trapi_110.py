@@ -34,6 +34,8 @@ class CohdTrapi110(CohdTrapi):
         self._query_graph = None
         self._concept_1_qnode_key = None
         self._concept_2_qnode_key = None
+        # Boolean indicating if concept_1 (from API context) is the subject node (True) or object node (False)
+        self._concept_1_is_subject_qnode = True
         self._query_options = None
         self._method = None
         self._concept_1_omop_ids = None
@@ -337,6 +339,7 @@ class CohdTrapi110(CohdTrapi):
         concept_1_qnode = None
         concept_2_qnode = None
         if 'ids' in subject_qnode:
+            self._concept_1_is_subject_qnode = True
             self._concept_1_qnode_key = subject_qnode_key
             concept_1_qnode = subject_qnode
             self._concept_2_qnode_key = object_qnode_key
@@ -345,6 +348,7 @@ class CohdTrapi110(CohdTrapi):
         if 'ids' in object_qnode:
             if 'ids' not in subject_qnode:
                 # Swap the subj/obj mapping to concept1/2 if only the obj node has IDs
+                self._concept_1_is_subject_qnode = False
                 self._concept_1_qnode_key = object_qnode_key
                 concept_1_qnode = object_qnode
                 self._concept_2_qnode_key = subject_qnode_key
@@ -616,36 +620,30 @@ class CohdTrapi110(CohdTrapi):
                         # Node 2's category was specified. Query associations between Node 1 and the requested
                         # categories (domains)
                         for domain_id, concept_class_id in self._domain_class_pairs:
-                            json_results = query_cohd_mysql.query_association(method=self._method,
-                                                                              concept_id_1=concept_1_omop_id,
-                                                                              concept_id_2=None,
-                                                                              dataset_id=self._dataset_id,
-                                                                              domain_id=domain_id,
-                                                                              concept_class_id=concept_class_id,
-                                                                              confidence=self._confidence_interval)
+                            json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                        concept_id_2=None,
+                                                                        dataset_id=self._dataset_id,
+                                                                        domain_id=domain_id,
+                                                                        concept_class_id=concept_class_id,
+                                                                        confidence=self._confidence_interval)
                             if json_results:
                                 new_cohd_results.extend(json_results['results'])
                     else:
                         # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
                         # domains
-                        json_results = query_cohd_mysql.query_association(method=self._method,
-                                                                          concept_id_1=concept_1_omop_id,
-                                                                          concept_id_2=None,
-                                                                          dataset_id=self._dataset_id,
-                                                                          domain_id=None,
-                                                                          confidence=self._confidence_interval)
+                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
+                                                                    dataset_id=self._dataset_id, domain_id=None,
+                                                                    confidence=self._confidence_interval)
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
 
                 else:
                     # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
                     for concept_2_id in self._concept_2_omop_ids:
-                        json_results = query_cohd_mysql.query_association(method=self._method,
-                                                                          concept_id_1=concept_1_omop_id,
-                                                                          concept_id_2=concept_2_id,
-                                                                          dataset_id=self._dataset_id,
-                                                                          domain_id=None,
-                                                                          confidence=self._confidence_interval)
+                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                    concept_id_2=concept_2_id,
+                                                                    dataset_id=self._dataset_id, domain_id=None,
+                                                                    confidence=self._confidence_interval)
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
 
@@ -712,9 +710,10 @@ class CohdTrapi110(CohdTrapi):
         kg_node_1, kg_node_2, kg_edge, kg_edge_id = self._add_kg_edge(subject_node, object_node, cohd_result)
 
         # Add to results
-        self._add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id)
+        score = score_cohd_result(cohd_result)
+        self._add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id, score)
 
-    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id):
+    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score):
         """ Adds a knowledge graph edge to the results list
 
         Parameters
@@ -722,6 +721,7 @@ class CohdTrapi110(CohdTrapi):
         kg_node_1_id: Subject node ID
         kg_node_2_id: Object node ID
         kg_edge_id: edge ID
+        score: result score
 
         Returns
         -------
@@ -740,7 +740,8 @@ class CohdTrapi110(CohdTrapi):
                 self._query_edge_key: [{
                     'id': kg_edge_id
                 }]
-            }
+            },
+            'score': score
         }
         self._results.append(result)
         return result
@@ -923,54 +924,121 @@ class CohdTrapi110(CohdTrapi):
         ke_id = 'ke{id:06d}'.format(id=len(self._knowledge_graph['edges']))
 
         # Add properties from COHD results to the edge attributes
-        attributes = list()
-        if 'p-value' in cohd_result:
-            attributes.append({
+        attributes = [  # TODO: need specific attribute IDs
+            {
                 'attribute_type_id': 'biolink:p_value',
                 'original_attribute_name': 'p-value',
-                'value': cohd_result['p-value'],
+                'value': cohd_result['chi_square_p-value'],
                 'value_type_id': 'EDAM:data_1669',  # P-value
                 'attribute_source': 'COHD',
-                'value_url': 'http://edamontology.org/data_1669'
-            })
-        if 'confidence_interval' in cohd_result:
-            attributes.append({
+                'value_url': 'http://edamontology.org/data_1669',
+                'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:p_value',
+                'original_attribute_name': 'p-value adjusted',
+                'value': cohd_result['chi_square_p-value_adjusted'],
+                'value_type_id': 'EDAM:data_1669',  # P-value
+                'attribute_source': 'COHD',
+                'value_url': 'http://edamontology.org/data_1669',
+                'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
+                               'http://cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'ln_ratio',
+                'value': cohd_result['ln_ratio'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': 'COHD',
+                'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
+            },
+            {
                 'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'confidence_interval',
-                'value': cohd_result['confidence_interval'],
+                'original_attribute_name': 'ln_ratio_confidence_interval',
+                'value': cohd_result['ln_ratio_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'COHD'
-            })
-        if 'dataset_id' in cohd_result:
-            attributes.append({
-                'attribute_type_id': 'biolink:provided_by',  # Database ID
-                'original_attribute_name': 'dataset_id',
-                'value': cohd_result['dataset_id'],
-                'value_type_id': 'EDAM:data_1048',  # Database ID
-                'attribute_source': 'COHD'
-            })
-        if 'expected_count' in cohd_result:
-            attributes.append({
+                'attribute_source': 'COHD',
+                'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'relative_frequency_subject',
+                'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_2'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': 'COHD',
+                'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_confidence_level',
+                'original_attribute_name': 'relative_freq_subject_confidence_interval',
+                'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_2_ci'],
+                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                'attribute_source': 'COHD',
+                'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'relative_frequency_object',
+                'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_1'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': 'COHD',
+                'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_confidence_level',
+                'original_attribute_name': 'relative_freq_object_confidence_interval',
+                'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_1_ci'],
+                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                'attribute_source': 'COHD',
+                'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
+            },
+            {
+                'attribute_type_id': 'biolink:has_count',
+                'original_attribute_name': 'concept_pair_count',
+                'value': cohd_result['concept_pair_count'],
+                'value_type_id': 'EDAM:data_0006',  # Data
+                'attribute_source': 'COHD',
+                'description': 'Observed concept count between the pair of subject and object nodes'
+            },
+            {
+                'attribute_type_id': 'biolink:has_count',
+                'original_attribute_name': 'concept_count_subject',
+                'value': cohd_result['concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
+                'value_type_id': 'EDAM:data_0006',  # Data
+                'attribute_source': 'COHD',
+                'description': 'Observed concept count of the subject node'
+            },
+            {
+                'attribute_type_id': 'biolink:has_count',
+                'original_attribute_name': 'concept_count_object',
+                'value': cohd_result['concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
+                'value_type_id': 'EDAM:data_0006',  # Data
+                'attribute_source': 'COHD',
+                'description': 'Observed concept count of the object node'
+            },
+            {
                 'attribute_type_id': 'EDAM:operation_3438',
                 'original_attribute_name': 'expected_count',
                 'value': cohd_result['expected_count'],
                 'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                'attribute_source': 'COHD'
-            })
-        # Some properties are handled together as a group based on their type
-        for key in ['ln_ratio', 'relative_frequency']:
-            if key in cohd_result:
-                attributes.append({
-                    'attribute_type_id': 'biolink:has_evidence',
-                    'original_attribute_name': key,
-                    'value': cohd_result[key],
-                    'value_type_id': 'EDAM:data_1772',  # Score
-                    'attribute_source': 'COHD'
-                })
-        for key in ['observed_count',  # From ln_ratio
-                    'concept_pair_count', 'concept_2_count',  # From relative_frequency
-                    'n', 'n_c1', 'n_c1_c2', 'n_c1_~c2', 'n_c2', 'n_~c1_c2', 'n_~c1_~c2'  # From chi_square
-                    ]:
+                'attribute_source': 'COHD',
+                'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:provided_by',  # Database ID
+                'original_attribute_name': 'dataset_id',
+                'value': cohd_result['dataset_id'],
+                'value_type_id': 'EDAM:data_1048',  # Database ID
+                'attribute_source': 'COHD',
+                'description': 'Dataset ID within COHD'
+            }
+        ]
+        # From calculation of chi_square
+        for key in ['n', 'n_c1', 'n_c1_c2', 'n_c1_~c2', 'n_c2', 'n_~c1_c2', 'n_~c1_~c2']:
             if key in cohd_result:
                 attributes.append({
                     'attribute_type_id': 'biolink:has_count',
@@ -978,7 +1046,7 @@ class CohdTrapi110(CohdTrapi):
                     'value': cohd_result[key],
                     'value_type_id': 'EDAM:data_0006',  # Data
                     'attribute_source': 'COHD'
-                })
+            })
 
         # Set the knowledge graph edge properties
         kg_edge = {
