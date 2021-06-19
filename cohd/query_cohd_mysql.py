@@ -1252,10 +1252,10 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                 cp.concept_count / (c1.concept_count + 0E0) AS {rename_rf1},
                 cp.concept_count / (c2.concept_count + 0E0) AS {rename_rf2},
                 pc.count AS patient_count
-            FROM cohd.concept_pair_counts cp
-            JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-            JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-            JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+            FROM concept_pair_counts cp
+            JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+            JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+            JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
             WHERE cp.dataset_id = %(dataset_id)s 
                 AND c1.dataset_id = %(dataset_id)s 
                 AND c2.dataset_id = %(dataset_id)s
@@ -1300,11 +1300,11 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     c.concept_name AS concept_2_name, 
                     c.domain_id AS concept_2_domain,
                     pc.count AS patient_count
-                FROM cohd.concept_pair_counts cp
-                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                FROM concept_pair_counts cp
+                JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN concept c ON cp.concept_id_2 = c.concept_id
                 WHERE cp.dataset_id = %(dataset_id)s 
                     AND c1.dataset_id = %(dataset_id)s 
                     AND c2.dataset_id = %(dataset_id)s
@@ -1326,11 +1326,11 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     c.concept_name AS concept_2_name, 
                     c.domain_id AS concept_2_domain,
                     pc.count AS patient_count
-                FROM cohd.concept_pair_counts cp
-                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
-                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
-                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
-                JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                FROM concept_pair_counts cp
+                JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN concept c ON cp.concept_id_1 = c.concept_id
                 WHERE cp.dataset_id = %(dataset_id)s 
                     AND c1.dataset_id = %(dataset_id)s 
                     AND c2.dataset_id = %(dataset_id)s
