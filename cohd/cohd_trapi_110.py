@@ -12,6 +12,9 @@ from .cohd_trapi import *
 from .trapi import reasoner_validator_11x as reasoner_validator
 
 
+_TOOL_VERSION = 'COHD 4.0.0'
+_SCHEMA_VERSION = '1.1'
+
 class CohdTrapi110(CohdTrapi):
     """
     Pseudo-reasoner conforming to NCATS Biomedical Data Translator Reasoner API Spec 1.0
@@ -1067,8 +1070,8 @@ class CohdTrapi110(CohdTrapi):
         self._response = {
             # From TRAPI Extended
             'reasoner_id': 'COHD',
-            'tool_version': 'COHD 4.0.0',
-            'schema_version': '1.1.0',
+            'tool_version': _TOOL_VERSION,
+            'schema_version': _SCHEMA_VERSION,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1140,8 +1143,8 @@ class CohdTrapi110(CohdTrapi):
             },
             # From TRAPI Extended
             'reasoner_id': 'COHD',
-            'tool_version': 'COHD 3.0.0',
-            'schema_version': '1.0.0',
+            'tool_version': _TOOL_VERSION,
+            'schema_version': _SCHEMA_VERSION,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
