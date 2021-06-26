@@ -693,7 +693,8 @@ class CohdTrapi110(CohdTrapi):
         concept_2_id = cohd_result['concept_id_2']
         concept_2_name = cohd_result.get('concept_2_name')
         concept_2_domain = cohd_result.get('concept_2_domain')
-        node_2 = self._get_kg_node(concept_2_id, concept_2_name, concept_2_domain,
+        concept_2_class_id = cohd_result.get('concept_2_class_id')
+        node_2 = self._get_kg_node(concept_2_id, concept_2_name, concept_2_domain, concept_2_class_id,
                                    query_node_categories=self._concept_2_qnode_categories)
 
         if not node_2.get('query_category_compliant', False) or \
