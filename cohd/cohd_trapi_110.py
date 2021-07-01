@@ -858,7 +858,7 @@ class CohdTrapi110(CohdTrapi):
                             'original_attribute_name': 'concept_id',
                             'value': omop_curie,
                             'value_type_id': 'EDAM:data_1087',  # Ontology concept ID
-                            'attribute_source': 'OMOP',
+                            'attribute_source': 'infores:omop-ohdsi',
                             'value_url': f'https://athena.ohdsi.org/search-terms/terms/{concept_id}'
                         },
                         {
@@ -866,14 +866,14 @@ class CohdTrapi110(CohdTrapi):
                             'original_attribute_name': 'concept_name',
                             'value': concept_name,
                             'value_type_id': 'EDAM:data_2339',  # Ontology concept name
-                            'attribute_source': 'OMOP',
+                            'attribute_source': 'infores:omop-ohdsi',
                         },
                         {
                             'attribute_type_id': 'EDAM:data_0967',  # Ontology concept data
                             'original_attribute_name': 'domain',
                             'value': domain,
                             'value_type_id': 'EDAM:data_0967',  # Ontology concept data
-                            'attribute_source': 'OMOP',
+                            'attribute_source': 'infores:omop-ohdsi',
                         }
                     ]
                 }
@@ -886,7 +886,7 @@ class CohdTrapi110(CohdTrapi):
                             'original_attribute_name': 'Database cross-mapping',
                             'value': mapping.history,
                             'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
-                            'attribute_source': 'COHD',
+                            'attribute_source': 'infores:cohd',
                         })
 
             self._kg_nodes[concept_id] = node
@@ -932,13 +932,30 @@ class CohdTrapi110(CohdTrapi):
         ke_id = 'ke{id:06d}'.format(id=len(self._knowledge_graph['edges']))
 
         # Add properties from COHD results to the edge attributes
-        attributes = [  # TODO: need specific attribute IDs
+        attributes = [
+            # Information Resource - Source Retrieval Provenance
+            # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
+            {
+                'attribute_type_id': 'biolink:original_knowledge_source',
+                'value': 'infores:cohd',
+                'value_type_id': 'biolink:InformationResource',
+                'attribute_source': 'infores:cohd',
+                'value_url': 'http://cohd.io/api/query'
+            },
+            {
+                'attribute_type_id': 'biolink:supporting_data_source',
+                'value': 'infores:cohd',
+                'value_type_id': 'biolink:InformationResource',
+                'attribute_source': 'infores:cohd',
+                'value_url': 'http://cohd.io/api/'
+            },
+            # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
             {
                 'attribute_type_id': 'biolink:p_value',
                 'original_attribute_name': 'p-value',
                 'value': cohd_result['chi_square_p-value'],
                 'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'value_url': 'http://edamontology.org/data_1669',
                 'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
             },
@@ -947,7 +964,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'p-value adjusted',
                 'value': cohd_result['chi_square_p-value_adjusted'],
                 'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'value_url': 'http://edamontology.org/data_1669',
                 'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
                                'http://cohd.io/about.html'
@@ -957,7 +974,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'ln_ratio',
                 'value': cohd_result['ln_ratio'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
             },
             {
@@ -965,7 +982,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'ln_ratio_confidence_interval',
                 'value': cohd_result['ln_ratio_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
             },
             {
@@ -974,7 +991,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_2'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
             },
             {
@@ -983,7 +1000,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_2_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
             },
             {
@@ -992,7 +1009,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_1'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
             },
             {
@@ -1001,7 +1018,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_1_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
             },
             {
@@ -1009,7 +1026,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_pair_count',
                 'value': cohd_result['concept_pair_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Observed concept count between the pair of subject and object nodes'
             },
             {
@@ -1017,7 +1034,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_count_subject',
                 'value': cohd_result['concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Observed concept count of the subject node'
             },
             {
@@ -1025,7 +1042,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_count_object',
                 'value': cohd_result['concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Observed concept count of the object node'
             },
             {
@@ -1033,7 +1050,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'expected_count',
                 'value': cohd_result['expected_count'],
                 'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
             },
             {
@@ -1041,7 +1058,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'dataset_id',
                 'value': cohd_result['dataset_id'],
                 'value_type_id': 'EDAM:data_1048',  # Database ID
-                'attribute_source': 'COHD',
+                'attribute_source': 'infores:cohd',
                 'description': 'Dataset ID within COHD'
             }
         ]
@@ -1053,7 +1070,7 @@ class CohdTrapi110(CohdTrapi):
                     'original_attribute_name': key,
                     'value': cohd_result[key],
                     'value_type_id': 'EDAM:data_0006',  # Data
-                    'attribute_source': 'COHD'
+                    'attribute_source': 'infores:cohd'
             })
 
         # Set the knowledge graph edge properties
