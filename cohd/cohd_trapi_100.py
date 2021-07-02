@@ -152,6 +152,9 @@ class CohdTrapi100(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
+        # Log that TRAPI 1.0 was called because there's no clear indication otherwise
+        logging.info('Query issued against TRAPI 1.0')
+
         # Check that the query input has the correct structure
         input_check = self._check_query_input()
         if not input_check[0]:
