@@ -1,6 +1,7 @@
 from datetime import datetime
 from numbers import Number
 import logging
+from typing import Union, List, Iterable
 
 from flask import jsonify
 import werkzeug
@@ -10,6 +11,7 @@ from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .trapi import reasoner_validator_11x as reasoner_validator
+from .translator.ontology_kp import OntologyKP
 
 
 _TOOL_VERSION = 'COHD 4.0.0'
@@ -1071,7 +1073,7 @@ class CohdTrapi110(CohdTrapi):
                     'value': cohd_result[key],
                     'value_type_id': 'EDAM:data_0006',  # Data
                     'attribute_source': 'infores:cohd'
-            })
+                })
 
         # Set the knowledge graph edge properties
         kg_edge = {
