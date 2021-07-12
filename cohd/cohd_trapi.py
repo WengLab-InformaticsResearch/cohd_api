@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 import threading
 import logging
-import requests
-from requests.compat import urljoin
-from typing import Union, Any, Iterable, Optional, Dict, List, Tuple
+from typing import Any, Iterable, Optional, Dict, List, Tuple
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -15,6 +13,7 @@ from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper, Mapping
 from .app import cache
 from .query_cohd_mysql import query_active_concepts
+from .translator.sri_node_normalizer import SriNodeNormalizer
 
 
 # Static instance of the Biolink Model Toolkit
@@ -757,7 +756,7 @@ class BiolinkConceptMapper:
         if BiolinkConceptMapper.rebuilding_cache:
             # There is already a thread running a build
             print('_build_cache_map_from already running. Will not start another thread.')
-            return
+            return 0
 
         BiolinkConceptMapper.rebuilding_cache = True
         print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
@@ -795,123 +794,6 @@ class BiolinkConceptMapper:
         return len(concepts)
 
 
-class SriNodeNormalizer:
-    base_url = 'https://nodenormalization-sri.renci.org/1.1/'
-    endpoint_get_normalized_nodes = 'get_normalized_nodes'
-
-    @staticmethod
-    def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, Any]]:
-        """ Straightforward call to get_normalized_nodes. Returns json from response.
-
-        Parameters
-        ----------
-        curies - list of curies
-
-        Returns
-        -------
-        JSON response from endpoint or None. Each input curie will be a key in the response. If no normalized node is
-        found, the entry will be null.
-        """
-        url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
-        response = requests.post(url=url, json={'curies': curies})
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-
-    @staticmethod
-    def get_canonical_identifiers(curies: List[str]) -> Union[Dict[str, Union[str, None]], None]:
-        """ Retrieve the canonical identifier
-
-        Parameters
-        ----------
-        curies - list of CURIES
-
-        Returns
-        -------
-        dict of canonical identifiers for each curie. If curie not found, then None
-        """
-        j = SriNodeNormalizer.get_normalized_nodes(curies)
-        if j is None:
-            return None
-
-        canonical = dict()
-        for curie in curies:
-            if curie in j and j[curie] is not None:
-                canonical[curie] = j[curie]['id']
-            else:
-                canonical[curie] = None
-        return canonical
-
-
-class OntologyKP:
-    base_url = 'https://stars-app.renci.org/sparql-kp/'
-    endpoint_query = 'query'
-
-    @staticmethod
-    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
-        """ Get descendant CURIEs from Ontology KP
-
-        Parameters
-        ----------
-        curies - list of curies
-        categories - list of biolink categories, or None
-
-        Returns
-        -------
-        All knowledge graph nodes returned by the Ontology KP. If any errors, an emtpy dict is returned.
-        """
-        # Ontology KP doesn't seem to like it when categories is null. Replace it with NamedThing for functionally
-        # equivalent TRAPI
-        if categories is None:
-            categories = ['biolink:NamedThing']
-
-        try:
-            # Query Ontology KP for descendants
-            m = {
-                "message": {
-                    "query_graph": {
-                        "nodes": {
-                            "a": {
-                                "ids": curies
-                            },
-                            "b": {
-                                "categories": categories
-                            }
-                        },
-                        "edges": {
-                            "ab": {
-                                "subject": "b",
-                                "object": "a",
-                                "predicate": "biolink:subclass_of"
-                            }
-                        }
-                    }
-                }
-            }
-            url = urljoin(OntologyKP.base_url, OntologyKP.endpoint_query)
-            response = requests.post(url=url, json=m)
-            if response.status_code == 200:
-                j = response.json()
-                if 'message' in j and 'knowledge_graph' in j['message']:
-                    nodes = j['message']['knowledge_graph'].get('nodes')
-                    if nodes is not None:
-                        # Return all nodes in KG, including reflexive CURIE node
-                        return nodes
-                    else:
-                        # Return an empty dict, indicating no descendants found
-                        return dict()
-            else:
-                logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
-        except requests.RequestException:
-            # Return None, indicating an error occurred
-            logging.warning('Encountered an RequestException when querying descendants from Ontology KP')
-            return None
-
-        # Return None, indicating an error occurred
-        return None
-
-
 def score_cohd_result(cohd_result):
     """ Get a score for a cohd result. We will use the absolute value of the smaller bound of the ln_ratio confidence
     interval. For confidence intervals that span 0 (e.g., [-.5, .5]), the score will be 0. For positive confidence
@@ -928,12 +810,12 @@ def score_cohd_result(cohd_result):
     """
     if 'ln_ratio_ci' in cohd_result:
         ci = cohd_result['ln_ratio_ci']
-        if ci[0] <=0 and ci[1] >= 0:
-            score = 0
-        elif ci[0] > 0:
+        if ci[0] > 0:
             score = ci[0]
         elif ci[1] < 0:
             score = abs(ci[1])
+        else:
+            score = 0
     else:
         score = 0
     return score
@@ -961,6 +843,8 @@ def sort_cohd_results(cohd_results, sort_field='ln_ratio_ci', ascending=False):
         sort_values = [score_cohd_result(x) for x in cohd_results]
     elif sort_field in ['relative_frequency_1_ci', 'relative_frequency_2_ci']:
         sort_values = [x[sort_field][0] for x in cohd_results]
+    else:
+        sort_values = [score_cohd_result(x) for x in cohd_results]
     results_sorted = [cohd_results[i] for i in argsort(sort_values)]
     if not ascending:
         results_sorted = list(reversed(results_sorted))
