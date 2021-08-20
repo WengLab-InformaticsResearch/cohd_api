@@ -73,13 +73,16 @@ class CohdTrapi(ABC):
     default_log_level = logging.WARNING
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
+
+    # Deprecated. Only used in old versions of cohd_trapi_VERSION
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
     supported_edge_types = [
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
     ]
 
-    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
-    default_predicate = 'biolink:correlated_with'
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all
+    # has_real_world_evidence_of_association_with
+    default_predicate = 'biolink:has_real_world_evidence_of_association_with'
     method_predicates = {
         'obsExpRatio': default_predicate,
         'relativeFrequency': default_predicate,
@@ -88,6 +91,9 @@ class CohdTrapi(ABC):
 
     def _get_kg_predicate(self) -> str:
         """ Determines which predicate should be used to represent the COHD analysis
+
+        As of 2021-08-19, this may get deprecated soon with development of new methods of modeling results as attributes
+        on the same edge rather than as separate edges with separate predicates
 
         Returns
         -------
