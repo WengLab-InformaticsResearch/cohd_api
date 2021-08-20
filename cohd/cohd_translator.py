@@ -25,39 +25,39 @@ def translator_predicates():
     """
     return jsonify({
         'biolink:DiseaseOrPhenotypicFeature': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
-            'biolink:Drug': ['biolink:correlated_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with'],
-            'biolink:Procedure': ['biolink:correlated_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
         },
         'biolink:Drug': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
-            'biolink:Drug': ['biolink:correlated_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with'],
-            'biolink:Procedure': ['biolink:correlated_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
         },
         'biolink:MolecularEntity': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
-            'biolink:Drug': ['biolink:correlated_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with'],
-            'biolink:Procedure': ['biolink:correlated_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
         },
         'biolink:Procedure': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
-            'biolink:Drug': ['biolink:correlated_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with'],
-            'biolink:Procedure': ['biolink:correlated_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
         },
         'biolink:PopulationOfIndividualOrganisms': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with'],
-            'biolink:Drug': ['biolink:correlated_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with'],
-            'biolink:Procedure': ['biolink:correlated_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with']
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
         },
     })
 
@@ -98,10 +98,16 @@ def translator_meta_knowledge_graph():
     edges = list()
     for subject in categories:
         for object in categories:
+            # Temporarily support both correlated_with and has_real_world_evidence_of_association_with
             edges.append({
                 'subject': subject,
                 'object': object,
                 'predicate': 'biolink:correlated_with'
+            })
+            edges.append({
+                'subject': subject,
+                'object': object,
+                'predicate': 'biolink:has_real_world_evidence_of_association_with'
             })
 
     return jsonify({

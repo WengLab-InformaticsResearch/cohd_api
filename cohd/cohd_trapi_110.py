@@ -27,7 +27,7 @@ class CohdTrapi110(CohdTrapi):
                             'biolink:Procedure']
 
     # Biolink predicates that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
-    supported_edge_types = ['biolink:correlated_with']
+    supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
 
     def __init__(self, request):
         super().__init__(request)
@@ -302,31 +302,35 @@ class CohdTrapi110(CohdTrapi):
         # Check if the edge type is supported by COHD Reasoner
         self._query_edge_key = list(edges.keys())[0]  # Get first and only edge
         self._query_edge = edges[self._query_edge_key]
-        edge_predicates = self._query_edge.get('predicates')
-        if edge_predicates is not None:
+        self._query_edge_predicates = self._query_edge.get('predicates')
+        if self._query_edge_predicates is not None:
             edge_supported = False
-            for edge_predicate in edge_predicates:
+            for edge_predicate in self._query_edge_predicates:
                 # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
                     self._valid_query = False
                     self._invalid_query_response = (f'{edge_predicate} was not recognized as a biolink predicate', 400)
                     return self._valid_query, self._invalid_query_response
 
-                # Check if any of the predicates are an ancestor of biolink:correlated_with
+                # Check if any of the predicates are an ancestor of the supported edge predicates
                 predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
                 for pd in predicate_descendants:
                     if pd in CohdTrapi110.supported_edge_types:
                         edge_supported = True
-                        self._query_edge_predicates = edge_predicates
+                        # Use the first supported predicate for the KG edge
+                        self._kg_edge_predicate = pd
                         break
+
+                if edge_supported:
+                    break
             if not edge_supported:
                 self._valid_query = False
                 self._invalid_query_response = \
-                    (f'None of the predicates in {edge_predicates} are supported by COHD.', 400)
+                    (f'None of the predicates in {self._query_edge_predicates} are supported by COHD.', 400)
                 return self._valid_query, self._invalid_query_response
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
-            self._query_edge_predicates = [CohdTrapi.default_predicate]
+            self._kg_edge_predicate = CohdTrapi.default_predicate
 
         # Get the QNodes
         # Note: qnode_key refers to the key identifier for the qnode in the QueryGraph's nodes property, e.g., "n00"
@@ -1077,7 +1081,7 @@ class CohdTrapi110(CohdTrapi):
 
         # Set the knowledge graph edge properties
         kg_edge = {
-            'predicate': self._get_kg_predicate(),
+            'predicate': self._kg_edge_predicate,
             'subject': node_1['primary_curie'],
             'object': node_2['primary_curie'],
             'attributes': attributes
