@@ -773,54 +773,56 @@ def test_omop_to_biolink_bad():
     print('...passed')
 
 
-# Temporarily disable this test. Issue captured here: https://github.com/WengLab-InformaticsResearch/cohd_api/issues/43
-# def test_translator_query_qnode_subclasses():
-#     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
-#     a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
-#     we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
-#     print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
-#
-#     url = f'{cr.server}/query'
-#     query = '''
-#     {
-#         "message": {
-#             "query_graph": {
-#                 "nodes": {
-#                     "subj": {
-#                         "ids": ["MONDO:0005015"]
-#                     },
-#                     "obj": {
-#                         "ids": ["CHEMBL.COMPOUND:CHEMBL1481"]
-#                     }
-#                 },
-#                 "edges": {
-#                     "e0": {
-#                         "subject": "subj",
-#                         "object": "obj",
-#                         "predicates": ["biolink:correlated_with"]
-#                     }
-#                 }
-#             }
-#         },
-#         "query_options": {
-#             "max_results": 50
-#         }
-#     }
-#     '''
-#     resp = requests.post(url, json=j.loads(query), timeout=300)
-#
-#     # Expect HTTP 200 status response
-#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-#                                     f'Received {resp.status_code}: {resp.text}'
-#
-#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-#     json = resp.json()
-#     reasoner_validator.validate_Response(json)
-#
-#     # There should be more than 1 result
-#     assert len(json['message']['results']) > 1
-#
-#     print('...passed')
+def test_translator_query_qnode_subclasses():
+    """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
+    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
+    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
+    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
+    maps to OMOP standard concept. """
+    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["MONDO:0005015"]
+                    },
+                    "obj": {
+                        "ids": ["PUBCHEM.COMPOUND:3476"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    reasoner_validator.validate_Response(json)
+
+    # There should be more than 1 result
+    assert len(json['message']['results']) > 1
+
+    print('...passed')
 
 
 def test_translator_query_qnode_null_constraint():
