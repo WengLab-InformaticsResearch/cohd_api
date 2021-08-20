@@ -87,7 +87,11 @@ class OntologyKP:
                     # This CURIE already allowed
                     preferred_curies.append(curie)
                 else:
-                    # Get the ID with the prefix that appears earliest in the allowed prefixes
+                    if norm_nodes[curie] is None:
+                        # No node normalizer info for this CURIE. Do not try to get descendants for this CURIE
+                        continue
+
+                    # Get the ID with the prefix that appears earliest in the allowed
                     new_ids = [v['identifier'] for v in norm_nodes[curie]['equivalent_identifiers']]
                     preferred_curie = None
                     for prefix in allowed_prefixes:

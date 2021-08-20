@@ -775,8 +775,11 @@ def test_omop_to_biolink_bad():
 
 def test_translator_query_qnode_subclasses():
     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
-    a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
-    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
+    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
+    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
+    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
+    maps to OMOP standard concept. """
     print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
@@ -789,7 +792,7 @@ def test_translator_query_qnode_subclasses():
                         "ids": ["MONDO:0005015"]
                     },
                     "obj": {
-                        "ids": ["CHEMBL.COMPOUND:CHEMBL1481"]
+                        "ids": ["PUBCHEM.COMPOUND:3476"]
                     }
                 },
                 "edges": {
