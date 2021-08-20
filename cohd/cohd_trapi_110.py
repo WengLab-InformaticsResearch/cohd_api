@@ -23,8 +23,8 @@ class CohdTrapi110(CohdTrapi):
     """
 
     # Biolink categories that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
-    supported_categories = ['biolink:MolecularEntity', 'biolink:Disease', 'biolink:Drug', 'biolink:PhenotypicFeature',
-                            'biolink:Procedure']
+    supported_categories = ['biolink:Disease', 'biolink:Drug', 'biolink:PhenotypicFeature', 'biolink:Procedure',
+                            'biolink:SmallMolecule']
 
     # Biolink predicates that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']

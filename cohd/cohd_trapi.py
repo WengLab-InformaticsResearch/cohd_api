@@ -249,11 +249,11 @@ def fix_blm_category(blm_category):
         'biolink:disease': 'biolink:Disease',
         'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
         'biolink:drug': 'biolink:Drug',
-        'biolink:molecular_entity': 'biolink:MolecularEntity',
         'biolink:phenomenon': 'biolink:Phenomenon',
         'biolink:phenotypic_feature': 'biolink:PhenotypicFeature',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
-        'biolink:procedure': 'biolink:Procedure'
+        'biolink:procedure': 'biolink:Procedure',
+        'biolink:small_molecule': 'biolink:SmallMolecule'
     }
     blm_category = supported_type_conversions.get(blm_category, blm_category)
 
@@ -296,18 +296,20 @@ def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     """
 
     mappings = {
-        'biolink:MolecularEntity': [DomainClass('Drug', 'Ingredient')],
+        'biolink:ChemicalEntity': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
         'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Disease': [DomainClass('Condition', None)],
         'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Drug': [DomainClass('Drug', None)],
+        'biolink:MolecularEntity': [DomainClass('Drug', 'Ingredient')],
         'biolink:Phenomenon': [DomainClass('Measurement', None),
                                DomainClass('Observation', None)],
         'biolink:PopulationOfIndividualOrganisms': [DomainClass('Ethnicity', None),
                                                     DomainClass('Gender', None),
                                                     DomainClass('Race', None)],
-        'biolink:Procedure': [DomainClass('Procedure', None)]
+        'biolink:Procedure': [DomainClass('Procedure', None)],
+        'biolink:SmallMolecule': [DomainClass('Drug', 'Ingredient')],
     }
     return mappings.get(node_type)
 
@@ -463,8 +465,9 @@ class BiolinkConceptMapper:
     _default_ontology_map = {
         'biolink:DiseaseOrPhenotypicFeature': list(set(bm_toolkit.get_element('Disease').id_prefixes +
                                                        bm_toolkit.get_element('PhenotypicFeature').id_prefixes)),
-        'biolink:MolecularEntity': bm_toolkit.get_element('MolecularEntity').id_prefixes,
         'biolink:Drug': bm_toolkit.get_element('Drug').id_prefixes,
+        'biolink:MolecularEntity': bm_toolkit.get_element('MolecularEntity').id_prefixes,
+        'biolink:SmallMolecule': bm_toolkit.get_element('SmallMolecule').id_prefixes,
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
         'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
     }

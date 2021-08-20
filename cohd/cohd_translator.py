@@ -27,37 +27,39 @@ def translator_predicates():
         'biolink:DiseaseOrPhenotypicFeature': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:Drug': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
-        },
-        'biolink:MolecularEntity': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:Procedure': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:PopulationOfIndividualOrganisms': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+        },
+        'biolink:SmallMolecule': {
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with',
+                                                   'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with',
+                                                        'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
     })
 
