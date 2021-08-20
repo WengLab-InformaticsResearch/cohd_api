@@ -14,7 +14,7 @@ from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml')
+bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -122,10 +122,10 @@ def test_translator_query_drug():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Drug')
 
 
-def test_translator_query_chemical():
-    """ Check the TRAPI endpoint to make sure it returns results for biolink:ChemicalSubstance
+def test_translator_query_molecular_entity():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:MolecularEntity
     """
-    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:ChemicalSubstance')
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
 
 
 def test_translator_query_procedure():
@@ -136,7 +136,7 @@ def test_translator_query_procedure():
 
 def test_translator_query_molecular_entity():
     """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
-    biolink:ChemicalSubstance. COHD should return types that are a subclass
+    biolink:MolecularEntity. COHD should return types that are a subclass
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
 

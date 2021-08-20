@@ -17,7 +17,7 @@ from .translator.sri_node_normalizer import SriNodeNormalizer
 
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml')
+bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
 
 
 class TrapiStatusCode(Enum):
@@ -239,11 +239,11 @@ def fix_blm_category(blm_category):
 
     # Convert snake case to camel case. Keep the original input if not in this dictionary.
     supported_type_conversions = {
-        'biolink:chemical_substance': 'biolink:ChemicalSubstance',
         'biolink:device': 'biolink:Device',
         'biolink:disease': 'biolink:Disease',
         'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
         'biolink:drug': 'biolink:Drug',
+        'biolink:molecular_entity': 'biolink:MolecularEntity',
         'biolink:phenomenon': 'biolink:Phenomenon',
         'biolink:phenotypic_feature': 'biolink:PhenotypicFeature',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
@@ -290,7 +290,7 @@ def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     """
 
     mappings = {
-        'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
+        'biolink:MolecularEntity': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
         'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Disease': [DomainClass('Condition', None)],
@@ -350,8 +350,8 @@ map_omop_domain_to_blm_class.mappings_domain_class = {
     DomainClass('Condition', None): ['biolink:DiseaseOrPhenotypicFeature'],
     DomainClass('Device', None): ['biolink:Device'],
     DomainClass('Drug', None): ['biolink:Drug',
-                                'biolink:ChemicalSubstance'],
-    DomainClass('Drug', 'Ingredient'): ['biolink:ChemicalSubstance',
+                                'biolink:MolecularEntity'],
+    DomainClass('Drug', 'Ingredient'): ['biolink:MolecularEntity',
                                         'biolink:Drug'],
     DomainClass('Ethnicity', None): ['biolink:PopulationOfIndividualOrganisms'],
     DomainClass('Gender', None): ['biolink:PopulationOfIndividualOrganisms'],
@@ -398,7 +398,7 @@ class BiolinkConceptMapper:
         'RXCUI': 'RxNorm',
         'NDC': None,
         'PHARMGKB.DRUG': None,
-        # Chemical Substances prefixes
+        # Molecular Entity prefixes
         'PUBCHEM.COMPOUND': 'PubChem_Compound',
         'CHEMBL.COMPOUND': None,
         'UNII': None,
@@ -444,7 +444,7 @@ class BiolinkConceptMapper:
         'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
         'RxNorm': 'RXCUI',
-        # Chemical Substance prefixes
+        # Molecular Entity prefixes
         'PubChem_Compound': 'PUBCHEM.COMPOUND',
         'CHEBI': 'CHEBI',
         'DrugBank': 'DRUGBANK',
@@ -455,14 +455,10 @@ class BiolinkConceptMapper:
     }
 
     _default_ontology_map = {
-        'biolink:DiseaseOrPhenotypicFeature': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
-                                               'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'KEGG.DISEASE',
-                                               'HP', 'MP', 'ZP', 'UPHENO', 'APO', 'FBcv', 'WBPhenotype'],
-        'biolink:ChemicalSubstance': ['PUBCHEM.COMPOUND', 'CHEMBL.COMPOUND', 'UNII', 'CHEBI', 'DRUGBANK', 'MESH', 'CAS',
-                                      'DrugCentral', 'GTOPDB', 'HMDB', 'KEGG.COMPOUND', 'ChemBank', 'Aeolus',
-                                      'PUBCHEM.SUBSTANCE', 'SIDER.DRUG', 'INCHI', 'INCHIKEY', 'KEGG.GLYCAN',
-                                      'KEGG.DRUG', 'KEGG.DGROUP', 'KEGG.ENVIRON'],
-        'biolink:Drug': ['RXCUI', 'NDC', 'PHARMGKB.DRUG'],
+        'biolink:DiseaseOrPhenotypicFeature': list(set(bm_toolkit.get_element('Disease').id_prefixes +
+                                                       bm_toolkit.get_element('PhenotypicFeature').id_prefixes)),
+        'biolink:MolecularEntity': bm_toolkit.get_element('MolecularEntity').id_prefixes,
+        'biolink:Drug': bm_toolkit.get_element('Drug').id_prefixes,
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
         'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
     }
