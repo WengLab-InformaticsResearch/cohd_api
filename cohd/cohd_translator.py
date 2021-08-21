@@ -6,8 +6,6 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 from flask import jsonify
 from semantic_version import Version
 
-from . import cohd_trapi_093
-from . import cohd_trapi_100
 from . import cohd_trapi_110
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
@@ -27,37 +25,39 @@ def translator_predicates():
         'biolink:DiseaseOrPhenotypicFeature': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:Drug': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
-        },
-        'biolink:MolecularEntity': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:Procedure': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
         'biolink:PopulationOfIndividualOrganisms': {
             'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:MolecularEntity': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
             'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+        },
+        'biolink:SmallMolecule': {
+            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with',
+                                                   'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with',
+                                                        'biolink:has_real_world_evidence_of_association_with'],
+            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
         },
     })
 
@@ -141,12 +141,6 @@ def translator_query(request, version=None):
 
     if Version('1.1.0-beta') <= version < Version('1.2.0-alpha'):
         trapi = cohd_trapi_110.CohdTrapi110(request)
-        return trapi.operate()
-    elif Version('1.0.0-beta') <= version < Version('1.1.0-alpha'):
-        trapi = cohd_trapi_100.CohdTrapi100(request)
-        return trapi.operate()
-    elif version == Version('0.9.3'):
-        trapi = cohd_trapi_093.CohdTrapi093(request)
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501
@@ -232,8 +226,7 @@ def omop_to_biolink(request):
         if omop_id in concept_definitions:
             domain_id = concept_definitions[omop_id]['domain_id']
             concept_class_id = concept_definitions[omop_id]['concept_class_id']
-            blm_category = map_omop_domain_to_blm_class(domain_id, concept_class_id, )
-            mapping, _ = concept_mapper.map_from_omop(omop_id, blm_category)
+            mapping, _ = concept_mapper.map_from_omop(omop_id, domain_id, concept_class_id)
             mappings[omop_id] = mapping
         else:
             mappings[omop_id] = None

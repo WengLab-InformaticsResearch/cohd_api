@@ -128,17 +128,16 @@ def test_translator_query_molecular_entity():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
 
 
+def test_translator_query_small_molecule():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:SmallMolecule
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:SmallMolecule')
+
+
 def test_translator_query_procedure():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Procedure
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
-
-
-def test_translator_query_molecular_entity():
-    """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
-    biolink:MolecularEntity. COHD should return types that are a subclass
-    """
-    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
 
 
 def test_translator_query_unsupported_category():
