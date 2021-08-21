@@ -2,7 +2,7 @@
 This test module tests the COHD API by making requests to cohd.io/api and checking the schema of the response JSONs and
 checking the results against known values.
 
-Intended to be run with pytest: pytest -s test_cohd_io.py
+Intended to be run with pytest: pytest -s test_cohd_covid_io.py
 """
 from collections import namedtuple
 from pprint import pformat
@@ -89,7 +89,7 @@ def test_datasets():
     Checks that the response json conforms to the expected schema.
     Checks that there are at least 3 data sets described.
     """
-    print(f'test_cohd_io: testing /metadata/datasets on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /metadata/datasets on {cr.server}..... ')
     json, df = cr.datasets()
 
     # Check that the results adhere to the expected schema
@@ -107,7 +107,7 @@ def test_domain_counts():
     """ Check the /metadata/domainCounts endpoint for dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/domainCounts on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /metadata/domainCounts on {cr.server}..... ')
     json, df = cr.domain_counts(dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -141,7 +141,7 @@ def test_domain_pair_counts():
     """ Check the /metadata/domainPairCounts endpoint for dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/domainPairCounts on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /metadata/domainPairCounts on {cr.server}..... ')
     json, df = cr.domain_pair_counts(dataset_id=2)
 
     # Check that the results adhere to the expected schema
@@ -177,7 +177,7 @@ def test_visitCount():
     """ Check the /metadata/visitCount endpoint for dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /metadata/visitCount on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /metadata/visitCount on {cr.server}..... ')
     json, df = cr.visit_count(dataset_id=2)
     # Check that the results adhere to the expected schema
     schema = [_s('dataset_id', int),
@@ -203,7 +203,7 @@ def test_conceptAncestors():
     concept_class_id=Ingredient, and dataset_id=4
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/conceptAncestors on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/conceptAncestors on {cr.server}..... ')
     json, df = cr.concept_ancestors(concept_id=40184084, dataset_id=4, vocabulary_id='RxNorm',
                                  concept_class_id='Ingredient')
 
@@ -246,7 +246,7 @@ def test_conceptDescendants():
     """ Check the /omop/conceptDescendants endpoint with concept_id=313217 and dataset_id=6
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/conceptDescendants on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/conceptDescendants on {cr.server}..... ')
     json, df = cr.concept_descendants(concept_id=313217, dataset_id=5)
 
     # Check that the results adhere to the expected schema
@@ -300,7 +300,7 @@ def test_concepts():
     """ Check the /omop/concepts endpoint with concept_id=192855,2008271
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/concepts on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/concepts on {cr.server}..... ')
     json, df = cr.concept([192855, 2008271])
 
     # Check that the results adhere to the expected schema
@@ -343,7 +343,7 @@ def test_findConceptIDs():
     """ Check the /omop/findConceptIDs endpoint. Search for infection condition concepts in dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/findConceptIDs on {cr.server}.... ')
+    print(f'test_cohd_covid_io: testing /omop/findConceptIDs on {cr.server}.... ')
     json, df = cr.find_concept(concept_name='infection', dataset_id=1, domain='Condition', min_count=1)
 
     # Check that the results adhere to the expected schema
@@ -380,7 +380,7 @@ def test_mapFromStandardConceptID():
     (Localized osteoarthrosis uncertain if primary OR secondary)
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/mapFromStandardConceptID on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/mapFromStandardConceptID on {cr.server}..... ')
     json, df = cr.map_from_standard_concept_id(concept_id=72990, vocabulary_id='ICD9CM')
 
     # Check that the results adhere to the expected schema
@@ -427,7 +427,7 @@ def test_mapToStandardConceptID():
     specified whether primary or secondary) to OMOP
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/mapToStandardConceptID on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/mapToStandardConceptID on {cr.server}..... ')
     json, df = cr.map_to_standard_concept_id(concept_code='715.3', vocabulary_id='ICD9CM')
 
     # Check that the results adhere to the expected schema
@@ -468,7 +468,7 @@ def test_vocabularies():
     """ Check the /omop/vocabularies endpoint to retrieve the list of vocabularies used.
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/vocabularies on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/vocabularies on {cr.server}..... ')
     json, df = cr.vocabularies()
 
     # Check that the results adhere to the expected schema
@@ -503,7 +503,7 @@ def test_xrefFromOMOP():
     with max distance 2.
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/xrefFromOMOP on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/xrefFromOMOP on {cr.server}..... ')
     json, df = cr.xref_from_omop(concept_id=192855, mapping_targets=['UMLS'], distance=2, local=True, recommend=False)
 
     # Check that the results adhere to the expected schema
@@ -574,7 +574,7 @@ def test_xrefToOMOP():
     implementation, recommended mapping, and max distance 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /omop/xrefToOMOP on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /omop/xrefToOMOP on {cr.server}..... ')
     json, df = cr.xref_to_omop(curie='DOID:8398', distance=2, local=True, recommend=True)
 
     # Check that the results adhere to the expected schema
@@ -617,7 +617,7 @@ def test_singleConceptFreq():
     obstructive pulmonary disease with acute lower respiratory infection) from dataset 2
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/singleConceptFreq on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /frequencies/singleConceptFreq on {cr.server}..... ')
     json, df = cr.concept_frequency(concept_ids=[313217], dataset_id=2)
 
     # Check that the results adhere to the expected schema
@@ -647,7 +647,7 @@ def test_mostFrequentConcepts():
     """ Check the /frequencies/mostFrequentConcepts endpoints. Get the most frequent 50 procedures for dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/mostFrequentConcepts on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /frequencies/mostFrequentConcepts on {cr.server}..... ')
     json, df = cr.most_frequent_concepts(limit=50, dataset_id=1, domain_id='Procedure')
 
     # Check that the results adhere to the expected schema
@@ -696,7 +696,7 @@ def test_pairedConceptFreq():
     and 437663 (Fever) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/pairedConceptFreq on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /frequencies/pairedConceptFreq on {cr.server}..... ')
     json, df = cr.paired_concepts_frequency(concept_id_1=40184084, concept_id_2=437663, dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -729,7 +729,7 @@ def test_associatedConceptFreq():
     dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/associatedConceptFreq on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /frequencies/associatedConceptFreq on {cr.server}..... ')
     json, df = cr.associated_concepts_freq(concept_id=40184084, dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -766,7 +766,7 @@ def test_associatedConceptDomainFreq():
     (Fever) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /frequencies/associatedConceptDomainFreq on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /frequencies/associatedConceptDomainFreq on {cr.server}..... ')
     json, df = cr.associated_concept_domain_freq(concept_id=40184084, domain_id='Condition', dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -803,7 +803,7 @@ def test_chiSquare():
     MG/ML Injectable Solution) and 46271075 (Acute hypoxemic respiratory failure) from dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/chiSquare on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /association/chiSquare on {cr.server}..... ')
     json, df = cr.chi_square(concept_id_1=40241504, concept_id_2=46271075, dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -852,7 +852,7 @@ def test_obsExpRatio():
     dataset 1
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/obsExpRatio on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /association/obsExpRatio on {cr.server}..... ')
     json, df = cr.obs_exp_ratio(concept_id_1=40241504, concept_id_2=46271075, dataset_id=1)
 
     # Check that the results adhere to the expected schema
@@ -891,7 +891,7 @@ def test_relativeFrequency():
     phosphate 4 MG/ML Injectable Solution) and conditions from dataset 3
     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
     """
-    print(f'test_cohd_io: testing /association/relativeFrequency on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /association/relativeFrequency on {cr.server}..... ')
     json, df = cr.relative_frequency(concept_id_1=40241504, domain_id='Condition', dataset_id=3)
 
     # Check that the results adhere to the expected schema
@@ -933,7 +933,7 @@ def test_relativeFrequency():
 def test_translator_query():
     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
     """
-    print(f'test_cohd_io: testing /translator/query on {cr.server}..... ')
+    print(f'test_cohd_covid_io: testing /translator/query on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=['MONDO:0021113'], node_2_categories=['biolink:Disease'],
                                    method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
                                    min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=False,
