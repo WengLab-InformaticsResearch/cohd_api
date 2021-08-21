@@ -914,7 +914,7 @@ def translator_query_110(node_1_curies, node_2_curies=None, node_2_categories=No
           },
           "edges": {
             "e00": {
-              "predicates": ["biolink:correlated_with"],
+              "predicates": ["biolink:has_real_world_evidence_of_association_with"],
               "subject": "n00",
               "object": "n01"
             }

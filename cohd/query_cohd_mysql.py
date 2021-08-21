@@ -1299,6 +1299,7 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     cp.concept_count / (c2.concept_count + 0E0) AS relative_frequency_2,
                     c.concept_name AS concept_2_name, 
                     c.domain_id AS concept_2_domain,
+                    c.concept_class_id AS concept_2_class_id,
                     pc.count AS patient_count
                 FROM concept_pair_counts cp
                 JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
@@ -1325,6 +1326,7 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     cp.concept_count / (c1.concept_count + 0E0) AS relative_frequency_2,
                     c.concept_name AS concept_2_name, 
                     c.domain_id AS concept_2_domain,
+                    c.concept_class_id AS concept_2_class_id,
                     pc.count AS patient_count
                 FROM concept_pair_counts cp
                 JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id

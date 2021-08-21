@@ -14,7 +14,7 @@ from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml')
+bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -122,23 +122,22 @@ def test_translator_query_drug():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Drug')
 
 
-def test_translator_query_chemical():
-    """ Check the TRAPI endpoint to make sure it returns results for biolink:ChemicalSubstance
+def test_translator_query_molecular_entity():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:MolecularEntity
     """
-    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:ChemicalSubstance')
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
+
+
+def test_translator_query_small_molecule():
+    """ Check the TRAPI endpoint to make sure it returns results for biolink:SmallMolecule
+    """
+    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:SmallMolecule')
 
 
 def test_translator_query_procedure():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:Procedure
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
-
-
-def test_translator_query_molecular_entity():
-    """ Check the TRAPI endpoint. biolink:MolecularEntity is the superclass of biolink:Drug and
-    biolink:ChemicalSubstance. COHD should return types that are a subclass
-    """
-    _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:MolecularEntity')
 
 
 def test_translator_query_unsupported_category():
@@ -370,7 +369,7 @@ def test_translator_query_q1_multiple_ids():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -423,7 +422,7 @@ def test_translator_query_q2_multiple_ids():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -455,6 +454,61 @@ def test_translator_query_q2_multiple_ids():
     print('...passed')
 
 
+# TODO: Temporarily replacing this test to not use CHEMBL.COMPOUND since Node Norm is currently missing mappings to MeSH
+# def test_translator_query_q1_q2_multiple_ids():
+#     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
+#     results """
+#     print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+#
+#     url = f'{cr.server}/query'
+#     query = '''
+#     {
+#         "message": {
+#             "query_graph": {
+#                 "nodes": {
+#                     "subj": {
+#                         "ids": ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+#                     },
+#                     "obj": {
+#                         "ids": ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+#                     }
+#                 },
+#                 "edges": {
+#                     "e0": {
+#                         "subject": "subj",
+#                         "object": "obj",
+#                         "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+#                     }
+#                 }
+#             }
+#         },
+#         "query_options": {
+#             "max_results": 50
+#         }
+#     }
+#     '''
+#     resp = requests.post(url, json=j.loads(query), timeout=300)
+#
+#     # Expect HTTP 200 status response
+#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+#                                     f'Received {resp.status_code}: {resp.text}'
+#
+#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+#     json = resp.json()
+#     reasoner_validator.validate_Response(json)
+#
+#     # There should be at least 12 results
+#     assert len(json['message']['results']) >= 12
+#
+#     # All pairs of the queried IDs should appear in at least one of the results
+#     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
+#     obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+#     result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
+#                        for r in json['message']['results']]
+#     for pair in product(subj_ids, obj_ids):
+#         assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.'
+#
+#     print('...passed')
 def test_translator_query_q1_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
     results """
@@ -470,14 +524,14 @@ def test_translator_query_q1_q2_multiple_ids():
                         "ids": ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
                     },
                     "obj": {
-                        "ids": ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+                        "ids": ["PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
                     }
                 },
                 "edges": {
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -498,11 +552,11 @@ def test_translator_query_q1_q2_multiple_ids():
     reasoner_validator.validate_Response(json)
 
     # There should be at least 12 results
-    assert len(json['message']['results']) >= 12
+    assert len(json['message']['results']) >= 8
 
     # All pairs of the queried IDs should appear in at least one of the results
     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+    obj_ids = ["PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
     result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
                        for r in json['message']['results']]
     for pair in product(subj_ids, obj_ids):
@@ -535,7 +589,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -573,7 +627,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -611,7 +665,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -720,8 +774,11 @@ def test_omop_to_biolink_bad():
 
 def test_translator_query_qnode_subclasses():
     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
-    a query between MONDO:0005015 (diabetes mellitus) and CHEMBL.COMPOUND:CHEMBL1481 (glimepiride). Without subclassing,
-    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
+    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
+    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
+    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
+    maps to OMOP standard concept. """
     print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
@@ -734,14 +791,14 @@ def test_translator_query_qnode_subclasses():
                         "ids": ["MONDO:0005015"]
                     },
                     "obj": {
-                        "ids": ["CHEMBL.COMPOUND:CHEMBL1481"]
+                        "ids": ["PUBCHEM.COMPOUND:3476"]
                     }
                 },
                 "edges": {
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }
@@ -791,7 +848,7 @@ def test_translator_query_qnode_null_constraint():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:correlated_with"]
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
                     }
                 }
             }

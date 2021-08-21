@@ -1,9 +1,7 @@
 from abc import ABC, abstractmethod
 import threading
 import logging
-import requests
-from requests.compat import urljoin
-from typing import Union, Any, Iterable, Optional, Dict, List, Tuple
+from typing import Any, Iterable, Optional, Dict, List, Tuple
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -15,10 +13,11 @@ from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper, Mapping
 from .app import cache
 from .query_cohd_mysql import query_active_concepts
+from .translator.sri_node_normalizer import SriNodeNormalizer
 
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/1.8.2/biolink-model.yaml')
+bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
 
 
 class TrapiStatusCode(Enum):
@@ -74,13 +73,16 @@ class CohdTrapi(ABC):
     default_log_level = logging.WARNING
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
+
+    # Deprecated. Only used in old versions of cohd_trapi_VERSION
     # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
     supported_edge_types = [
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
     ]
 
-    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
-    default_predicate = 'biolink:correlated_with'
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all
+    # has_real_world_evidence_of_association_with
+    default_predicate = 'biolink:has_real_world_evidence_of_association_with'
     method_predicates = {
         'obsExpRatio': default_predicate,
         'relativeFrequency': default_predicate,
@@ -89,6 +91,9 @@ class CohdTrapi(ABC):
 
     def _get_kg_predicate(self) -> str:
         """ Determines which predicate should be used to represent the COHD analysis
+
+        As of 2021-08-19, this may get deprecated soon with development of new methods of modeling results as attributes
+        on the same edge rather than as separate edges with separate predicates
 
         Returns
         -------
@@ -240,7 +245,6 @@ def fix_blm_category(blm_category):
 
     # Convert snake case to camel case. Keep the original input if not in this dictionary.
     supported_type_conversions = {
-        'biolink:chemical_substance': 'biolink:ChemicalSubstance',
         'biolink:device': 'biolink:Device',
         'biolink:disease': 'biolink:Disease',
         'biolink:disease_or_phenotypic_feature': 'biolink:DiseaseOrPhenotypicFeature',
@@ -248,7 +252,8 @@ def fix_blm_category(blm_category):
         'biolink:phenomenon': 'biolink:Phenomenon',
         'biolink:phenotypic_feature': 'biolink:PhenotypicFeature',
         'biolink:population_of_individual_organisms': 'biolink:PopulationOfIndividualOrganisms',
-        'biolink:procedure': 'biolink:Procedure'
+        'biolink:procedure': 'biolink:Procedure',
+        'biolink:small_molecule': 'biolink:SmallMolecule'
     }
     blm_category = supported_type_conversions.get(blm_category, blm_category)
 
@@ -291,18 +296,20 @@ def map_blm_class_to_omop_domain(node_type: str) -> Optional[List[DomainClass]]:
     """
 
     mappings = {
-        'biolink:ChemicalSubstance': [DomainClass('Drug', 'Ingredient')],
+        'biolink:ChemicalEntity': [DomainClass('Drug', 'Ingredient')],
         'biolink:Device': [DomainClass('Device', None)],
         'biolink:DiseaseOrPhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Disease': [DomainClass('Condition', None)],
         'biolink:PhenotypicFeature': [DomainClass('Condition', None)],
         'biolink:Drug': [DomainClass('Drug', None)],
+        'biolink:MolecularEntity': [DomainClass('Drug', 'Ingredient')],
         'biolink:Phenomenon': [DomainClass('Measurement', None),
                                DomainClass('Observation', None)],
         'biolink:PopulationOfIndividualOrganisms': [DomainClass('Ethnicity', None),
                                                     DomainClass('Gender', None),
                                                     DomainClass('Race', None)],
-        'biolink:Procedure': [DomainClass('Procedure', None)]
+        'biolink:Procedure': [DomainClass('Procedure', None)],
+        'biolink:SmallMolecule': [DomainClass('Drug', 'Ingredient')],
     }
     return mappings.get(node_type)
 
@@ -348,12 +355,17 @@ def map_omop_domain_to_blm_class(domain: str,
 # Preferred mappings from OMOP (domain_id, concept_class_id) to biolink categories
 # List items are in preferred order
 map_omop_domain_to_blm_class.mappings_domain_class = {
-    DomainClass('Condition', None): ['biolink:DiseaseOrPhenotypicFeature'],
+    DomainClass('Condition', None): ['biolink:DiseaseOrPhenotypicFeature',
+                                     'biolink:Disease',
+                                     'biolink:PhenotypicFeature'],
     DomainClass('Device', None): ['biolink:Device'],
     DomainClass('Drug', None): ['biolink:Drug',
-                                'biolink:ChemicalSubstance'],
-    DomainClass('Drug', 'Ingredient'): ['biolink:ChemicalSubstance',
-                                        'biolink:Drug'],
+                                'biolink:MolecularEntity',
+                                'biolink:ChemicalEntity',
+                                'biolink:SmallMolecule',],
+    DomainClass('Drug', 'Ingredient'): ['biolink:MolecularEntity',
+                                        'biolink:ChemicalEntity',
+                                        'biolink:SmallMolecule'],
     DomainClass('Ethnicity', None): ['biolink:PopulationOfIndividualOrganisms'],
     DomainClass('Gender', None): ['biolink:PopulationOfIndividualOrganisms'],
     DomainClass('Measurement', None): ['biolink:Phenomenon'],
@@ -399,7 +411,7 @@ class BiolinkConceptMapper:
         'RXCUI': 'RxNorm',
         'NDC': None,
         'PHARMGKB.DRUG': None,
-        # Chemical Substances prefixes
+        # Molecular Entity prefixes
         'PUBCHEM.COMPOUND': 'PubChem_Compound',
         'CHEMBL.COMPOUND': None,
         'UNII': None,
@@ -445,7 +457,7 @@ class BiolinkConceptMapper:
         'WBPhenotype': 'WBPhenotype',
         # Drug prefixes
         'RxNorm': 'RXCUI',
-        # Chemical Substance prefixes
+        # Molecular Entity prefixes
         'PubChem_Compound': 'PUBCHEM.COMPOUND',
         'CHEBI': 'CHEBI',
         'DrugBank': 'DRUGBANK',
@@ -456,16 +468,15 @@ class BiolinkConceptMapper:
     }
 
     _default_ontology_map = {
-        'biolink:DiseaseOrPhenotypicFeature': ['MONDO', 'DOID', 'OMIM', 'ORPHANET', 'EFO', 'UMLS', 'MESH', 'MEDDRA',
-                                               'NCIT', 'SNOMEDCT', 'medgen', 'ICD10', 'ICD9', 'ICD0', 'KEGG.DISEASE',
-                                               'HP', 'MP', 'ZP', 'UPHENO', 'APO', 'FBcv', 'WBPhenotype'],
-        'biolink:ChemicalSubstance': ['PUBCHEM.COMPOUND', 'CHEMBL.COMPOUND', 'UNII', 'CHEBI', 'DRUGBANK', 'MESH', 'CAS',
-                                      'DrugCentral', 'GTOPDB', 'HMDB', 'KEGG.COMPOUND', 'ChemBank', 'Aeolus',
-                                      'PUBCHEM.SUBSTANCE', 'SIDER.DRUG', 'INCHI', 'INCHIKEY', 'KEGG.GLYCAN',
-                                      'KEGG.DRUG', 'KEGG.DGROUP', 'KEGG.ENVIRON'],
-        'biolink:Drug': ['RXCUI', 'NDC', 'PHARMGKB.DRUG'],
+        'biolink:Disease': bm_toolkit.get_element('Disease').id_prefixes,
+        'biolink:DiseaseOrPhenotypicFeature': list(set(bm_toolkit.get_element('Disease').id_prefixes +
+                                                       bm_toolkit.get_element('PhenotypicFeature').id_prefixes)),
+        'biolink:Drug': bm_toolkit.get_element('Drug').id_prefixes,
+        'biolink:MolecularEntity': bm_toolkit.get_element('MolecularEntity').id_prefixes,
+        'biolink:PhenotypicFeature': bm_toolkit.get_element('PhenotypicFeature').id_prefixes,
         # Note: There are currently no prefixes allowed for Procedure in Biolink, so use some standard OMOP mappings
-        'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT']
+        'biolink:Procedure': ['ICD10PCS', 'SNOMEDCT'],
+        'biolink:SmallMolecule': bm_toolkit.get_element('SmallMolecule').id_prefixes,
     }
 
     # Update Flask cache. When True, flask cache will be updated for the given (parameter-sensitive) call
@@ -630,24 +641,43 @@ class BiolinkConceptMapper:
         return omop_mappings, normalized_nodes
 
     @cache.memoize(timeout=7257600, cache_none=True, unless=lambda: BiolinkConceptMapper.force_update_cache)
-    def map_from_omop(self, concept_id: int, blm_category: str) -> Tuple[Optional[Mapping], Optional[List]]:
+    def map_from_omop(self, concept_id: int, domain: str, concept_class: Optional[str] = None,) -> \
+            Tuple[Optional[Mapping], Optional[List]]:
         """ Map from OMOP concept to appropriate domain-specific ontology.
 
         Parameters
         ----------
         concept_id: OMOP concept ID
-        blm_category: biolink model category of the concept
+        domain: OMOP domain ID
+        concept_class: OMOP concept class
 
         Returns
         -------
         tuple: (Mapping object or None, list of categories or None)
         """
-        if blm_category not in self.biolink_mappings_as_oxo:
-            # No target ontologies defined for this Biolink category
+        # Get the biolink categories that can potentially represent concepts of this domain & concept class
+        if DomainClass(domain, concept_class) in map_omop_domain_to_blm_class.mappings_domain_class:
+            blm_categories = map_omop_domain_to_blm_class.mappings_domain_class[DomainClass(domain, concept_class)]
+        elif DomainClass(domain, None) in map_omop_domain_to_blm_class.mappings_domain_class:
+            blm_categories = map_omop_domain_to_blm_class.mappings_domain_class[DomainClass(domain, None)]
+        else:
+            # No target categories defined for this OMOP domain & concept class
             return None, None
 
+        # Union of ID prefixes for these categories
+        id_prefixes = set()
+        for c in blm_categories:
+            # First, try custom defined id_prefixes, otherwise, use id_prefixes from biolink model
+            if c in self.biolink_mappings:
+                id_prefixes = id_prefixes.union(self.biolink_mappings[c])
+            else:
+                id_prefixes = id_prefixes.union(bm_toolkit.get_element(c).id_prefixes)
+        id_prefixes = list(id_prefixes)
+
+        # Convert from Biolink style prefixes to OxO style
+        target_ontologies = [self._mappings_prefixes_blm_to_oxo.get(p, p) for p in id_prefixes]
+
         # Get mappings from ConceptMapper
-        target_ontologies = self.biolink_mappings_as_oxo[blm_category]
         mappings = self._oxo_concept_mapper.map_from_omop_to_target(concept_id, target_ontologies)
 
         if mappings is None:
@@ -689,13 +719,12 @@ class BiolinkConceptMapper:
         # Did not find any canonical nodes from SRI Node Normalizer
         # Choose one of the mappings to be the main identifier for the node. Prioritize distance first, and then
         # choose by the order of prefixes listed in the Concept Mapper.
-        blm_prefixes = self.biolink_mappings.get(blm_category, [])
         for d in range(self.distance + 1):
             # Get all mappings with the current distance
             m_d = [m for m in mappings if m.get_distance() == d]
 
             # Look for the first matching prefix in the list of biolink prefixes
-            for prefix in blm_prefixes:
+            for prefix in id_prefixes:
                 for m in m_d:
                     if m.output_id.split(':')[0] == prefix:
                         # Found the priority prefix with the shortest distance. Return the mapping
@@ -757,7 +786,7 @@ class BiolinkConceptMapper:
         if BiolinkConceptMapper.rebuilding_cache:
             # There is already a thread running a build
             print('_build_cache_map_from already running. Will not start another thread.')
-            return
+            return 0
 
         BiolinkConceptMapper.rebuilding_cache = True
         print(f'{datetime.now()}: Building cache for BiolinkConceptMapper::map_from_omop')
@@ -769,8 +798,7 @@ class BiolinkConceptMapper:
         for i, concept in enumerate(concepts):
             try:
                 BiolinkConceptMapper.force_update_cache = True
-                blm_category = map_omop_domain_to_blm_class(concept['domain_id'], concept['concept_class_id'])
-                mapper.map_from_omop(concept['concept_id'], blm_category)
+                mapper.map_from_omop(concept['concept_id'], concept['domain_id'], concept['concept_class_id'])
             except pymysql.err.Error as e:
                 # Occasionally, MySQL server has issues. Log the issue and move on
                 print(e)
@@ -795,123 +823,6 @@ class BiolinkConceptMapper:
         return len(concepts)
 
 
-class SriNodeNormalizer:
-    base_url = 'https://nodenormalization-sri.renci.org/1.1/'
-    endpoint_get_normalized_nodes = 'get_normalized_nodes'
-
-    @staticmethod
-    def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, Any]]:
-        """ Straightforward call to get_normalized_nodes. Returns json from response.
-
-        Parameters
-        ----------
-        curies - list of curies
-
-        Returns
-        -------
-        JSON response from endpoint or None. Each input curie will be a key in the response. If no normalized node is
-        found, the entry will be null.
-        """
-        url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
-        response = requests.post(url=url, json={'curies': curies})
-        if response.status_code == 200:
-            return response.json()
-        else:
-            return None
-
-    @staticmethod
-    def get_canonical_identifiers(curies: List[str]) -> Union[Dict[str, Union[str, None]], None]:
-        """ Retrieve the canonical identifier
-
-        Parameters
-        ----------
-        curies - list of CURIES
-
-        Returns
-        -------
-        dict of canonical identifiers for each curie. If curie not found, then None
-        """
-        j = SriNodeNormalizer.get_normalized_nodes(curies)
-        if j is None:
-            return None
-
-        canonical = dict()
-        for curie in curies:
-            if curie in j and j[curie] is not None:
-                canonical[curie] = j[curie]['id']
-            else:
-                canonical[curie] = None
-        return canonical
-
-
-class OntologyKP:
-    base_url = 'https://stars-app.renci.org/sparql-kp/'
-    endpoint_query = 'query'
-
-    @staticmethod
-    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
-        """ Get descendant CURIEs from Ontology KP
-
-        Parameters
-        ----------
-        curies - list of curies
-        categories - list of biolink categories, or None
-
-        Returns
-        -------
-        All knowledge graph nodes returned by the Ontology KP. If any errors, an emtpy dict is returned.
-        """
-        # Ontology KP doesn't seem to like it when categories is null. Replace it with NamedThing for functionally
-        # equivalent TRAPI
-        if categories is None:
-            categories = ['biolink:NamedThing']
-
-        try:
-            # Query Ontology KP for descendants
-            m = {
-                "message": {
-                    "query_graph": {
-                        "nodes": {
-                            "a": {
-                                "ids": curies
-                            },
-                            "b": {
-                                "categories": categories
-                            }
-                        },
-                        "edges": {
-                            "ab": {
-                                "subject": "b",
-                                "object": "a",
-                                "predicate": "biolink:subclass_of"
-                            }
-                        }
-                    }
-                }
-            }
-            url = urljoin(OntologyKP.base_url, OntologyKP.endpoint_query)
-            response = requests.post(url=url, json=m)
-            if response.status_code == 200:
-                j = response.json()
-                if 'message' in j and 'knowledge_graph' in j['message']:
-                    nodes = j['message']['knowledge_graph'].get('nodes')
-                    if nodes is not None:
-                        # Return all nodes in KG, including reflexive CURIE node
-                        return nodes
-                    else:
-                        # Return an empty dict, indicating no descendants found
-                        return dict()
-            else:
-                logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
-        except requests.RequestException:
-            # Return None, indicating an error occurred
-            logging.warning('Encountered an RequestException when querying descendants from Ontology KP')
-            return None
-
-        # Return None, indicating an error occurred
-        return None
-
-
 def score_cohd_result(cohd_result):
     """ Get a score for a cohd result. We will use the absolute value of the smaller bound of the ln_ratio confidence
     interval. For confidence intervals that span 0 (e.g., [-.5, .5]), the score will be 0. For positive confidence
@@ -928,12 +839,12 @@ def score_cohd_result(cohd_result):
     """
     if 'ln_ratio_ci' in cohd_result:
         ci = cohd_result['ln_ratio_ci']
-        if ci[0] <=0 and ci[1] >= 0:
-            score = 0
-        elif ci[0] > 0:
+        if ci[0] > 0:
             score = ci[0]
         elif ci[1] < 0:
             score = abs(ci[1])
+        else:
+            score = 0
     else:
         score = 0
     return score
@@ -961,6 +872,8 @@ def sort_cohd_results(cohd_results, sort_field='ln_ratio_ci', ascending=False):
         sort_values = [score_cohd_result(x) for x in cohd_results]
     elif sort_field in ['relative_frequency_1_ci', 'relative_frequency_2_ci']:
         sort_values = [x[sort_field][0] for x in cohd_results]
+    else:
+        sort_values = [score_cohd_result(x) for x in cohd_results]
     results_sorted = [cohd_results[i] for i in argsort(sort_values)]
     if not ascending:
         results_sorted = list(reversed(results_sorted))
