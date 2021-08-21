@@ -821,13 +821,14 @@ class CohdTrapi110(CohdTrapi):
                     # The query specified both the ID and the category. Use the specified category
                     blm_categories = query_node_categories
                 else:
-                    blm_categories = [map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)]
+                    blm_categories = [map_omop_domain_to_blm_class(domain, concept_class)]
             else:
-                # Map to Biolink Model or other target ontologies
-                blm_category = map_omop_domain_to_blm_class(domain, concept_class, query_node_categories)
+                # Map to Biolink Model
+                blm_category = map_omop_domain_to_blm_class(domain, concept_class)
                 blm_categories = [blm_category]
                 if self._concept_mapper:
-                    mapping, normalized_categories = self._concept_mapper.map_from_omop(concept_id, blm_category)
+                    mapping, normalized_categories = self._concept_mapper.map_from_omop(concept_id, domain,
+                                                                                        concept_class)
                     if mapping is not None:
                         primary_curie = mapping.output_id
                         primary_label = mapping.output_label
