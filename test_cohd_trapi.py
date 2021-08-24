@@ -737,7 +737,7 @@ def test_omop_to_biolink():
     """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
     print(f'\ntest_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
 
-    omop_ids = ['78472', '197508']
+    omop_ids = ['313217', '197508']
     response = cr.translator_omop_to_biolink(omop_ids)
 
     # Expect HTTP 200 status response
