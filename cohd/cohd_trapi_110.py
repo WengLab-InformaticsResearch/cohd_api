@@ -14,9 +14,6 @@ from .trapi import reasoner_validator_11x as reasoner_validator
 from .translator.ontology_kp import OntologyKP
 
 
-_TOOL_VERSION = 'COHD 4.0.0'
-_SCHEMA_VERSION = '1.1'
-
 class CohdTrapi110(CohdTrapi):
     """
     Pseudo-reasoner conforming to NCATS Biomedical Data Translator Reasoner API Spec 1.0
@@ -28,6 +25,9 @@ class CohdTrapi110(CohdTrapi):
 
     # Biolink predicates that COHD TRAPI 1.1 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 4.0.0'
+    _SCHEMA_VERSION = '1.1'
 
     def __init__(self, request):
         super().__init__(request)
@@ -296,7 +296,7 @@ class CohdTrapi110(CohdTrapi):
         edges = self._query_graph['edges']
         if len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = ('COHD reasoner only supports 1-hop queries', 400)
+            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries', 400)
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner
@@ -325,8 +325,8 @@ class CohdTrapi110(CohdTrapi):
                     break
             if not edge_supported:
                 self._valid_query = False
-                self._invalid_query_response = \
-                    (f'None of the predicates in {self._query_edge_predicates} are supported by COHD.', 400)
+                self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
+                                                f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
                 return self._valid_query, self._invalid_query_response
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
@@ -372,7 +372,8 @@ class CohdTrapi110(CohdTrapi):
         # COHD queries require at least 1 node with a specified ID
         if len(node_ids) == 0:
             self._valid_query = False
-            self._invalid_query_response = ('COHD TRAPI requires at least one node to have an ID', 400)
+            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID',
+                                            400)
             return self._valid_query, self._invalid_query_response
 
         # Get qnode categories and check the formatting
@@ -401,7 +402,7 @@ class CohdTrapi110(CohdTrapi):
                 # None of the categories for this QNode were mapped to OMOP
                 self._valid_query = False
                 description = f"None of QNode {self._concept_1_qnode_key}'s categories " \
-                              f"({self._concept_1_qnode_categories}) are supported by COHD"
+                              f"({self._concept_1_qnode_categories}) are supported by {CohdTrapi._SERVICE_NAME}"
                 response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
@@ -432,7 +433,7 @@ class CohdTrapi110(CohdTrapi):
                 # None of the categories for this QNode were mapped to OMOP
                 self._valid_query = False
                 description = f"None of QNode {self._concept_2_qnode_key}'s categories " \
-                              f"({self._concept_2_qnode_categories}) are supported by COHD"
+                              f"({self._concept_2_qnode_categories}) are supported by {CohdTrapi._SERVICE_NAME}"
                 response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
@@ -579,14 +580,15 @@ class CohdTrapi110(CohdTrapi):
 
         if concept_1_qnode.get('constraints', None) is not None:
             self._valid_query = False
-            self._invalid_query_response = 'COHD does not support constraints on a QNode with ids specified', 400
+            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} does not support constraints on a QNode with '\
+                                           'ids specified', 400
             return self._valid_query, self._invalid_query_response
 
         qnode2_constraints = concept_2_qnode.get('constraints', None)
         if qnode2_constraints is not None and len(qnode2_constraints) > 0:
             # COHD does not yet support constraints
             self._valid_query = False
-            self._invalid_query_response = 'COHD has not yet implemented support of constraints', 400
+            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} has not yet implemented support of constraints', 400
             return self._valid_query, self._invalid_query_response
 
         # Criteria for returning results
@@ -893,7 +895,7 @@ class CohdTrapi110(CohdTrapi):
                             'original_attribute_name': 'Database cross-mapping',
                             'value': mapping.history,
                             'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
-                            'attribute_source': 'infores:cohd',
+                            'attribute_source': CohdTrapi._INFORES_ID,
                         })
 
             self._kg_nodes[concept_id] = node
@@ -944,16 +946,16 @@ class CohdTrapi110(CohdTrapi):
             # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
             {
                 'attribute_type_id': 'biolink:original_knowledge_source',
-                'value': 'infores:cohd',
+                'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://cohd.io/api/query'
             },
             {
                 'attribute_type_id': 'biolink:supporting_data_source',
-                'value': 'infores:cohd',
+                'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://cohd.io/api/'
             },
             # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
@@ -962,7 +964,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'p-value',
                 'value': cohd_result['chi_square_p-value'],
                 'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://edamontology.org/data_1669',
                 'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
             },
@@ -971,7 +973,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'p-value adjusted',
                 'value': cohd_result['chi_square_p-value_adjusted'],
                 'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://edamontology.org/data_1669',
                 'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
                                'http://cohd.io/about.html'
@@ -981,7 +983,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'ln_ratio',
                 'value': cohd_result['ln_ratio'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
             },
             {
@@ -989,7 +991,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'ln_ratio_confidence_interval',
                 'value': cohd_result['ln_ratio_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
             },
             {
@@ -998,7 +1000,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_2'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
             },
             {
@@ -1007,7 +1009,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_2_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
             },
             {
@@ -1016,7 +1018,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_1'],
                 'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
             },
             {
@@ -1025,7 +1027,7 @@ class CohdTrapi110(CohdTrapi):
                 'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
                                      'relative_frequency_1_ci'],
                 'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
             },
             {
@@ -1033,7 +1035,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_pair_count',
                 'value': cohd_result['concept_pair_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Observed concept count between the pair of subject and object nodes'
             },
             {
@@ -1041,7 +1043,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_count_subject',
                 'value': cohd_result['concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Observed concept count of the subject node'
             },
             {
@@ -1049,7 +1051,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'concept_count_object',
                 'value': cohd_result['concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
                 'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Observed concept count of the object node'
             },
             {
@@ -1057,7 +1059,7 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'expected_count',
                 'value': cohd_result['expected_count'],
                 'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                'attribute_source': 'infores:cohd',
+                'attribute_source': CohdTrapi._INFORES_ID,
                 'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
             },
             {
@@ -1065,8 +1067,8 @@ class CohdTrapi110(CohdTrapi):
                 'original_attribute_name': 'dataset_id',
                 'value': cohd_result['dataset_id'],
                 'value_type_id': 'EDAM:data_1048',  # Database ID
-                'attribute_source': 'infores:cohd',
-                'description': 'Dataset ID within COHD'
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
             }
         ]
         # From calculation of chi_square
@@ -1077,7 +1079,7 @@ class CohdTrapi110(CohdTrapi):
                     'original_attribute_name': key,
                     'value': cohd_result[key],
                     'value_type_id': 'EDAM:data_0006',  # Data
-                    'attribute_source': 'infores:cohd'
+                    'attribute_source': CohdTrapi._INFORES_ID
                 })
 
         # Set the knowledge graph edge properties
@@ -1098,9 +1100,9 @@ class CohdTrapi110(CohdTrapi):
         """
         self._response = {
             # From TRAPI Extended
-            'reasoner_id': 'COHD',
-            'tool_version': _TOOL_VERSION,
-            'schema_version': _SCHEMA_VERSION,
+            'reasoner_id': CohdTrapi._INFORES_ID,
+            'tool_version': CohdTrapi110._TOOL_VERSION,
+            'schema_version': CohdTrapi110._SCHEMA_VERSION,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1138,7 +1140,7 @@ class CohdTrapi110(CohdTrapi):
             status = TrapiStatusCode.NO_RESULTS
         self._response['status'] = status.value
 
-        self._response['description'] = f'COHD returned {len(self._results)} results.'
+        self._response['description'] = f'{CohdTrapi._SERVICE_NAME} returned {len(self._results)} results.'
 
         self._response['message'] = {
             'results': self._results,
@@ -1171,9 +1173,9 @@ class CohdTrapi110(CohdTrapi):
                 'knowledge_graph': None
             },
             # From TRAPI Extended
-            'reasoner_id': 'COHD',
-            'tool_version': _TOOL_VERSION,
-            'schema_version': _SCHEMA_VERSION,
+            'reasoner_id': CohdTrapi._INFORES_ID,
+            'tool_version': CohdTrapi110._TOOL_VERSION,
+            'schema_version': CohdTrapi110._SCHEMA_VERSION,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
