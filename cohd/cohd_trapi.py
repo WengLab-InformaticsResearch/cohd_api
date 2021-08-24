@@ -89,6 +89,9 @@ class CohdTrapi(ABC):
         'chiSquare': default_predicate
     }
 
+    _INFORES_ID = 'infores:cohd'
+    _SERVICE_NAME = 'COHD'
+
     def _get_kg_predicate(self) -> str:
         """ Determines which predicate should be used to represent the COHD analysis
 
