@@ -19,7 +19,7 @@ cache = Cache(app)
 logging.config.dictConfig({
     'version': 1,
     'formatters': {'default': {
-        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+        'format': '[%(asctime)s] %(levelname)s in %(module)s thread%(thread)d: %(message)s',
     }},
     'handlers': {'wsgi': {
         'class': 'logging.StreamHandler',
