@@ -151,11 +151,9 @@ def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
     :param distance: Integer [1-3], default=2
     :return: JSON return from /oxo/api/search
     """
-    ids = list(set(ids))
-    ids.sort()
-    mapping_targets = list(set(mapping_targets))
-    mapping_targets.sort()
-    oxo_search_cached(ids, input_source, mapping_targets, distance)
+    ids = sorted(list(set(ids))) if ids is not None else None
+    mapping_targets = sorted(list(set(mapping_targets))) if mapping_targets is not None else None
+    return oxo_search_cached(ids, input_source, mapping_targets, distance)
 
 
 @cache.memoize(timeout=10886400)
