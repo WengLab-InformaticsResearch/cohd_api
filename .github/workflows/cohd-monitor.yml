@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest requests pandas matplotlib bmt
+        pip install pytest requests pandas matplotlib bmt reasoner-validator
     - name: Test cohd.io
       # Test cohd.io by running pytest on test_cohd_io.py
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)

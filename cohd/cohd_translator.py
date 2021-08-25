@@ -7,6 +7,7 @@ from flask import jsonify
 from semantic_version import Version
 
 from . import cohd_trapi_110
+from . import cohd_trapi_120
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
@@ -132,14 +133,17 @@ def translator_query(request, version=None):
     requested version
     """
     if version is None:
-        version = '1.1.0'
+        version = '1.2.0'
 
     try:
         version = Version(version)
     except ValueError:
-        return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.0.0', 400
+        return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.2.0', 400
 
-    if Version('1.1.0-beta') <= version < Version('1.2.0-alpha'):
+    if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
+        trapi = cohd_trapi_120.CohdTrapi120(request)
+        return trapi.operate()
+    elif Version('1.1.0-alpha') <= version < Version('1.2.0-alpha'):
         trapi = cohd_trapi_110.CohdTrapi110(request)
         return trapi.operate()
     else:
