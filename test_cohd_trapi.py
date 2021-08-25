@@ -9,9 +9,9 @@ from itertools import product
 import requests
 import json as j
 from bmt import Toolkit
-from reasoner_validator import validate
 
 from notebooks.cohd_helpers import cohd_requests as cr
+from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
@@ -25,7 +25,6 @@ _s = namedtuple('_s', ['key', 'type'])
 cr.server = 'https://cohd.io/api'
 
 # Proxy for main TRAPI version
-TRAPI_VERSION = "1.2"
 translator_query = cr.translator_query_110
 
 # No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
@@ -66,7 +65,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -153,7 +152,7 @@ def test_translator_query_unsupported_category():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be 0 results or null
     results = json['message']['results']
@@ -213,7 +212,7 @@ def test_translator_query_no_predicate():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -260,7 +259,7 @@ def test_translator_query_related_to():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -387,7 +386,7 @@ def test_translator_query_q1_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3
@@ -440,7 +439,7 @@ def test_translator_query_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3
@@ -495,7 +494,7 @@ def test_translator_query_q2_multiple_ids():
 #
 #     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
 #     json = resp.json()
-#     validate(json, "Response", TRAPI_VERSION)
+#     validate_trapi(json, "Response")
 #
 #     # There should be at least 12 results
 #     assert len(json['message']['results']) >= 12
@@ -549,7 +548,7 @@ def test_translator_query_q1_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be at least 12 results
     assert len(json['message']['results']) >= 8
@@ -607,7 +606,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_disease = resp_disease.json()
-    validate(json_disease, "Response", TRAPI_VERSION)
+    validate_trapi(json_disease, "Response")
 
     num_results_disease = len(json_disease['message']['results'])
 
@@ -645,7 +644,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_procedure = resp_procedure.json()
-    validate(json_procedure, "Response", TRAPI_VERSION)
+    validate_trapi(json_procedure, "Response")
 
     num_results_procedure = len(json_procedure['message']['results'])
 
@@ -683,7 +682,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_combined = resp_combined.json()
-    validate(json_combined, "Response", TRAPI_VERSION)
+    validate_trapi(json_combined, "Response")
 
     num_results_combined = len(json_combined['message']['results'])
 
@@ -711,7 +710,7 @@ def test_biolink_to_omop():
         assert j.get(curie) is not None, f'Did not find a mapping for curie {curie}'
 
     print('...passed')
-    
+
 
 def test_biolink_to_omop_bad():
     """ Check /translator/biolink_to_omop with bad CURIEs """
@@ -816,7 +815,7 @@ def test_translator_query_qnode_subclasses():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be more than 1 result
     assert len(json['message']['results']) > 1
@@ -866,7 +865,7 @@ def test_translator_query_qnode_null_constraint():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate(json, "Response", TRAPI_VERSION)
+    validate_trapi(json, "Response")
 
     # There should be at least 1 result
     assert len(json['message']['results']) >= 1
