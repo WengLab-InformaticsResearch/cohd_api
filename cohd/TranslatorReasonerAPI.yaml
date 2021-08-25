@@ -18,7 +18,7 @@ info:
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
   version: 5.0.0
-  title: Columbia Open Health Data (COHD) Translator Reasoner (TRAPI) API
+  title: COHD TRAPI 1.2
   contact:
     name: Casey Ta
     email: ct2865@cumc.columbia.edu

@@ -42,7 +42,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
   version: 5.0.0
-  title: Columbia Open Health Data (COHD)
+  title: Columbia Open Health Data (COHD) API
   contact:
     name: Casey Ta
     email: ct2865@cumc.columbia.edu
