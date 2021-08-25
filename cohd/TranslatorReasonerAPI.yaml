@@ -51,8 +51,8 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-trapi/
 servers:
-  - url: 'https://cohd.io/api/'
-    description: COHD production server
+  - url: 'https://trapi-dev.cohd.io/api/'
+    description: COHD TRAPI Development Server
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services
