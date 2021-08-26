@@ -54,16 +54,6 @@ info:
   termsOfService: 'http://cohd.nsides.io/terms/'
   x-accessRestriction: none
   x-implementationLanguage: Python
-  x-translator:
-    component: KP
-    team:
-      - Clinical Data Provider
-    externalDocs:
-      description: >-
-        The values for component and team are restricted according to this
-        external JSON schema. See schema and examples at url
-      url: https://github.com/NCATSTranslator/translator_extensions/blob/\
-        production/x-translator/
 servers:
   - url: 'https://cohd.io/api/'
     description: COHD production server
