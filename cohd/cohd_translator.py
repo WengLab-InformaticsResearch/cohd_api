@@ -15,54 +15,6 @@ from .query_cohd_mysql import omop_concept_definitions
 from .cohd_trapi import bm_toolkit
 
 
-def translator_predicates():
-    """ Implementation of /translator/predicates for Translator Reasoner API
-
-    Returns
-    -------
-    json response object
-    """
-    return jsonify({
-        'biolink:DiseaseOrPhenotypicFeature': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:Drug': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:Procedure': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:PopulationOfIndividualOrganisms': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:SmallMolecule': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with',
-                                                   'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with',
-                                                        'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-    })
-
-
 def translator_meta_knowledge_graph():
     """ Implementation of /meta_knowledge_graph for Translator Reasoner API to provide supported nodes and edges
 
