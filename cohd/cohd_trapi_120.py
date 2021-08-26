@@ -10,7 +10,7 @@ from jsonschema import ValidationError
 from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
-from .trapi import reasoner_validator_11x as reasoner_validator
+from .trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 from .translator.ontology_kp import OntologyKP
 
 
@@ -108,7 +108,7 @@ class CohdTrapi120(CohdTrapi):
 
         # Use TRAPI Reasoner Validator to validate the query
         try:
-            reasoner_validator.validate_Query(self._json_data)
+            validate_trapi(self._json_data, "Query")
             self.log('Query passed reasoner validator')
         except ValidationError as err:
             self._valid_query = False
@@ -130,6 +130,15 @@ class CohdTrapi120(CohdTrapi):
             self._valid_query = False
             self._invalid_query_response = ('Unsupported query. Only one-hop queries supported.', 400)
             return self._valid_query, self._invalid_query_response
+
+        # Check the workflow. Should be at most a single lookup operation
+        workflow = self._json_data.get('workflow')
+        if workflow and type(workflow) is list:
+            if len(workflow) > 1 or workflow[0]['id'] != 'lookup':
+                self._valid_query = False
+                self._invalid_query_response = ('Unsupported workflow. Only a single "lookup" operation is supported',
+                                                400)
+                return self._valid_query, self._invalid_query_response
 
         # Everything looks good so far
         self._valid_query = True
