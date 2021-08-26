@@ -22,7 +22,7 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
-cr.server = 'https://cohd.io/api'
+cr.server = 'https://trapi-dev.cohd.io/api'
 
 # Proxy for main TRAPI version
 translator_query = cr.translator_query_110
