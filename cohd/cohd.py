@@ -167,12 +167,6 @@ def api_translator_query_version(version):
     return api_call('translator', 'query', version=version)
 
 
-@app.route('/api/predicates', methods=['GET'])
-@app.route('/api/translator/predicates', methods=['GET'])
-def api_translator_predicates():
-    return api_call('translator', 'predicates')
-
-
 @app.route('/api/meta_knowledge_graph', methods=['GET'])
 @app.route('/api/translator/meta_knowledge_graph', methods=['GET'])
 def api_translator_meta_knowledge_graph():
@@ -281,8 +275,6 @@ def api_call(service=None, meta=None, query=None, version=None):
     elif service == 'translator':
         if meta == 'query':
             result = cohd_translator.translator_query(request, version)
-        elif meta == 'predicates':
-            result = cohd_translator.translator_predicates()
         elif meta == 'meta_knowledge_graph':
             result = cohd_translator.translator_meta_knowledge_graph()
         elif meta == 'omop_to_biolink':

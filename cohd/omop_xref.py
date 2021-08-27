@@ -1,5 +1,6 @@
 from difflib import SequenceMatcher
 from typing import Optional, Union, Dict, List, Tuple, Iterable, Any
+import logging
 
 import requests
 from numpy import argsort
@@ -140,9 +141,9 @@ def omop_map_from_standard(cur, concept_id, vocabularies=None):
     return results
 
 
-@cache.memoize(timeout=10886400)
 def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
-    """ Wrapper to the OxO search method.
+    """ Calls oxo_search_cached with list arguments sorted and duplicates removed so that the cache works regardless
+    the order of the items in the lists
 
     :param ids: List of strings - CURIEs to search for
     :param input_source: String
@@ -150,6 +151,25 @@ def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
     :param distance: Integer [1-3], default=2
     :return: JSON return from /oxo/api/search
     """
+    ids = sorted(list(set(ids))) if ids is not None else None
+    mapping_targets = sorted(list(set(mapping_targets))) if mapping_targets is not None else None
+    return oxo_search_cached(ids, input_source, mapping_targets, distance)
+
+
+@cache.memoize(timeout=10886400)
+def oxo_search_cached(ids, input_source=None, mapping_targets=None, distance=2):
+    """ Wrapper to the OxO search method.
+
+    Note: in order for caching to work properly, ids and mapping_targets must have all list elements in the same order.
+
+    :param ids: List of strings - CURIEs to search for
+    :param input_source: String
+    :param mapping_targets: List of strings - Prefixes for target ontologies
+    :param distance: Integer [1-3], default=2
+    :return: JSON return from /oxo/api/search
+    """
+    logging.info('USING REMOTE OXO')
+
     if mapping_targets is None:
         mapping_targets = []
 
@@ -166,8 +186,8 @@ def oxo_search(ids, input_source=None, mapping_targets=None, distance=2):
         json_return = r.json()
         return json_return
     else:
-        print('omop_xref.py::oxo_search - Non-200 response code from OxO:')
-        print(r)
+        logging.warning('omop_xref.py::oxo_search - Non-200 response code from OxO:')
+        logging.warning(r)
 
     return None
 
@@ -1230,7 +1250,6 @@ class ConceptMapper:
             if self.local_oxo:
                 oxo_mappings = xref_from_omop_local(cur, concept_id, oxo_targets, distance=self.distance, best=True)
             else:
-                print("USING REMOTE OXO")
                 oxo_mappings = xref_from_omop_standard_concept(cur, concept_id, oxo_targets, distance=self.distance,
                                                                best=True)
             for mapping in oxo_mappings:

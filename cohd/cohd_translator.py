@@ -6,60 +6,12 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 from flask import jsonify
 from semantic_version import Version
 
-from . import cohd_trapi_110
+from . import cohd_trapi_120
 from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
 # Get the static instance of the Biolink Model Toolkit from cohd_trapi
-from .cohd_trapi import bm_toolkit
-
-
-def translator_predicates():
-    """ Implementation of /translator/predicates for Translator Reasoner API
-
-    Returns
-    -------
-    json response object
-    """
-    return jsonify({
-        'biolink:DiseaseOrPhenotypicFeature': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:Drug': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:Procedure': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:PopulationOfIndividualOrganisms': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-        'biolink:SmallMolecule': {
-            'biolink:DiseaseOrPhenotypicFeature': ['biolink:correlated_with',
-                                                   'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Drug': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:Procedure': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:PopulationOfIndividualOrganisms': ['biolink:correlated_with',
-                                                        'biolink:has_real_world_evidence_of_association_with'],
-            'biolink:SmallMolecule': ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with'],
-        },
-    })
+from .cohd_trapi import bm_toolkit, CohdTrapi
 
 
 def translator_meta_knowledge_graph():
@@ -70,15 +22,26 @@ def translator_meta_knowledge_graph():
     json response object
     """
     # Supported categories in most recent TRAPI implementation
-    categories = cohd_trapi_110.CohdTrapi110.supported_categories
+    categories = cohd_trapi_120.CohdTrapi120.supported_categories
 
     # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
     nodes = dict()
+    common_node_attributes = [
+        {
+            'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
+            'attribute_source': CohdTrapi._INFORES_ID,
+            'original_attribute_names': ['Database cross-mapping'],
+            'constraint_use': False
+        }
+    ]
     for cat in categories:
         # Most nodes can be added using just the id_prefixes returned by the Biolink Model Toolkit
         prefixes = bm_toolkit.get_element(cat).id_prefixes
         if prefixes is not None and len(prefixes) >= 1:
-            nodes[cat] = {'id_prefixes': prefixes}
+            nodes[cat] = {
+                'id_prefixes': prefixes,
+                'attributes': common_node_attributes
+            }
         else:
             # Some categories do not have any id_prefixes defined in biolink
             if cat == 'biolink:DiseaseOrPhenotypicFeature':
@@ -95,6 +58,60 @@ def translator_meta_knowledge_graph():
                 }
 
     # Add the supported edges
+    common_edge_attributes = [
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:original_knowledge_source",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:supporting_data_source",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:p_value",
+            "original_attribute_names": ["p-value", "p-value adjusted"],
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:has_evidence",
+            "original_attribute_names": ["ln_ratio",
+                                         "relative_frequency_subject",
+                                         "relative_frequency_object"],
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:has_confidence_level",
+            "original_attribute_names": ["ln_ratio_confidence_interval",
+                                         "relative_freq_subject_confidence_interval",
+                                         "relative_freq_object_confidence_interval"],
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:has_count",
+            "original_attribute_names": ["concept_pair_count",
+                                         "concept_count_subject",
+                                         "concept_count_object"],
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "EDAM:operation_3438",
+            "original_attribute_names": ["expected_count"],
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:provided_by",
+            "original_attribute_names": ["dataset_id"],
+            "constraint_use": False
+        }
+    ]
     edges = list()
     for subject in categories:
         for object in categories:
@@ -102,12 +119,14 @@ def translator_meta_knowledge_graph():
             edges.append({
                 'subject': subject,
                 'object': object,
-                'predicate': 'biolink:correlated_with'
+                'predicate': 'biolink:correlated_with',
+                'attributes': common_edge_attributes
             })
             edges.append({
                 'subject': subject,
                 'object': object,
-                'predicate': 'biolink:has_real_world_evidence_of_association_with'
+                'predicate': 'biolink:has_real_world_evidence_of_association_with',
+                'attributes': common_edge_attributes
             })
 
     return jsonify({
@@ -132,15 +151,15 @@ def translator_query(request, version=None):
     requested version
     """
     if version is None:
-        version = '1.1.0'
+        version = '1.2.0'
 
     try:
         version = Version(version)
     except ValueError:
-        return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.0.0', 400
+        return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.2.0', 400
 
-    if Version('1.1.0-beta') <= version < Version('1.2.0-alpha'):
-        trapi = cohd_trapi_110.CohdTrapi110(request)
+    if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
+        trapi = cohd_trapi_120.CohdTrapi120(request)
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501

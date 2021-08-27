@@ -472,7 +472,8 @@ class BiolinkConceptMapper:
 
     _default_ontology_map = {
         'biolink:Disease': bm_toolkit.get_element('Disease').id_prefixes,
-        'biolink:DiseaseOrPhenotypicFeature': list(set(bm_toolkit.get_element('Disease').id_prefixes +
+        # list(dict.fromkeys([...])) removes duplicates from the list while preserving order
+        'biolink:DiseaseOrPhenotypicFeature': list(dict.fromkeys(bm_toolkit.get_element('Disease').id_prefixes +
                                                        bm_toolkit.get_element('PhenotypicFeature').id_prefixes)),
         'biolink:Drug': bm_toolkit.get_element('Drug').id_prefixes,
         'biolink:MolecularEntity': bm_toolkit.get_element('MolecularEntity').id_prefixes,
@@ -553,8 +554,8 @@ class BiolinkConceptMapper:
         # Convert the biolink_mappings to also be represented using OxO prefixes
         self.biolink_mappings_as_oxo = dict()
         for blm_category, prefixes in biolink_mappings.items():
-            oxo_prefixes = [BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix)
-                            for prefix in prefixes]
+            oxo_prefixes = [BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix) for prefix in prefixes
+                            if BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(prefix) is not None]
             # remove None from list
             oxo_prefixes = [p for p in oxo_prefixes if p is not None]
             self.biolink_mappings_as_oxo[blm_category] = oxo_prefixes
@@ -678,7 +679,8 @@ class BiolinkConceptMapper:
         id_prefixes = list(id_prefixes)
 
         # Convert from Biolink style prefixes to OxO style
-        target_ontologies = [self._mappings_prefixes_blm_to_oxo.get(p, p) for p in id_prefixes]
+        target_ontologies = [self._mappings_prefixes_blm_to_oxo.get(p, p) for p in id_prefixes
+                             if self._mappings_prefixes_blm_to_oxo.get(p, p) is not None]
 
         # Get mappings from ConceptMapper
         mappings = self._oxo_concept_mapper.map_from_omop_to_target(concept_id, target_ontologies)

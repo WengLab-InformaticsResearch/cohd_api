@@ -11,7 +11,7 @@ import json as j
 from bmt import Toolkit
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi import reasoner_validator_11x, reasoner_validator_10x
+from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
@@ -22,10 +22,9 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
-cr.server = 'https://cohd.io/api'
+cr.server = 'https://trapi-dev.cohd.io/api'
 
 # Proxy for main TRAPI version
-reasoner_validator = reasoner_validator_11x
 translator_query = cr.translator_query_110
 
 # No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
@@ -66,7 +65,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -144,7 +143,8 @@ def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
     with no results.
     """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with an unsupported category on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_unsupported_category: testing TRAPI query with an unsupported '
+          f'category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
 
     # Should have 200 status response code
@@ -153,7 +153,7 @@ def test_translator_query_unsupported_category():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be 0 results or null
     results = json['message']['results']
@@ -165,7 +165,8 @@ def test_translator_query_unsupported_category():
 def test_translator_query_bad_category():
     """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
     """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with a non-biolink category on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_bad_category: testing TRAPI query with a non-biolink category on '
+          f'{cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
 
     # Should have 200 status response code
@@ -177,7 +178,8 @@ def test_translator_query_bad_category():
 
 def test_translator_query_no_predicate():
     """ Check the TRAPI endpoint when not using a predicate. Expect results to be returned. """
-    print(f'\ntest_cohd_trapi: testing TRAPI query without a predicate on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_no_predicate: testing TRAPI query without a predicate on '
+          f'{cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -213,7 +215,7 @@ def test_translator_query_no_predicate():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -223,7 +225,8 @@ def test_translator_query_no_predicate():
 
 def test_translator_query_related_to():
     """ Check the TRAPI endpoint when using a generic predicate (biolink:related_to). Expect results to be returned. """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with a generic predicate (biolink:related_to) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_related_to: testing TRAPI query with a generic predicate '
+          f'(biolink:related_to) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -260,7 +263,7 @@ def test_translator_query_related_to():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be 10 results
     assert len(json['message']['results']) == 10
@@ -270,7 +273,8 @@ def test_translator_query_related_to():
 
 def test_translator_query_unsupported_predicate():
     """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with an unsupported predicate (biolink:affects) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_unsupported_predicate: testing TRAPI query with an unsupported '
+          f'predicate (biolink:affects) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -310,7 +314,8 @@ def test_translator_query_unsupported_predicate():
 
 def test_translator_query_bad_predicate():
     """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
-    print(f'\ntest_cohd_trapi: testing TRAPI query a bad predicate (biolink:correlated) on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_bad_predicate: testing TRAPI query a bad predicate '
+          f'(biolink:correlated) on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -350,7 +355,8 @@ def test_translator_query_bad_predicate():
 
 def test_translator_query_q1_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject node. Expect COHD to return 3+ results """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in subject QNode on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_q1_multiple_ids: testing TRAPI query with multiple IDs in subject '
+          f'QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -387,7 +393,7 @@ def test_translator_query_q1_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3
@@ -403,7 +409,8 @@ def test_translator_query_q1_multiple_ids():
 
 def test_translator_query_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3+ results """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in object QNode on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_q2_multiple_ids: testing TRAPI query with multiple IDs in object '
+          f'QNode on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -440,7 +447,7 @@ def test_translator_query_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3
@@ -495,7 +502,7 @@ def test_translator_query_q2_multiple_ids():
 #
 #     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
 #     json = resp.json()
-#     reasoner_validator.validate_Response(json)
+#     validate_trapi(json, "Response")
 #
 #     # There should be at least 12 results
 #     assert len(json['message']['results']) >= 12
@@ -512,7 +519,8 @@ def test_translator_query_q2_multiple_ids():
 def test_translator_query_q1_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
     results """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_q1_q2_multiple_ids: testing TRAPI query with multiple IDs in both '
+          f'query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -549,7 +557,7 @@ def test_translator_query_q1_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be at least 12 results
     assert len(json['message']['results']) >= 8
@@ -570,7 +578,8 @@ def test_translator_query_multiple_categories():
     disease with acute hepatitis", which has low prevalence in COHD, hence will have few correlations (much less than
     500). Run multiple queries with individual categories to get counts, and then run it with multiple categories to
     make sure we're getting more results back. """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple categories for object node on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_multiple_categories: testing TRAPI query with multiple categories '
+          f'for object node on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query_disease = '''
@@ -607,7 +616,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_disease = resp_disease.json()
-    reasoner_validator.validate_Response(json_disease)
+    validate_trapi(json_disease, "Response")
 
     num_results_disease = len(json_disease['message']['results'])
 
@@ -645,7 +654,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_procedure = resp_procedure.json()
-    reasoner_validator.validate_Response(json_procedure)
+    validate_trapi(json_procedure, "Response")
 
     num_results_procedure = len(json_procedure['message']['results'])
 
@@ -683,7 +692,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_combined = resp_combined.json()
-    reasoner_validator.validate_Response(json_combined)
+    validate_trapi(json_combined, "Response")
 
     num_results_combined = len(json_combined['message']['results'])
 
@@ -696,7 +705,7 @@ def test_translator_query_multiple_categories():
 
 def test_biolink_to_omop():
     """ Check that the /translator/biolink_to_omop is functioning with good CURIEs """
-    print(f'\ntest_cohd_trapi: testing /translator/biolink_to_omop on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_biolink_to_omop: testing /translator/biolink_to_omop on {cr.server}..... ')
 
     curies = ['HP:0002907', 'MONDO:0001187']
     response = cr.translator_biolink_to_omop(curies)
@@ -711,11 +720,12 @@ def test_biolink_to_omop():
         assert j.get(curie) is not None, f'Did not find a mapping for curie {curie}'
 
     print('...passed')
-    
+
 
 def test_biolink_to_omop_bad():
     """ Check /translator/biolink_to_omop with bad CURIEs """
-    print(f'\ntest_cohd_trapi: testing /translator/biolink_to_omop with bad CURIEs on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_biolink_to_omop_bad: testing /translator/biolink_to_omop with bad CURIEs on '
+          f'{cr.server}..... ')
 
     curies = ['HP:0002907BAD', 'MONDO:0001187BAD']
     response = cr.translator_biolink_to_omop(curies)
@@ -735,7 +745,7 @@ def test_biolink_to_omop_bad():
 
 def test_omop_to_biolink():
     """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
-    print(f'\ntest_cohd_trapi: testing /translator/omop_to_biolink on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_omop_to_biolink: testing /translator/omop_to_biolink on {cr.server}..... ')
 
     omop_ids = ['78472', '197508']
     response = cr.translator_omop_to_biolink(omop_ids)
@@ -754,7 +764,8 @@ def test_omop_to_biolink():
 
 def test_omop_to_biolink_bad():
     """ Check /translator/omop_to_biolink with bad OMOP IDs """
-    print(f'\ntest_cohd_trapi: testing /translator/omop_to_biolink with bad OMOP IDs on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_omop_to_biolink_bad: testing /translator/omop_to_biolink with bad OMOP IDs on '
+          f'{cr.server}..... ')
 
     omop_ids = ['78472197508']
     response = cr.translator_omop_to_biolink(omop_ids)
@@ -779,7 +790,8 @@ def test_translator_query_qnode_subclasses():
     Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
     changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
     maps to OMOP standard concept. """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_qnode_subclasses: testing TRAPI query with multiple IDs in both '
+          f'query nodes on {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -816,7 +828,7 @@ def test_translator_query_qnode_subclasses():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be more than 1 result
     assert len(json['message']['results']) > 1
@@ -827,7 +839,8 @@ def test_translator_query_qnode_subclasses():
 def test_translator_query_qnode_null_constraint():
     """ Check the TRAPI endpoint to make sure it allows null constraints on QNodes. The null constraints should be
     ignored regardless of whether or not COHD implements constraints. """
-    print(f'\ntest_cohd_trapi: testing TRAPI query with null constraints on QNodes {cr.server}..... ')
+    print(f'\ntest_cohd_trapi::test_translator_query_qnode_null_constraint: testing TRAPI query with null constraints '
+          f'on QNodes {cr.server}..... ')
 
     url = f'{cr.server}/query'
     query = '''
@@ -866,9 +879,90 @@ def test_translator_query_qnode_null_constraint():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be at least 1 result
     assert len(json['message']['results']) >= 1
+
+    print('...passed')
+
+
+def test_translator_workflows():
+    """ Check the TRAPI endpoint to make sure COHD only responds when workflow is a single lookup operation. """
+    print(f'\ntest_cohd_trapi::test_translator_workflows: testing TRAPI query with workflows on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"]
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 1
+        }
+    }
+    '''
+    j_query = j.loads(query)
+
+    # Test with a good workflow (single lookup operation)
+    j_query['workflow'] = [{'id': 'lookup'}]
+    resp = requests.post(url, json=j_query, timeout=300)
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+    # There should be 1 result
+    assert len(json['message']['results']) == 1
+
+    # Test with bad workflows: unsupported operation (overlay)
+    j_query['workflow'] = [{'id': 'overlay'}]
+    resp = requests.post(url, json=j_query, timeout=300)
+    # Expect HTTP 400 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Test with bad workflows: multiple lookups
+    j_query['workflow'] = [{'id': 'lookup'}, {'id': 'lookup'}]
+    resp = requests.post(url, json=j_query, timeout=300)
+    # Expect HTTP 400 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    print('...passed')
+
+
+def test_translator_meta_knowledge_graph():
+    """ Check the /meta_knowledge_graph endpoint to make sure it returns a valid response. """
+    print(f'\ntest_cohd_trapi::test_translator_meta_knowledge_graph: testing TRAPI /meta_knowledge_graph '
+          f'on QNodes {cr.server}..... ')
+
+    url = f'{cr.server}/meta_knowledge_graph'
+    resp = requests.get(url, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "MetaKnowledgeGraph")
 
     print('...passed')

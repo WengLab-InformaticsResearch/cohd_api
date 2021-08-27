@@ -287,7 +287,7 @@ def test_oxo_search():
     oxo_response_keys = ['_links', '_embedded', 'page']
 
     # Check oxo_search with a known CURIE that should produce matches
-    json = omop_xref.oxo_search('DOID:8398', distance=2)
+    json = omop_xref.oxo_search(['DOID:8398'], distance=2)
     # Check the general response format
     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
     # Searched for 1 CURIE, expect searchResults with length 1
@@ -301,7 +301,7 @@ def test_oxo_search():
     sleep(2)
 
     # Check oxo_search with a known CURIE with a shorter distance and check that there are fewer results
-    json = omop_xref.oxo_search('DOID:8398', distance=1)
+    json = omop_xref.oxo_search(['DOID:8398'], distance=1)
     # Check the general response format
     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
     # Searched for 1 CURIE, expect searchResults with length 1
@@ -315,7 +315,7 @@ def test_oxo_search():
     sleep(2)
 
     # Check oxo_search with a known CURIE with a longer distance and check that there are fewer results
-    json = omop_xref.oxo_search('DOID:8398', distance=3)
+    json = omop_xref.oxo_search(['DOID:8398'], distance=3)
     # Check the general response format
     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
     # Searched for 1 CURIE, expect searchResults with length 1
@@ -329,7 +329,7 @@ def test_oxo_search():
     sleep(2)
 
     # Check oxo_search with a known CURIE with a restricted mapping targets and check that there are fewer results
-    json = omop_xref.oxo_search('DOID:8398', mapping_targets=['ICD10CM'], distance=2)
+    json = omop_xref.oxo_search(['DOID:8398'], mapping_targets=['ICD10CM'], distance=2)
     # Check the general response format
     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
     # Searched for 1 CURIE, expect searchResults with length 1
