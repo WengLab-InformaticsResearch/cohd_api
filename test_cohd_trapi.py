@@ -947,3 +947,22 @@ def test_translator_workflows():
                                     f'Received {resp.status_code}: {resp.text}'
 
     print('...passed')
+
+
+def test_translator_meta_knowledge_graph():
+    """ Check the /meta_knowledge_graph endpoint to make sure it returns a valid response. """
+    print(f'\ntest_cohd_trapi::test_translator_meta_knowledge_graph: testing TRAPI /meta_knowledge_graph '
+          f'on QNodes {cr.server}..... ')
+
+    url = f'{cr.server}/meta_knowledge_graph'
+    resp = requests.get(url, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "MetaKnowledgeGraph")
+
+    print('...passed')

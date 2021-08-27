@@ -869,7 +869,18 @@ class CohdTrapi120(CohdTrapi):
                 'query_category_compliant': query_category_compliant,
                 'kg_node': {
                     'name': primary_label,
-                    'categories': blm_categories,
+                    'categories': blm_categories
+                }
+            }
+
+            # Add the OMOP-Biolink mapping
+            if mapping is not None:
+                node['kg_node']['attributes'] = [{
+                    'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                    'original_attribute_name': 'Database cross-mapping',
+                    'value': mapping.history,
+                    'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
+                    'attribute_source': CohdTrapi._INFORES_ID,
                     'attributes': [
                         {
                             'attribute_type_id': 'EDAM:data_1087',  # Ontology concept ID
@@ -894,18 +905,7 @@ class CohdTrapi120(CohdTrapi):
                             'attribute_source': 'infores:omop-ohdsi',
                         }
                     ]
-                }
-            }
-
-            # Add the OMOP-Biolink mapping
-            if mapping is not None:
-                node['kg_node']['attributes'].append({
-                            'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
-                            'original_attribute_name': 'Database cross-mapping',
-                            'value': mapping.history,
-                            'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
-                            'attribute_source': CohdTrapi._INFORES_ID,
-                        })
+                }]
 
             self._kg_nodes[concept_id] = node
 
