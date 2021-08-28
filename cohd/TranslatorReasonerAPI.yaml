@@ -1,11 +1,10 @@
 openapi: 3.0.1
 info:
   description: |
-    The Columbia Open Health Data (COHD) for COVID-19 Research TRAPI API provides access to associations derived from
-    clinical data between diseases, phenotypic features, drugs, procedures, and demographic features.
+    The Columbia Open Health Data (COHD) TRAPI API provides access to associations derived from clinical data between
+    diseases, phenotypic features, drugs, procedures, and demographic features.
     
-    COHD for COVID-19 Research was developed at the
-    [Columbia University Department of Biomedical Informatics](https://www.dbmi.columbia.edu/)
+    COHD was developed at the [Columbia University Department of Biomedical Informatics](https://www.dbmi.columbia.edu/)
     as a collaboration between the [Weng Lab](http://people.dbmi.columbia.edu/~chw7007/),
     [Tatonetti Lab](http://tatonettilab.org/), and the
     [NCATS Biomedical Data Translator](https://ncats.nih.gov/translator) program.
@@ -19,7 +18,7 @@ info:
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
   version: 5.0.0
-  title: COHD for COVID-19 Research TRAPI
+  title: COHD TRAPI 1.2
   contact:
     name: Casey Ta
     email: ct2865@cumc.columbia.edu
@@ -52,8 +51,8 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-trapi/
 servers:
-  - url: 'https://covid.cohd.io/api/'
-    description: COHD for COVID-19 Research TRAPI Server
+  - url: 'https://trapi-dev.cohd.io/api/'
+    description: COHD TRAPI Development Server
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services
@@ -90,16 +89,14 @@ paths:
     post:
       tags:
         - query
-      summary: >-
-        Query COHD-COVID following NCATS Translator Reasoner Standard API. Initiate a query and wait to receive a
-        Response
+      summary: Query COHD following NCATS Translator Reasoner Standard API. Initiate a query and wait to receive a Response
       description: >-
-        Query the COHD-COVID API following the
+        Query the COHD API following the
         [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
         Only single hop queries are supported. See the example query_graph.
         
-        The COHD-COVID data are natively represented using OMOP. COHD-COVID will attempt to map between Biolink and OMOP
-        both in the input and response.
+        The COHD data are natively represented using OMOP. COHD will attempt to map between Biolink and OMOP both in the
+        input and response.
       operationId: query
       requestBody:
         description: Query information to be submitted
@@ -220,7 +217,7 @@ paths:
 components:
   schemas:
     QueryOptions:
-      description: Additional query options that apply to COHD-COVID
+      description: Additional query options that apply to COHD
       type: object
       properties:
         max_results:
@@ -228,7 +225,7 @@ components:
           type: integer
           example: 10
         dataset_id:
-          description: "The COHD-COVID dataset to query"
+          description: "The COHD dataset to query"
           type: integer
           example: 3
         confidence_interval:
