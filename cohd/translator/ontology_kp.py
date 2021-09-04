@@ -1,7 +1,7 @@
 import logging
 import requests
 from requests.compat import urljoin
-from typing import Any, Optional, Dict, List, Set
+from typing import Any, Optional, Dict, List, Set, Tuple
 
 from ..app import cache
 from .sri_node_normalizer import SriNodeNormalizer
@@ -11,6 +11,7 @@ class OntologyKP:
     base_url = 'https://stars-app.renci.org/sparql-kp/'
     endpoint_query = 'query'
     endpoint_meta_kg = 'meta_knowledge_graph'
+    INFORES_ID = 'infores:sri-ontology'
     _TIMEOUT = 30  # Query timeout (seconds)
 
     @staticmethod
@@ -60,7 +61,7 @@ class OntologyKP:
         return allowed_prefixes
 
     @staticmethod
-    def convert_to_preferred(curies: List[str], categories: List[str]) -> List[str]:
+    def convert_to_preferred(curies: List[str], categories: List[str]) -> Dict[str, str]:
         """ Converts the input CURIEs into the prefixes prefered by Ontology KP
 
         Parameters
@@ -70,7 +71,7 @@ class OntologyKP:
 
         Returns
         -------
-        List of CURIEs converted to preferred prefixes, if successful. Otherwise, the CURIEs are returned unaltered.
+        Dict of CURIEs converted to preferred prefixes, if successful. Otherwise, the CURIEs are returned unaltered.
         """
         allowed_prefixes = OntologyKP.get_allowed_prefixes(categories)
         if allowed_prefixes is not None:
@@ -81,18 +82,19 @@ class OntologyKP:
                 # Failed node normalizer. Return the original curies
                 return curies
 
-            preferred_curies = list()
+            preferred_curies = dict()
             for curie in curies:
                 if curie not in curies_to_convert:
                     # This CURIE already allowed
-                    preferred_curies.append(curie)
+                    preferred_curies[curie] = curie
                 else:
                     if norm_nodes[curie] is None:
-                        # No node normalizer info for this CURIE. Do not try to get descendants for this CURIE
+                        # No node normalizer info for this CURIE, try to use the CURIE as is
+                        preferred_curies[curie] = curie
                         continue
 
                     # Get the ID with the prefix that appears earliest in the allowed
-                    new_ids = [v['identifier'] for v in norm_nodes[curie]['equivalent_identifiers']]
+                    new_ids = [v.id for v in norm_nodes[curie].equivalent_identifiers]
                     preferred_curie = None
                     for prefix in allowed_prefixes:
                         for nid in new_ids:
@@ -104,14 +106,14 @@ class OntologyKP:
                     if preferred_curie is None:
                         # No CURIE with allowed prefix found. Just try with the original CURIE
                         preferred_curie = curie
-                    preferred_curies.append(preferred_curie)
+                    preferred_curies[curie] = preferred_curie
             return preferred_curies
         else:
             # Didn't get a valid response from meta_knowledge_graph. Don't alter the input CURIEs
-            return curies
+            return {curie:curie for curie in curies}
 
     @staticmethod
-    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """ Get descendant CURIEs from Ontology KP
 
         Parameters
@@ -129,6 +131,8 @@ class OntologyKP:
             categories = ['biolink:NamedThing']
 
         preferred_curies = OntologyKP.convert_to_preferred(curies, categories)
+        # Reverse mapping to get original CURIE from preferred CURIE
+        original_curies = {v:k for (k,v) in preferred_curies.items()}
 
         try:
             # Query Ontology KP for descendants
@@ -137,7 +141,7 @@ class OntologyKP:
                     "query_graph": {
                         "nodes": {
                             "a": {
-                                "ids": preferred_curies
+                                "ids": list(preferred_curies.values())
                             },
                             "b": {
                                 "categories": categories
@@ -147,7 +151,7 @@ class OntologyKP:
                             "ab": {
                                 "subject": "b",
                                 "object": "a",
-                                "predicate": "biolink:subclass_of"
+                                "predicates": ["biolink:subclass_of"]
                             }
                         }
                     }
@@ -158,17 +162,23 @@ class OntologyKP:
             if response.status_code == 200:
                 j = response.json()
                 if 'message' in j and 'knowledge_graph' in j['message']:
-                    nodes = j['message']['knowledge_graph'].get('nodes')
-                    if nodes is not None:
+                    kg = j['message']['knowledge_graph']
+                    nodes = kg.get('nodes')
+                    edges = kg.get('edges')
+                    if nodes is not None and edges is not None:
                         # Return all nodes in KG except for reflexive CURIE node if it's different from original CURIE
                         # This is to prevent the same concept from being queried twice with 2 different IDs
                         for pc in preferred_curies:
                             if pc not in curies:
                                 del nodes[pc]
-                        return nodes
+
+                        # Also return a dictionary indicating the QNode IDs that are ancestors of each descendant
+                        ancestor_dict = {e['subject']:original_curies[e['object']] for e in edges.values() if e['predicate'] == 'biolink:subclass_of'}
+
+                        return nodes, ancestor_dict
                     else:
                         # Return an empty dict, indicating no descendants found
-                        return dict()
+                        return dict(), dict()
             else:
                 logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
         except requests.RequestException:

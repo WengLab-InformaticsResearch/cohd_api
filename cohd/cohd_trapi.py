@@ -13,7 +13,7 @@ from .cohd_utilities import ln_ratio_ci, ci_significance, DomainClass
 from .omop_xref import ConceptMapper, Mapping
 from .app import cache
 from .query_cohd_mysql import query_active_concepts
-from .translator.sri_node_normalizer import SriNodeNormalizer
+from .translator.sri_node_normalizer import SriNodeNormalizer, NormalizedNode
 
 
 # Static instance of the Biolink Model Toolkit
@@ -592,7 +592,7 @@ class BiolinkConceptMapper:
         return str(d)
 
     @cache.memoize(timeout=7257600, cache_none=True, unless=lambda: BiolinkConceptMapper.force_update_cache)
-    def map_to_omop(self, curies: List[str]) -> Tuple[Dict[str, Mapping], Optional[Dict[str, Any]]]:
+    def map_to_omop(self, curies: List[str]) -> Tuple[Dict[str, Mapping], Optional[Dict[str, NormalizedNode]]]:
         """ Map to OMOP concept from ontology
 
         Parameters
@@ -612,28 +612,27 @@ class BiolinkConceptMapper:
             oxo_curie = BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(curie)
             mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
 
-            if mapping is None and normalized_nodes is not None and curie in normalized_nodes and \
-                    normalized_nodes[curie] is not None:
+            if mapping is None and normalized_nodes is not None and normalized_nodes.get(curie) is not None:
                 # Try OxO on each of the equivalent identifiers from SRI Node Normalizer
-                equivalent_ids = normalized_nodes[curie]['equivalent_identifiers']
+                equivalent_ids = normalized_nodes[curie].equivalent_identifiers
                 for identifier in equivalent_ids:
                     # The original CURIE was already tried above, skip it
                     if identifier == curie:
                         continue
 
-                    oxo_curie = BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(identifier['identifier'])
+                    oxo_curie = BiolinkConceptMapper.map_blm_prefixes_to_oxo_prefixes(identifier.id)
                     mapping = self._oxo_concept_mapper.map_to_omop(oxo_curie)
                     if mapping is not None:
                         # Find the input label from SRI Normalizer
                         input_label = None
                         for sri_mapping in equivalent_ids:
-                            if sri_mapping['identifier'] == curie:
-                                input_label = sri_mapping.get('label')
+                            if sri_mapping.id == curie:
+                                input_label = sri_mapping.label
                                 break
 
                         # Edit the mapping object to add the SRI Node Normalizer as the first step
-                        mapping.add_history(input_id=curie, output_id=mapping.input_id, source='SRI Normalizer',
-                                            input_label=input_label, output_label=identifier.get('label'),
+                        mapping.add_history(input_id=curie, output_id=mapping.input_id, source=SriNodeNormalizer.INFORES_ID,
+                                            input_label=input_label, output_label=identifier.label,
                                             distance=1, index=0)
                         mapping.input_id = curie
                         mapping.input_label = input_label
@@ -705,19 +704,21 @@ class BiolinkConceptMapper:
                 m_d = [m for m in mappings if m.get_distance() == d]
                 for m in m_d:
                     cm_target_curie = m.output_id
-                    if cm_target_curie in normalized_nodes and normalized_nodes[cm_target_curie] is not None:
+                    if normalized_nodes.get(cm_target_curie) is not None:
                         normalized_node = normalized_nodes[cm_target_curie]
-                        canonical_node = normalized_node['id']
-                        normalized_categories = normalized_node['type']
+                        canonical_node = normalized_node.normalized_identifier
+                        normalized_categories = normalized_node.categories
 
                         # If SRI normalizer suggests a different ID as canonical, add the mapping provenance
-                        if canonical_node['identifier'] != m.output_id:
-                            m.add_history(input_id=m.output_id, output_id=canonical_node['identifier'],
-                                          source='SRI Normalizer', input_label=m.output_label,
-                                          output_label=canonical_node.get('label'), distance=1)
-                            m.output_id = canonical_node['identifier']
-                        if 'label' in canonical_node:
-                            m.output_label = canonical_node['label']
+                        if canonical_node.id != m.output_id:
+                            m.add_history(input_id=m.output_id, output_id=canonical_node.id,
+                                          source=SriNodeNormalizer.INFORES_ID, input_label=m.output_label,
+                                          output_label=canonical_node.label, distance=1)
+                            m.output_id = canonical_node.id
+                        
+                        # Update the label if the canonical node label is not an empty string
+                        if canonical_node.label:
+                            m.output_label = canonical_node.label
 
                         return m, normalized_categories
 
