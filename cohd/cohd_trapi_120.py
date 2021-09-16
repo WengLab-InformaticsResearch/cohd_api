@@ -10,6 +10,7 @@ from jsonschema import ValidationError
 from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
+from .biolink_mapper import *
 from .trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 from .translator.ontology_kp import OntologyKP
 

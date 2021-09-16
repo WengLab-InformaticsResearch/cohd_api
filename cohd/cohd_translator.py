@@ -7,7 +7,7 @@ from flask import jsonify
 from semantic_version import Version
 
 from . import cohd_trapi_120
-from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
+from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
 # Get the static instance of the Biolink Model Toolkit from cohd_trapi
