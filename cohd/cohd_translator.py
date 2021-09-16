@@ -253,7 +253,7 @@ def omop_to_biolink(request):
     # Normalize with SRI Node Normalizer
     normalized_mappings = dict()
     curies = [x.output_id for x in mappings.values() if x is not None]
-    normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
+    normalized_nodes = SriNodeNormalizer.get_normalized_nodes_raw(curies)
 
     if normalized_nodes is None:
         return 'Unexpected response or no response received from SRI Node Normalizer', 503
