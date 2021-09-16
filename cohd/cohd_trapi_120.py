@@ -451,16 +451,17 @@ class CohdTrapi120(CohdTrapi):
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
-        ids = concept_1_qnode['ids']
+        ids = concept_1_qnode['ids'].copy()
+        ids = SriNodeNormalizer.remove_equivalents(ids)
 
         # Get subclasses for all CURIEs using ontology KP
-        descendants = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
+        descendants, ancestor_dict = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
         if descendants is not None:
             # Add new descendant CURIEs to the end of IDs list
-            new_ids = list(set(descendants.keys()) - set(ids))
-            if len(new_ids) > 0:
-                ids.extend(new_ids)
-                self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {new_ids}.",
+            descendant_ids = list(set(descendants.keys()) - set(ids))
+            if len(descendant_ids) > 0:
+                ids.extend(descendant_ids)
+                self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
                 self.log(f"No descendants found from Ontology KP for QNode '{self._concept_1_qnode_key}'.",
@@ -486,18 +487,33 @@ class CohdTrapi120(CohdTrapi):
                 qnode_categories = self._concept_1_qnode_categories
                 if self._concept_1_qnode_categories is None and normalized_nodes is not None \
                         and normalized_nodes.get(curie) is not None:
-                    qnode_categories = normalized_nodes[curie].get('type', None)
+                    qnode_categories = normalized_nodes[curie].categories
 
                 # Create a KG node now with the curie and mapping specified
-                self._get_kg_node(concept_1_omop_id, query_node_curie=curie,
-                                  query_node_categories=qnode_categories, mapping=concept_1_mapping)
+                inode = self._get_kg_node(concept_1_omop_id, query_node_curie=curie,
+                                          query_node_categories=qnode_categories, mapping=concept_1_mapping)                
+                self._add_internal_node_to_kg(inode)
 
                 # Debug logging
                 message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
                 self.log(message, level=logging.DEBUG)
             else:
+                # No OMOP mapping found. Just add the node to the KG. 
+                nn = normalized_nodes.get(curie)
+                if nn is not None:
+                    # Use node norm info when available
+                    self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label, categories=nn.categories))
+                else:
+                    # No node norm info available, make an empty KG node
+                    self._add_kg_node(curie, CohdTrapi120._make_kg_node())
+
                 message = f"Could not map node '{self._concept_1_qnode_key}' ID {curie} to OMOP concept"
                 self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
+
+            # For descendant nodes, add subclass_of edge
+            if curie in descendant_ids and curie in ancestor_dict:
+                self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
+
         if not found:
             self._valid_query = False
             description = f"Could not map node '{self._concept_1_qnode_key}' to OMOP concept"
@@ -509,17 +525,20 @@ class CohdTrapi120(CohdTrapi):
         # Get the desired association concept or category
         ids = concept_2_qnode.get('ids')
         if ids is not None and ids:
+            ids = ids.copy()
+            ids = SriNodeNormalizer.remove_equivalents(ids)
+            
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
 
             # Get subclasses for all CURIEs using ontology KP
-            descendants = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
+            descendants, ancestor_dict = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
             if descendants is not None:
                 # Add new descendant CURIEs to the end of IDs list
-                new_ids = list(set(descendants.keys()) - set(ids))
-                if len(new_ids) > 0:
-                    ids.extend(new_ids)
-                    self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {new_ids}.",
+                descendant_ids = list(set(descendants.keys()) - set(ids))
+                if len(descendant_ids) > 0:
+                    ids.extend(descendant_ids)
+                    self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:
                     self.log(f"No descendants found from Ontology KP for QNode '{self._concept_2_qnode_key}'.",
@@ -547,18 +566,33 @@ class CohdTrapi120(CohdTrapi):
                     qnode_categories = self._concept_2_qnode_categories
                     if self._concept_2_qnode_categories is None and normalized_nodes is not None \
                             and normalized_nodes.get(curie) is not None:
-                        qnode_categories = normalized_nodes[curie].get('type', None)
+                        qnode_categories = normalized_nodes[curie].categories
 
                     # Create a KG node now with the curie and mapping specified
-                    self._get_kg_node(concept_2_omop_id, query_node_curie=curie,
-                                      query_node_categories=qnode_categories, mapping=concept_2_mapping)
+                    inode = self._get_kg_node(concept_2_omop_id, query_node_curie=curie, 
+                                              query_node_categories=qnode_categories, mapping=concept_2_mapping)
+                    self._add_internal_node_to_kg(inode)
 
                     # Debug logging
                     message = f"Mapped node '{self._concept_2_qnode_key}' ID {curie} to OMOP:{concept_2_omop_id}"
                     self.log(message, level=logging.DEBUG)
                 else:
+                    # No OMOP mapping found. Just add the node to the KG. 
+                    nn = normalized_nodes.get(curie)
+                    if nn is not None:
+                        # Use node norm info when available
+                        self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label, categories=nn.categories))
+                    else:
+                        # No node norm info available, make an empty KG node
+                        self._add_kg_node(curie, CohdTrapi120._make_kg_node())
+
                     message = f"Could not map node '{self._concept_2_qnode_key}' ID {curie} to OMOP concept"
                     self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
+
+                # For descendant nodes, add subclass_of edge
+                if curie in descendant_ids and curie in ancestor_dict:
+                    self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
+                    
             if not found:
                 self._valid_query = False
                 description = f"Could not map node '{self._concept_2_qnode_key}' to OMOP concept"
@@ -785,7 +819,7 @@ class CohdTrapi120(CohdTrapi):
         concept_class: OMOP concept class ID
         query_node_curie: CURIE used in the QNode corresponding to this KG Node
         query_node_categories: list of categories for this QNode
-        mapping: mapping between OMOP and Biolink
+        mapping: mapping between OMOP and Biolink        
 
         Returns
         -------
@@ -912,8 +946,32 @@ class CohdTrapi120(CohdTrapi):
 
         return node
 
-    def _add_kg_node(self, node):
+    @staticmethod
+    def _make_kg_node(name: Optional[str] = None, categories: Optional[List[str]] = None, attributes: Optional[List[Any]] = None):
+        """ Makes the KG node 
+        
+        Parameters
+        ----------
+        name: node name
+        categories: node categories
+        attributes: node attributes """
+        return {
+            'name': name,
+            'categories': categories,
+            'attributes': attributes
+        }
+    
+    def _add_kg_node(self, id, node):
         """ Adds the node to the knowledge graph
+
+        Parameters
+        ----------
+        node: Node
+        """
+        self._knowledge_graph['nodes'][id] = node
+
+    def _add_internal_node_to_kg(self, node):
+        """ Adds the internal node to the knowledge graph
 
         Parameters
         ----------
@@ -929,6 +987,11 @@ class CohdTrapi120(CohdTrapi):
             node['in_kgraph'] = True
 
         return kg_node
+    
+    def _get_new_kg_edge_id(self) -> str:
+        """ Mint a new KG edge identifier 
+        """
+        return 'ke{id:06d}'.format(id=len(self._knowledge_graph['edges']))
 
     def _add_kg_edge(self, node_1, node_2, cohd_result):
         """ Adds the edge to the knowledge graph
@@ -944,11 +1007,11 @@ class CohdTrapi120(CohdTrapi):
         kg_node_1, kg_node_2, kg_edge
         """
         # Add nodes to knowledge graph
-        kg_node_1 = self._add_kg_node(node_1)
-        kg_node_2 = self._add_kg_node(node_2)
+        kg_node_1 = self._add_internal_node_to_kg(node_1)
+        kg_node_2 = self._add_internal_node_to_kg(node_2)
 
         # Mint a new identifier
-        ke_id = 'ke{id:06d}'.format(id=len(self._knowledge_graph['edges']))
+        ke_id = self._get_new_kg_edge_id()
 
         # Add properties from COHD results to the edge attributes
         attributes = [
@@ -1104,6 +1167,41 @@ class CohdTrapi120(CohdTrapi):
         self._knowledge_graph['edges'][ke_id] = kg_edge
 
         return kg_node_1, kg_node_2, kg_edge, ke_id
+
+    def _add_kg_edge_subclass_of(self, descendant_node_id, ancestor_node_id):
+        """ Adds the biolink:subclass_of edge to the knowledge graph
+
+        Parameters
+        ----------
+        node_1: Subject node
+        node_2: Object node
+        cohd_result: COHD result - data gets added to edge
+
+        Returns
+        -------
+        kg_node_1, kg_node_2, kg_edge
+        """
+        # Check that this pair is not already in the KG
+        for edge in self._knowledge_graph['edges'].values():
+            if edge['predicate'] == 'biolink:subclass_of' and \
+                edge['subject'] == descendant_node_id and \
+                edge['object'] == ancestor_node_id:
+                return
+
+        # Add a new subclass_of edge
+        ke_id = self._get_new_kg_edge_id()
+        self._knowledge_graph['edges'][ke_id] = {
+            'predicate': 'biolink:subclass_of',
+            'subject': descendant_node_id,
+            'object': ancestor_node_id,
+            'attributes': [{
+                'attribute_type_id': 'biolink:aggregator_knowledge_source',
+                'value': OntologyKP.INFORES_ID,
+                'value_type_id': 'biolink:InformationResource',
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'value_url': OntologyKP.base_url
+            }]
+        }
 
     def _initialize_trapi_response(self):
         """ Starts the TRAPI response message
