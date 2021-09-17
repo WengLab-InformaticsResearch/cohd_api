@@ -51,7 +51,7 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-trapi/
 servers:
-  - url: 'https://trapi-dev.cohd.io/api/'
+  - url: 'https://cohd.io/api/'
     description: COHD TRAPI Development Server
 externalDocs:
   description: >-
