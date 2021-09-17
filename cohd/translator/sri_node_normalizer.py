@@ -20,8 +20,9 @@ class NormalizedNode:
 
 
 class SriNodeNormalizer:
-    base_url = 'https://nodenormalization-sri.renci.org/1.1/'
-    # base_url = 'https://nodenormalization-sri-dev.renci.org/1.1/'
+    base_url = 'https://nodenormalization-sri.renci.org/'
+    # base_url = 'https://nodenormalization-sri-dev.renci.org/'
+    # base_url = 'https://nodenormalization-sri.renci.org/1.2/'
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
     INFORES_ID = 'infores:sri-node-normalizer'
 
@@ -41,7 +42,7 @@ class SriNodeNormalizer:
         if response.status_code == 200:
             return response.json()
         else:
-            logging.warning('Received a non-200 response code from SRI Node Normalizer: '
+            logging.error('Received a non-200 response code from SRI Node Normalizer: '
                             f'{(response.status_code, response.text)}')
             return None
     
