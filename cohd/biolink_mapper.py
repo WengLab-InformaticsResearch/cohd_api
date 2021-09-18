@@ -430,15 +430,54 @@ class BiolinkConceptMapper:
         else:
             logging.info('Updating biolink.mappings database')
 
+            # Clear out old mappings
             sql = 'TRUNCATE TABLE biolink.mappings;'
             cur.execute(sql)
 
+            # Insert new mappings
             sql = """
             INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity) VALUES
             """
             placeholders = ['(%s, %s, %s, %s, %s, %s, %s)'] * mapping_count
             sql += ','.join(placeholders) + ';'
             cur.execute(sql, params)
+            conn.commit()
+
+            # Multiple OMOP IDs may map to the same Biolink IDs. Try to find preferred mappings based on:
+            # 1) mapping distance, 2) string similarity, 3) COHD counts
+            sql = """
+            WITH
+            -- First choose based off of mapping distance
+            dist AS (SELECT biolink_id, MIN(distance) AS distance
+                FROM biolink.mappings
+                GROUP BY biolink_id),
+            
+            -- Next, use string similarity
+            string_sim AS (SELECT m.biolink_id, m.distance, MAX(string_similarity) AS string_similarity
+                FROM biolink.mappings m
+                JOIN dist ON m.biolink_id = dist.biolink_id AND m.distance = dist.distance
+                GROUP BY biolink_id, distance),
+            
+            -- Next, use max concept count from COHD data
+            max_count AS (SELECT m.biolink_id, m.distance, m.string_similarity, MAX(cc.concept_count) AS concept_count
+                FROM biolink.mappings m
+                JOIN string_sim s ON m.biolink_id = s.biolink_id
+                    AND m.distance = s.distance
+                    AND m.string_similarity = s.string_similarity
+                JOIN cohd.concept_counts cc ON m.omop_id = cc.concept_id
+                GROUP BY m.biolink_id, m.distance, m.string_similarity)
+
+            UPDATE biolink.mappings m
+            JOIN cohd.concept_counts cc ON m.omop_id = cc.concept_id
+            JOIN max_count x ON m.biolink_id = x.biolink_id
+                AND m.distance = x.distance
+                AND m.string_similarity = x.string_similarity
+                AND cc.concept_count = x.concept_count
+            -- JOIN cohd.concept c ON m.omop_id = c.concept_id
+            --    AND x.standard_concept = c.standard_concept
+            SET preferred = true;
+            """
+            cur.execute(sql)
             conn.commit()
 
             status_message += 'Updated to new mappings'
