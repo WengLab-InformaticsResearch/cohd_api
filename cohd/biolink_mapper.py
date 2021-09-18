@@ -1,4 +1,3 @@
-import threading
 import logging
 from typing import Iterable, Optional, Dict, List, Tuple
 import json
@@ -129,6 +128,24 @@ class BiolinkConceptMapper:
     When mapping from OMOP drugs (non-ingredients), use RXCUI for RXNORM identifiers. When mapping from OMOP drug
     ingredients, map through MESH. 
     """
+
+    # Store mappings keyed by omop/biolink IDs in memory
+    _map_omop = dict()
+    _map_biolink = dict()
+
+    # Pre-fetch mappings from SQL database
+    @staticmethod
+    def prefetch_mappings():
+        sql = """SELECT m.*, c.concept_name
+        FROM biolink.mappings m
+        JOIN concept c ON m.omop_id = c.concept_id
+        WHERE preferred = true;"""
+        conn = sql_connection()
+        cur = conn.cursor()
+        cur.execute(sql)
+        mapping_rows = cur.fetchall()
+        BiolinkConceptMapper._map_omop = {r['omop_id']:r for r in mapping_rows}
+        BiolinkConceptMapper._map_biolink = {r['biolink_id']:r for r in mapping_rows}
     
     @staticmethod
     def map_to_omop(curies: List[str]) -> Optional[Tuple[Dict[str, Optional[OmopBiolinkMapping]], Dict[str, Optional[NormalizedNode]]]]:
@@ -157,22 +174,6 @@ class BiolinkConceptMapper:
         if not canonical_ids:
             # No normalized nodes found
             return omop_mappings, normalized_nodes
-
-        sql = f"""SELECT m.*, c.concept_name
-        FROM biolink.mappings m
-        JOIN concept c ON m.omop_id = c.concept_id
-        WHERE biolink_id IN ({canonical_str}) AND preferred = true;"""
-        conn = sql_connection()
-        cur = conn.cursor()
-        cur.execute(sql)
-        mapping_rows = cur.fetchall()
-
-        if not mapping_rows:
-            # No mappings found 
-            return omop_mappings, normalized_nodes
-
-        # Create dictionary keyed on biolink_id
-        mappings = {r['biolink_id']:r for r in mapping_rows}
         
         for curie in curies:            
             normalized_node = normalized_nodes.get(curie)
@@ -189,7 +190,7 @@ class BiolinkConceptMapper:
                     break
             
             # Create mapping object
-            r = mappings.get(normalized_id)                  
+            r = BiolinkConceptMapper._map_biolink.get(normalized_id)
             if r is None:
                 omop_mappings[curie] = None
                 continue
@@ -212,17 +213,8 @@ class BiolinkConceptMapper:
         -------
         tuple: (Mapping object or None, list of categories or None)
         """
-        conn = sql_connection()
-        cur = conn.cursor()
-        sql = f"""SELECT m.*, c.concept_name
-        FROM biolink.mappings m
-        JOIN concept c ON m.omop_id = c.concept_id
-        WHERE omop_id = {concept_id}"""
-        cur.execute(sql)
-        mapping_rows = cur.fetchall()
-
-        if len(mapping_rows) == 1:
-            r = mapping_rows[0]
+        r = BiolinkConceptMapper._map_omop.get(concept_id)
+        if r:
             omop_curie = f'OMOP:{concept_id}'            
             mapping = OmopBiolinkMapping(omop_curie, r['biolink_id'], r['concept_name'], r['biolink_label'], r['provenance'], r['distance'])
             categories = json.loads(r['categories'])
@@ -232,28 +224,13 @@ class BiolinkConceptMapper:
 
     @staticmethod
     def build_mapping() -> Tuple[str, int]:
-        """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
-
-        This function starts another thread to run the build.
+        """ Rebuilds the mappings between OMOP and Biolink
 
         Returns
         -------
         Number of concepts
         """
-        thread = threading.Thread(target=BiolinkConceptMapper._build_mapping, daemon=True)
-        thread.start()
-        return 'Build started.', 200
+        return 'Not yet implemented.', 501
 
-    # Flag to indicate that COHD is currently in the process of rebuilding the cache
-    rebuilding_cache = False
 
-    @staticmethod
-    def _build_mapping() -> int:
-        """ Calls the BiolinkConceptMapper's map_from_omop on all concepts with data in COHD to build the cache
-
-        Returns
-        -------
-        Number of concepts
-        """
-        # Temporary shell
-        return 0
+BiolinkConceptMapper.prefetch_mappings()
