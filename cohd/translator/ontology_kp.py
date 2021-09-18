@@ -80,7 +80,7 @@ class OntologyKP:
             norm_nodes = SriNodeNormalizer.get_normalized_nodes(curies_to_convert)
             if norm_nodes is None:
                 # Failed node normalizer. Return the original curies
-                return curies
+                return {c:c for c in curies}
 
             preferred_curies = dict()
             for curie in curies:

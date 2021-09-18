@@ -10,7 +10,9 @@ from jsonschema import ValidationError
 from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
+from .biolink_mapper import *
 from .trapi.reasoner_validator import validate_trapi_12x as validate_trapi
+from .translator import bm_toolkit
 from .translator.ontology_kp import OntologyKP
 
 
@@ -51,7 +53,6 @@ class CohdTrapi120(CohdTrapi):
         self._criteria = []
         self._min_cooccurrence = None
         self._confidence_interval = None
-        self._concept_mapper = BiolinkConceptMapper()
         self._request = request
         self._max_results = CohdTrapi.default_max_results
         self._local_oxo = CohdTrapi.default_local_oxo
@@ -278,15 +279,6 @@ class CohdTrapi120(CohdTrapi):
         if self._mapping_distance is None or not isinstance(self._mapping_distance, Number):
             self._mapping_distance = CohdTrapi.default_mapping_distance
 
-        # Get query_option for ontology_targets
-        ontology_map = self._query_options.get('ontology_targets')
-        if ontology_map and isinstance(ontology_map, dict):
-            self._concept_mapper = BiolinkConceptMapper(ontology_map, distance=self._mapping_distance,
-                                                        local_oxo=self._local_oxo)
-        else:
-            # Use default ontology map
-            self._concept_mapper = BiolinkConceptMapper(distance=self._mapping_distance, local_oxo=self._local_oxo)
-
         # Get query_option for including only Biolink nodes
         self._biolink_only = self._query_options.get('biolink_only')
         if self._biolink_only is None or not isinstance(self._biolink_only, bool):
@@ -471,14 +463,14 @@ class CohdTrapi120(CohdTrapi):
                      level=logging.WARNING)
 
         # Find BLM - OMOP mappings for all identified query nodes
-        node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(ids)
+        node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
 
         # Map as many IDs to OMOP as possible
         for curie in ids:
             if node_mappings[curie] is not None:
                 # Found an OMOP mapping. Use this CURIE
                 concept_1_mapping = node_mappings[curie]
-                concept_1_omop_id = int(concept_1_mapping.output_id.split(':')[1])
+                concept_1_omop_id = int(concept_1_mapping.omop_id.split(':')[1])
                 self._concept_1_omop_ids.append(concept_1_omop_id)
                 found = True
 
@@ -548,16 +540,16 @@ class CohdTrapi120(CohdTrapi):
                          level=logging.WARNING)
 
             # Find BLM - OMOP mappings for all identified query nodes
-            node_mappings, normalized_nodes = self._concept_mapper.map_to_omop(ids)
+            node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
 
             # Map as many of the QNode IDs to OMOP as we can
             self._concept_2_omop_ids = list()
             found = False
             for curie in ids:
-                if node_mappings[curie] is not None:
+                if node_mappings.get(curie) is not None:
                     # Found an OMOP mapping. Use this CURIE
                     concept_2_mapping = node_mappings[curie]
-                    concept_2_omop_id = int(concept_2_mapping.output_id.split(':')[1])
+                    concept_2_omop_id = int(concept_2_mapping.omop_id.split(':')[1])
                     self._concept_2_omop_ids.append(concept_2_omop_id)
                     found = True
 
@@ -806,7 +798,7 @@ class CohdTrapi120(CohdTrapi):
         return result
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
-                     query_node_categories=None, mapping: Mapping = None):
+                     query_node_categories=None, mapping: OmopBiolinkMapping = None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
@@ -860,7 +852,7 @@ class CohdTrapi120(CohdTrapi):
 
                 # Find the label from the mappings
                 if mapping is not None:
-                    primary_label = mapping.output_label
+                    primary_label = mapping.biolink_label
 
                 if query_node_categories:
                     # The query specified both the ID and the category. Use the specified category
@@ -871,16 +863,14 @@ class CohdTrapi120(CohdTrapi):
                 # Map to Biolink Model
                 blm_category = map_omop_domain_to_blm_class(domain, concept_class)
                 blm_categories = [blm_category]
-                if self._concept_mapper:
-                    mapping, normalized_categories = self._concept_mapper.map_from_omop(concept_id, domain,
-                                                                                        concept_class)
-                    if mapping is not None:
-                        primary_curie = mapping.output_id
-                        primary_label = mapping.output_label
-                        mapped_to_blm = True
+                mapping, normalized_categories = BiolinkConceptMapper.map_from_omop(concept_id)
+                if mapping is not None:
+                    primary_curie = mapping.biolink_id
+                    primary_label = mapping.biolink_label
+                    mapped_to_blm = True
 
-                    if normalized_categories is not None:
-                        blm_categories = normalized_categories
+                if normalized_categories is not None:
+                    blm_categories = normalized_categories
 
                 # Check if at least 1 of the blm_categories is a descendant of the queried category
                 for query_category in query_node_categories:
@@ -912,7 +902,7 @@ class CohdTrapi120(CohdTrapi):
                 node['kg_node']['attributes'] = [{
                     'attribute_type_id': 'EDAM:data_0954',  # Database cross-mapping
                     'original_attribute_name': 'Database cross-mapping',
-                    'value': mapping.history,
+                    'value': mapping.provenance,
                     'value_type_id': 'EDAM:data_0954',  # Database cross-mapping
                     'attribute_source': CohdTrapi._INFORES_ID,
                     'attributes': [
