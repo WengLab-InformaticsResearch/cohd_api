@@ -1,6 +1,8 @@
 import logging
 from typing import Iterable, Optional, Dict, List, Tuple
 import json
+import difflib
+from collections import defaultdict
 
 from .cohd_utilities import DomainClass
 from .app import cache
@@ -223,14 +225,224 @@ class BiolinkConceptMapper:
         return None, None
 
     @staticmethod
-    def build_mapping() -> Tuple[str, int]:
+    def build_mappings() -> Tuple[str, int]:
         """ Rebuilds the mappings between OMOP and Biolink
 
         Returns
         -------
         Number of concepts
         """
-        return 'Not yet implemented.', 501
+        logging.info('Starting a new build of OMOP-Biolink mappings')
 
+        # Map OMOP vocabulary_id to Biolink prefixes
+        prefix_map = {
+            'ICD10CM': 'ICD10',
+            'ICD9CM': 'ICD9',
+            'MedDRA': 'MEDDRA',
+            'SNOMED': 'SNOMEDCT',
+            'HCPCS': 'HCPCS',
+            'CPT4': 'CPT'
+        }
+
+        # COHD MySQL database
+        conn = sql_connection()
+        cur = conn.cursor()
+
+        # Get current number of mappings
+        sql = 'SELECT COUNT(*) AS count FROM biolink.mappings;'
+        cur.execute(sql)
+        current_count = cur.fetchone()['count']
+
+        # Build the SQL insert
+        mapping_count = 0
+        params = list()
+
+        ########################## Conditions ##########################
+        logging.info('Mapping condition concepts')
+
+        # Get all active condition concepts
+        sql = """
+        SELECT c.concept_id, c.concept_name, c.vocabulary_id, c.concept_code,
+            c.concept_class_id, standard_concept
+        FROM
+            (SELECT DISTINCT concept_id FROM concept_counts) x
+        JOIN concept c ON x.concept_id = c.concept_id
+        WHERE c.domain_id = 'condition'
+        ORDER BY c.concept_id;
+        """
+        cur.execute(sql)
+        condition_concepts = cur.fetchall()
+        omop_concepts = {c['concept_id']:c for c in condition_concepts}
+
+        # Normalize with SRI Node Norm via ICD, MedDRA, and SNOMED codes
+        omop_biolink = {c['concept_id']:prefix_map[c['vocabulary_id']] + ':' + c['concept_code'] for c in condition_concepts if c['vocabulary_id'] in prefix_map}
+        biolink_ids = list(omop_biolink.values())
+        normalized_ids = SriNodeNormalizer.get_normalized_nodes(biolink_ids)
+
+        # Create mappings
+        for omop_id in omop_concepts:
+            biolink_id = omop_biolink[omop_id]
+            if normalized_ids[biolink_id] is None:
+                continue
+            
+            biolink_norm_node = normalized_ids[biolink_id]
+            biolink_norm_id = biolink_norm_node.normalized_identifier.id
+            biolink_label = biolink_norm_node.normalized_identifier.label
+            omop_label = omop_concepts[omop_id]['concept_name']
+            categories = json.dumps(biolink_norm_node.categories)
+            provenance = f'OMOP:{omop_id}-{biolink_id}'
+            distance = 0
+            string_similarity = difflib.SequenceMatcher(None, omop_label, biolink_label).ratio()
+            if biolink_id != biolink_norm_id:
+                provenance += f'-{biolink_norm_id}'
+                distance += 1
+            params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, distance, string_similarity])
+            mapping_count += 1
+
+        ########################## Drugs - non-ingredients ##########################
+        logging.info('Mapping drug concepts')
+        
+        # Get all active RXNORM drug (non-ingredient) concepts
+        sql = """
+        SELECT c.concept_id, c.concept_name, c.vocabulary_id, c.concept_code, c.concept_class_id, standard_concept
+        FROM
+        (SELECT DISTINCT concept_id FROM concept_counts) x
+        JOIN concept c ON x.concept_id = c.concept_id
+        WHERE c.domain_id = 'drug' AND c.concept_class_id != 'ingredient' AND c.vocabulary_id = 'RxNorm'
+        ORDER BY c.concept_id;
+        """
+        cur.execute(sql)
+        drug_concepts = cur.fetchall()
+
+        # Use RXNORM (RXCUI) for Biolink ID
+        omop_concepts = {c['concept_id']:c for c in drug_concepts}
+        omop_biolink = {c['concept_id']:'RXCUI:' + c['concept_code'] for c in drug_concepts}
+        biolink_ids = list(omop_biolink.values())
+
+        # Create mappings
+        for omop_id in omop_concepts:
+            biolink_id = omop_biolink[omop_id]
+            biolink_label = omop_concepts[omop_id]['concept_name']
+            categories = json.dumps(['biolink:Drug'])
+            provenance = f'OMOP:{omop_id}-{biolink_id}'
+            distance = 0
+            string_similarity = 1 
+            params.extend([omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity])
+            mapping_count += 1
+
+        ########################## Drug ingredients ##########################
+        logging.info('Mapping drug ingredient concepts')
+        
+        # Get all active drug ingredients which have OMOP mappings to MESH
+        sql = """
+        SELECT c.concept_id, c.concept_name, '|||', c_mesh.concept_code AS mesh_code, c_mesh.concept_name AS mesh_name
+        FROM
+        (SELECT DISTINCT concept_id FROM concept_counts) x
+        JOIN concept c ON x.concept_id = c.concept_id
+        JOIN concept_relationship cr ON c.concept_id = cr.concept_id_2
+        JOIN concept c_mesh ON cr.concept_id_1 = c_mesh.concept_id
+        --    AND cr.relationship_id = 'Maps to' -- only Maps to relationships in the COHD database
+        WHERE c.domain_id = 'drug' AND c.concept_class_id = 'ingredient'
+            AND c_mesh.vocabulary_id = 'MeSH'
+        ORDER BY c.concept_id;
+        """
+        cur.execute(sql)
+        ingredient_concepts = cur.fetchall()
+
+        # Normalize with SRI Node Norm via MESH
+        # Note: multiple MESH concepts may map to the same standard OMOP concept
+        omop_concepts = defaultdict(dict)
+        omop_biolink = defaultdict(list)
+        biolink_ids = list()
+        for c in ingredient_concepts:
+            biolink_id = 'MESH:' + c['mesh_code']
+            omop_id = c['concept_id']
+            omop_concepts[omop_id][biolink_id] = c
+            omop_biolink[omop_id].append(biolink_id)
+            biolink_ids.append(biolink_id)
+        normalized_ids = SriNodeNormalizer.get_normalized_nodes(biolink_ids)
+        
+        for omop_id in omop_concepts:
+            biolink_ids = omop_biolink[omop_id]
+            for biolink_id in biolink_ids:
+                if normalized_ids[biolink_id] is None:
+                    continue
+
+                biolink_norm_node = normalized_ids[biolink_id]
+                biolink_norm_id = biolink_norm_node.normalized_identifier.id
+                biolink_label = biolink_norm_node.normalized_identifier.label
+                omop_label = omop_concepts[omop_id][biolink_id]['concept_name']
+                categories = json.dumps(biolink_norm_node.categories)
+                provenance = f'OMOP:{omop_id}-{biolink_id}'
+                distance = 0
+                string_similarity = difflib.SequenceMatcher(None, omop_label, biolink_label).ratio()
+                if biolink_id != biolink_norm_id:
+                    provenance += f'-{biolink_norm_id}'
+                    distance += 1
+                params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, distance, string_similarity])
+                mapping_count += 1
+
+                # Naively use the first MESH ID that can be normalized
+                break
+
+        ########################## Procedures ##########################
+        logging.info('Mapping procedure concepts')
+        
+        # Note: Biolink doesn't list any prefixes in biolink:Procedure. Use vocabularies that are supported
+        # by Biolink in general (SNOMED, CPT4, MedDRA, HCPCS, and ICD9CM). Currently unsupported vocabularies 
+        # include ICD10PCS and ICD9Proc
+        sql = """
+        SELECT c.concept_id, c.concept_name, c.vocabulary_id, c.concept_code, c.concept_class_id, standard_concept
+        FROM
+        (SELECT DISTINCT concept_id FROM concept_counts) x
+        JOIN concept c ON x.concept_id = c.concept_id
+        WHERE c.domain_id = 'procedure' AND c.vocabulary_id IN ('CPT4', 'HCPCS', 'ICD9CM', 'MedDRA', 'SNOMED')
+        ORDER BY c.concept_id;
+        """
+        cur.execute(sql)
+        procedure_concepts = cur.fetchall()
+        
+        # Use the vocabulary concept codes as the Biolink IDs
+        omop_concepts = {c['concept_id']:c for c in procedure_concepts}
+        omop_biolink = {c['concept_id']:prefix_map[c['vocabulary_id']] + ':' + c['concept_code'] for c in procedure_concepts if c['vocabulary_id'] in prefix_map}
+        biolink_ids = list(omop_biolink.values())
+
+        # Create the mappings
+        for omop_id in omop_concepts:
+            biolink_id = omop_biolink[omop_id]
+            biolink_label = omop_concepts[omop_id]['concept_name']
+            categories = json.dumps(['biolink:Procedure'])
+            provenance = f'OMOP:{omop_id}-{biolink_id}'
+            distance = 0
+            string_similarity = 1
+            params.extend([omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity])
+            mapping_count += 1
+
+        ########################## Finalize ##########################
+        # Make sure that the new mappings have at least 95% as many mappings as the existing mappings
+        status_message = f"""Current number of mappings: {current_count}
+            New mappings: {mapping_count}
+            """
+        if mapping_count < (0.95 * current_count):
+            status_message += 'Retained old mappings'
+            logging.info(status_message)
+            return status_message, 200
+        else:
+            logging.info('Updating biolink.mappings database')
+
+            sql = 'TRUNCATE TABLE biolink.mappings;'
+            cur.execute(sql)
+
+            sql = """
+            INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity) VALUES
+            """
+            placeholders = ['(%s, %s, %s, %s, %s, %s, %s)'] * mapping_count
+            sql += ','.join(placeholders) + ';'
+            cur.execute(sql, params)
+            conn.commit()
+
+            status_message += 'Updated to new mappings'
+            logging.info(status_message)
+            return status_message, 200
 
 BiolinkConceptMapper.prefetch_mappings()
