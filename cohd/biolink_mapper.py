@@ -3,11 +3,13 @@ from typing import Iterable, Optional, Dict, List, Tuple
 import json
 import difflib
 from collections import defaultdict
+import urllib3
 
 from .cohd_utilities import DomainClass
 from .app import cache
 from .query_cohd_mysql import sql_connection
 from .translator.sri_node_normalizer import SriNodeNormalizer, NormalizedNode
+from .translator.sri_name_resolution import SriNameResolution
 from .translator import bm_toolkit
 
 
@@ -248,8 +250,8 @@ class BiolinkConceptMapper:
         conn = sql_connection()
         cur = conn.cursor()
 
-        # Get current number of mappings
-        sql = 'SELECT COUNT(*) AS count FROM biolink.mappings;'
+        # Get current number of mappings that weren't from string searches
+        sql = 'SELECT COUNT(*) AS count FROM biolink.mappings WHERE string_search = 0;'
         cur.execute(sql)
         current_count = cur.fetchone()['count']
 
@@ -276,27 +278,27 @@ class BiolinkConceptMapper:
 
         # Normalize with SRI Node Norm via ICD, MedDRA, and SNOMED codes
         omop_biolink = {c['concept_id']:prefix_map[c['vocabulary_id']] + ':' + c['concept_code'] for c in condition_concepts if c['vocabulary_id'] in prefix_map}
-        biolink_ids = list(omop_biolink.values())
-        normalized_ids = SriNodeNormalizer.get_normalized_nodes(biolink_ids)
+        mapped_ids = list(omop_biolink.values())
+        normalized_ids = SriNodeNormalizer.get_normalized_nodes(mapped_ids)
 
         # Create mappings
         for omop_id in omop_concepts:
-            biolink_id = omop_biolink[omop_id]
-            if normalized_ids[biolink_id] is None:
+            mapped_id = omop_biolink[omop_id]
+            if normalized_ids[mapped_id] is None:
                 continue
             
-            biolink_norm_node = normalized_ids[biolink_id]
+            biolink_norm_node = normalized_ids[mapped_id]
             biolink_norm_id = biolink_norm_node.normalized_identifier.id
             biolink_label = biolink_norm_node.normalized_identifier.label
             omop_label = omop_concepts[omop_id]['concept_name']
             categories = json.dumps(biolink_norm_node.categories)
-            provenance = f'OMOP:{omop_id}-{biolink_id}'
-            distance = 0
-            string_similarity = difflib.SequenceMatcher(None, omop_label, biolink_label).ratio()
-            if biolink_id != biolink_norm_id:
-                provenance += f'-{biolink_norm_id}'
+            provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+            distance = 1
+            string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
+            if mapped_id != biolink_norm_id:
+                provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
                 distance += 1
-            params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, distance, string_similarity])
+            params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity])
             mapping_count += 1
 
         ########################## Drugs - non-ingredients ##########################
@@ -317,17 +319,16 @@ class BiolinkConceptMapper:
         # Use RXNORM (RXCUI) for Biolink ID
         omop_concepts = {c['concept_id']:c for c in drug_concepts}
         omop_biolink = {c['concept_id']:'RXCUI:' + c['concept_code'] for c in drug_concepts}
-        biolink_ids = list(omop_biolink.values())
 
         # Create mappings
         for omop_id in omop_concepts:
-            biolink_id = omop_biolink[omop_id]
+            mapped_id = omop_biolink[omop_id]
             biolink_label = omop_concepts[omop_id]['concept_name']
             categories = json.dumps(['biolink:Drug'])
-            provenance = f'OMOP:{omop_id}-{biolink_id}'
-            distance = 0
+            provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+            distance = 1
             string_similarity = 1 
-            params.extend([omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity])
+            params.extend([omop_id, mapped_id, biolink_label, categories, provenance, False, distance, string_similarity])
             mapping_count += 1
 
         ########################## Drug ingredients ##########################
@@ -353,33 +354,33 @@ class BiolinkConceptMapper:
         # Note: multiple MESH concepts may map to the same standard OMOP concept
         omop_concepts = defaultdict(dict)
         omop_biolink = defaultdict(list)
-        biolink_ids = list()
+        mapped_ids = list()
         for c in ingredient_concepts:
-            biolink_id = 'MESH:' + c['mesh_code']
+            mapped_id = 'MESH:' + c['mesh_code']
             omop_id = c['concept_id']
-            omop_concepts[omop_id][biolink_id] = c
-            omop_biolink[omop_id].append(biolink_id)
-            biolink_ids.append(biolink_id)
-        normalized_ids = SriNodeNormalizer.get_normalized_nodes(biolink_ids)
+            omop_concepts[omop_id][mapped_id] = c
+            omop_biolink[omop_id].append(mapped_id)
+            mapped_ids.append(mapped_id)
+        normalized_ids = SriNodeNormalizer.get_normalized_nodes(mapped_ids)
         
         for omop_id in omop_concepts:
-            biolink_ids = omop_biolink[omop_id]
-            for biolink_id in biolink_ids:
-                if normalized_ids[biolink_id] is None:
+            mapped_ids = omop_biolink[omop_id]
+            for mapped_id in mapped_ids:
+                if normalized_ids[mapped_id] is None:
                     continue
 
-                biolink_norm_node = normalized_ids[biolink_id]
+                biolink_norm_node = normalized_ids[mapped_id]
                 biolink_norm_id = biolink_norm_node.normalized_identifier.id
                 biolink_label = biolink_norm_node.normalized_identifier.label
-                omop_label = omop_concepts[omop_id][biolink_id]['concept_name']
+                omop_label = omop_concepts[omop_id][mapped_id]['concept_name']
                 categories = json.dumps(biolink_norm_node.categories)
-                provenance = f'OMOP:{omop_id}-{biolink_id}'
-                distance = 0
-                string_similarity = difflib.SequenceMatcher(None, omop_label, biolink_label).ratio()
-                if biolink_id != biolink_norm_id:
-                    provenance += f'-{biolink_norm_id}'
+                provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+                distance = 1
+                string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
+                if mapped_id != biolink_norm_id:
+                    provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
                     distance += 1
-                params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, distance, string_similarity])
+                params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity])
                 mapping_count += 1
 
                 # Naively use the first MESH ID that can be normalized
@@ -405,26 +406,24 @@ class BiolinkConceptMapper:
         # Use the vocabulary concept codes as the Biolink IDs
         omop_concepts = {c['concept_id']:c for c in procedure_concepts}
         omop_biolink = {c['concept_id']:prefix_map[c['vocabulary_id']] + ':' + c['concept_code'] for c in procedure_concepts if c['vocabulary_id'] in prefix_map}
-        biolink_ids = list(omop_biolink.values())
 
         # Create the mappings
         for omop_id in omop_concepts:
-            biolink_id = omop_biolink[omop_id]
+            mapped_id = omop_biolink[omop_id]
             biolink_label = omop_concepts[omop_id]['concept_name']
             categories = json.dumps(['biolink:Procedure'])
-            provenance = f'OMOP:{omop_id}-{biolink_id}'
-            distance = 0
+            provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+            distance = 1
             string_similarity = 1
-            params.extend([omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity])
+            params.extend([omop_id, mapped_id, biolink_label, categories, provenance, False, distance, string_similarity])
             mapping_count += 1
 
-        ########################## Finalize ##########################
+        ########################## Update mappings ##########################
         # Make sure that the new mappings have at least 95% as many mappings as the existing mappings
-        status_message = f"""Current number of mappings: {current_count}
-            New mappings: {mapping_count}
-            """
         if mapping_count < (0.95 * current_count):
-            status_message += 'Retained old mappings'
+            status_message = f"""Current number of mappings: {current_count}
+            New mappings: {mapping_count}
+            Retained old mappings"""
             logging.info(status_message)
             return status_message, 200
         else:
@@ -436,9 +435,9 @@ class BiolinkConceptMapper:
 
             # Insert new mappings
             sql = """
-            INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, distance, string_similarity) VALUES
+            INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, string_search, distance, string_similarity) VALUES
             """
-            placeholders = ['(%s, %s, %s, %s, %s, %s, %s)'] * mapping_count
+            placeholders = ['(%s, %s, %s, %s, %s, %s, %s, %s)'] * mapping_count
             sql += ','.join(placeholders) + ';'
             cur.execute(sql, params)
             conn.commit()
@@ -480,8 +479,153 @@ class BiolinkConceptMapper:
             cur.execute(sql)
             conn.commit()
 
-            status_message += 'Updated to new mappings'
-            logging.info(status_message)
-            return status_message, 200
+        ########################## Search drug ingredients by name ##########################
+        logging.info('Mapping drug ingredients by name')
+        # Get all active drug ingredients which aren't mapped yet
+        sql = """
+        SELECT c.concept_id, c.concept_name
+        FROM
+        (SELECT DISTINCT concept_id FROM concept_counts) x
+        JOIN concept c ON x.concept_id = c.concept_id
+        LEFT JOIN biolink.mappings m ON x.concept_id = m.omop_id
+        WHERE c.domain_id = 'drug' AND c.concept_class_id = 'ingredient'
+            AND m.omop_id IS NULL
+        ORDER BY c.concept_id;
+        """
+        cur.execute(sql)
+        missing_ingredient_concepts = cur.fetchall()
+        
+        # First, collect responses from SRI Lookup service
+        total_errors = 0
+        max_total_errors = 10
+        max_tries = 2
+        omop_labels = dict()
+        lookup_responses = dict()
+        potential_curies = list()
+        for r in missing_ingredient_concepts:
+            if total_errors >= max_total_errors:
+                logging.error(f'Biolink Mapper Max Total Errors')
+                break
+            
+            tries = 1
+            # SRI Lookup service can be a little flakey, retry a couple times
+            while tries <= max_tries:
+                try:
+                    omop_id = r['concept_id']
+                    concept_name = r['concept_name']
+                    omop_labels[omop_id] = concept_name
+                    
+                    # Lookup
+                    j = SriNameResolution.name_lookup(concept_name)
+                    if j is None:
+                        logging.error(f'Biolink Mapper SRI Lookup Error: {omop_id} - {concept_name}')
+                        total_errors += 1
+                    else:
+                        if len(j) > 0:
+                            # Collect the responses
+                            lookup_responses[omop_id] = j
+                            potential_curies.extend(j.keys())
+                            break
+                        else:
+                            logging.info(f'Biolink Mapper - No Match: {omop_id} - {concept_name}')
+                            break
+                except urllib3.exception.ConnectionError as e:
+                    total_errors += 1
+                
+                tries += 1
+
+        # Call SRI Node Normalizer to get categories for all potential CURIEs
+        potential_curies = list(set(potential_curies))
+        normalized_nodes = SriNodeNormalizer.get_normalized_nodes(potential_curies)
+        
+        # For each search result, find the first result that is a biolink:ChemicalEntity and high string similarity
+        string_sim_criteria = 0.9
+        string_match_count = 0
+        params = list()
+        chemical_descendants = bm_toolkit.get_descendants('biolink:ChemicalEntity', reflexive=True, formatted=True)
+        for omop_id, lookup_response in lookup_responses.items():
+            omop_label = omop_labels[omop_id].lower()
+            # CURIEs are in order of best match, according to SRI, so use this order to find the first match
+            for curie, labels in lookup_response.items():
+                # Check if the categories of the CURIE include biolink:ChemicalEntity
+                normalized_node = normalized_nodes.get(curie)
+                if normalized_node is None:
+                    continue
+                is_chemical_descendant = False
+                categories = normalized_node.categories
+                for category in categories:
+                    if category in chemical_descendants:
+                        is_chemical_descendant = True
+                        break
+                if not is_chemical_descendant:
+                    continue
+                
+                # Check if any of the labels match well enough
+                found_match = False
+                for label in labels:
+                    string_similarity = difflib.SequenceMatcher(None, omop_label, label.lower()).ratio()
+                    if string_similarity > string_sim_criteria:
+                        found_match = True
+                        categories = json.dumps(categories)
+                        provenance = f'(OMOP:{omop_id})-[SRI Name Resolution]-({curie})'
+                        params.extend([omop_id, curie, label, categories, provenance, True, 99, string_similarity])
+                        string_match_count += 1
+                        break
+
+                if found_match:
+                    break
+        
+        # Insert new string-based mappings
+        sql = """
+        INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, string_search, distance, string_similarity) VALUES
+        """
+        placeholders = ['(%s, %s, %s, %s, %s, %s, %s, %s)'] * string_match_count
+        sql += ','.join(placeholders) + ';'
+        cur.execute(sql, params)
+
+        # Choose the preferred mappings among the string-search results only based on string similarity
+        sql = """
+        WITH
+        -- First, get the biolink CURIEs that don't yet have a preferred mapping
+        preferred AS (SELECT DISTINCT biolink_id
+            FROM biolink.mappings
+            WHERE preferred = 1),
+        
+        not_preferred AS (SELECT DISTINCT m.biolink_id AS biolink_id
+            FROM biolink.mappings m
+            LEFT JOIN preferred p ON m.biolink_id = p.biolink_id
+            WHERE p.biolink_id IS NULL),
+        
+        -- Next, use string similarity
+        string_sim AS (SELECT m.biolink_id, MAX(string_similarity) AS string_similarity
+            FROM biolink.mappings m
+            JOIN not_preferred np ON m.biolink_id = np.biolink_id
+            GROUP BY biolink_id),
+        
+        -- Next, use max concept count from COHD data
+        max_count AS (SELECT m.biolink_id, m.string_similarity, MAX(cc.concept_count) AS concept_count
+            FROM biolink.mappings m
+            JOIN string_sim s ON m.biolink_id = s.biolink_id
+                AND m.string_similarity = s.string_similarity
+            JOIN cohd.concept_counts cc ON m.omop_id = cc.concept_id
+            GROUP BY m.biolink_id, m.string_similarity)
+
+        UPDATE biolink.mappings m
+        JOIN cohd.concept_counts cc ON m.omop_id = cc.concept_id
+        JOIN max_count x ON m.biolink_id = x.biolink_id
+            AND m.string_similarity = x.string_similarity
+            AND cc.concept_count = x.concept_count
+        SET preferred = true;
+        """
+        cur.execute(sql)
+        conn.commit()
+
+        status_message = f"""Current number of mappings: {current_count}
+                New mappings: {mapping_count}
+                String search mappings: {string_match_count}
+                Updated to new mappings.
+                """
+        return status_message, 200
+        
 
 BiolinkConceptMapper.prefetch_mappings()
