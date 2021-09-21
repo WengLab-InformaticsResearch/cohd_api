@@ -284,21 +284,27 @@ class BiolinkConceptMapper:
         # Create mappings
         for omop_id in omop_concepts:
             mapped_id = omop_biolink[omop_id]
-            if normalized_ids[mapped_id] is None:
-                continue
-            
-            biolink_norm_node = normalized_ids[mapped_id]
-            biolink_norm_id = biolink_norm_node.normalized_identifier.id
-            biolink_label = biolink_norm_node.normalized_identifier.label
             omop_label = omop_concepts[omop_id]['concept_name']
-            categories = json.dumps(biolink_norm_node.categories)
-            provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
-            distance = 1
-            string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
-            if mapped_id != biolink_norm_id:
-                provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
-                distance += 1
-            params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity])
+            if normalized_ids[mapped_id] is None:
+                # Use the OMOP vocabulary mapping only
+                categories = json.dumps(['biolink:DiseaseOrPhenotypicFeature'])
+                provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+                distance = 1
+                string_similarity = 1
+                params.extend([omop_id, mapped_id, omop_label, categories, provenance, False, distance, string_similarity])
+            else:
+                # Use the normalized node
+                biolink_norm_node = normalized_ids[mapped_id]
+                biolink_norm_id = biolink_norm_node.normalized_identifier.id
+                biolink_label = biolink_norm_node.normalized_identifier.label
+                categories = json.dumps(biolink_norm_node.categories)
+                provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
+                distance = 1
+                string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
+                if mapped_id != biolink_norm_id:
+                    provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
+                    distance += 1
+                params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity])
             mapping_count += 1
 
         ########################## Drugs - non-ingredients ##########################
