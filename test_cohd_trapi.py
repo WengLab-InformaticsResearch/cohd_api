@@ -16,7 +16,7 @@ from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
 
-""" 
+"""
 tuple for storing pairs of (key, type) for results schemas
 """
 _s = namedtuple('_s', ['key', 'type'])
@@ -836,13 +836,15 @@ def test_translator_query_qnode_subclasses():
     print('...passed')
 
 
-def test_translator_query_qnode_null_constraint():
-    """ Check the TRAPI endpoint to make sure it allows null constraints on QNodes. The null constraints should be
+def test_translator_query_qnode_empty_constraint():
+    """ Check the TRAPI endpoint to make sure it allows null & empty constraints on QNodes. The null constraints should be
     ignored regardless of whether or not COHD implements constraints. """
-    print(f'\ntest_cohd_trapi::test_translator_query_qnode_null_constraint: testing TRAPI query with null constraints '
+    print(f'\ntest_cohd_trapi::test_translator_query_qnode_empty_constraint: testing TRAPI query with null constraints '
           f'on QNodes {cr.server}..... ')
 
     url = f'{cr.server}/query'
+
+    # Query with null constraints
     query = '''
     {
         "message": {
@@ -855,6 +857,48 @@ def test_translator_query_qnode_null_constraint():
                     "obj": {
                         "categories": ["biolink:DiseaseOrPhenotypicFeature"],
                         "constraints": null
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    resp = requests.post(url, json=j.loads(query), timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) >= 1
+
+    # Query with empty constraints
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"],
+                        "constraints": []
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
+                        "constraints": []
                     }
                 },
                 "edges": {

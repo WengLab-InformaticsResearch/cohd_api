@@ -173,7 +173,8 @@ class OntologyKP:
                                 del nodes[pc]
 
                         # Also return a dictionary indicating the QNode IDs that are ancestors of each descendant
-                        ancestor_dict = {original_curies[e['subject']] if e['subject'] in original_curies else e['subject']:original_curies[e['object']]
+                        ancestor_dict = {original_curies[e['subject']] if e['subject'] in original_curies
+                                else e['subject']:original_curies[e['object']]
                                 for e in edges.values() if e['predicate'] == 'biolink:subclass_of'}
 
                         return nodes, ancestor_dict
