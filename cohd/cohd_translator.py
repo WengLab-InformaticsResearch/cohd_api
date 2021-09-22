@@ -188,7 +188,7 @@ def biolink_to_omop(request):
         curies = j['curies']
     else:
         return 'Bad request', 400
-    
+
     mappings, _ = BiolinkConceptMapper.map_to_omop(curies)
 
     # Convert the Mappings object into a dict for return
@@ -237,7 +237,7 @@ def omop_to_biolink(request):
             if omop_id.isdigit():
                 omop_ids.append(int(omop_id))
 
-    # Map to Biolink using OxO
+    # Map to Biolink
     concept_definitions = omop_concept_definitions(omop_ids)
     mappings = dict()
     for omop_id in omop_ids:
