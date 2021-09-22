@@ -454,6 +454,7 @@ class CohdTrapi120(CohdTrapi):
             descendant_ids = list(set(descendants.keys()) - set(ids))
             if len(descendant_ids) > 0:
                 ids.extend(descendant_ids)
+                ids = SriNodeNormalizer.remove_equivalents(ids)
                 self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
@@ -531,6 +532,7 @@ class CohdTrapi120(CohdTrapi):
                 descendant_ids = list(set(descendants.keys()) - set(ids))
                 if len(descendant_ids) > 0:
                     ids.extend(descendant_ids)
+                    ids = SriNodeNormalizer.remove_equivalents(ids)
                     self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:
