@@ -61,6 +61,8 @@ class CohdTrapi120(CohdTrapi):
             'nodes': {},
             'edges': {}
         }
+        # Track in the KG which CURIEs are being used by which OMOP IDs (may be more than 1 OMOP ID)
+        self._kg_curie_omop_use = defaultdict(list)
         self._cohd_results = []
         self._results = []
         self._logs = []
@@ -623,7 +625,8 @@ class CohdTrapi120(CohdTrapi):
         if qnode2_constraints:
             # COHD does not yet support constraints
             self._valid_query = False
-            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} has not yet implemented support of constraints', 400
+            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} has not yet implemented support of constraints',\
+                                           400
             return self._valid_query, self._invalid_query_response
 
         # Criteria for returning results
@@ -747,6 +750,16 @@ class CohdTrapi120(CohdTrapi):
         if not node_2.get('query_category_compliant', False) or \
                 (self._biolink_only and not node_2.get('biolink_compliant', False)):
             # Only include results when node_2 maps to biolink and matches the queried category
+            return
+
+        # Only allow one OMOP ID to use a CURIE. Will allow the first result using a given CURIE to go through. Since
+        # results are in descending order, will give priority to the OMOP ID with the strongest association
+        concept_1_curie = node_1['primary_curie']
+        concept_2_curie = node_2['primary_curie']
+        if ((self._kg_curie_omop_use[concept_1_curie] and
+            concept_1_id not in self._kg_curie_omop_use[concept_1_curie]) or
+            (self._kg_curie_omop_use[concept_2_curie] and
+            concept_2_id not in self._kg_curie_omop_use[concept_2_curie])):
             return
 
         # Add nodes and edge to knowledge graph
@@ -972,8 +985,10 @@ class CohdTrapi120(CohdTrapi):
         """
         kg_node = node['kg_node']
         if not node['in_kgraph']:
-            self._knowledge_graph['nodes'][node['primary_curie']] = kg_node
+            curie = node['primary_curie']
+            self._knowledge_graph['nodes'][curie] = kg_node
             node['in_kgraph'] = True
+            self._kg_curie_omop_use[curie].append(node['omop_id'])
 
         return kg_node
 
