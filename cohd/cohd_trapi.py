@@ -57,7 +57,7 @@ class CohdTrapi(ABC):
     default_mapping_distance = 3
     default_biolink_only = True
     default_max_results = 500
-    default_log_level = logging.WARNING
+    default_log_level = logging.INFO
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
