@@ -482,14 +482,14 @@ class CohdTrapi120(CohdTrapi):
 
                 # Create a KG node now with the curie and mapping specified
                 inode = self._get_kg_node(concept_1_omop_id, query_node_curie=curie,
-                                          query_node_categories=qnode_categories, mapping=concept_1_mapping)                
+                                          query_node_categories=qnode_categories, mapping=concept_1_mapping)
                 self._add_internal_node_to_kg(inode)
 
                 # Debug logging
                 message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
                 self.log(message, level=logging.DEBUG)
             else:
-                # No OMOP mapping found. Just add the node to the KG. 
+                # No OMOP mapping found. Just add the node to the KG.
                 nn = normalized_nodes.get(curie)
                 if nn is not None:
                     # Use node norm info when available
@@ -518,7 +518,7 @@ class CohdTrapi120(CohdTrapi):
         if ids is not None and ids:
             ids = ids.copy()
             ids = SriNodeNormalizer.remove_equivalents(ids)
-            
+
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
 
@@ -560,7 +560,7 @@ class CohdTrapi120(CohdTrapi):
                         qnode_categories = normalized_nodes[curie].categories
 
                     # Create a KG node now with the curie and mapping specified
-                    inode = self._get_kg_node(concept_2_omop_id, query_node_curie=curie, 
+                    inode = self._get_kg_node(concept_2_omop_id, query_node_curie=curie,
                                               query_node_categories=qnode_categories, mapping=concept_2_mapping)
                     self._add_internal_node_to_kg(inode)
 
@@ -568,7 +568,7 @@ class CohdTrapi120(CohdTrapi):
                     message = f"Mapped node '{self._concept_2_qnode_key}' ID {curie} to OMOP:{concept_2_omop_id}"
                     self.log(message, level=logging.DEBUG)
                 else:
-                    # No OMOP mapping found. Just add the node to the KG. 
+                    # No OMOP mapping found. Just add the node to the KG.
                     nn = normalized_nodes.get(curie)
                     if nn is not None:
                         # Use node norm info when available
@@ -583,7 +583,7 @@ class CohdTrapi120(CohdTrapi):
                 # For descendant nodes, add subclass_of edge
                 if curie in descendant_ids and curie in ancestor_dict:
                     self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
-                    
+
             if not found:
                 self._valid_query = False
                 description = f"Could not map node '{self._concept_2_qnode_key}' to OMOP concept"
@@ -603,7 +603,7 @@ class CohdTrapi120(CohdTrapi):
             else:
                 for dc_pair in self._domain_class_pairs:
                     if dc_pair.concept_class_id is not None:
-                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:' 
+                        self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}:'
                                  f'{dc_pair.concept_class_id}', level=logging.INFO)
                     else:
                         self.log(f'Querying associations to all OMOP domain {dc_pair.domain_id}', level=logging.INFO)
@@ -613,14 +613,14 @@ class CohdTrapi120(CohdTrapi):
             self._domain_class_pairs = None
             self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
 
-        if concept_1_qnode.get('constraints', None) is not None:
+        if concept_1_qnode.get('constraints'):
             self._valid_query = False
             self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} does not support constraints on a QNode with '\
                                            'ids specified', 400
             return self._valid_query, self._invalid_query_response
 
-        qnode2_constraints = concept_2_qnode.get('constraints', None)
-        if qnode2_constraints is not None and len(qnode2_constraints) > 0:
+        qnode2_constraints = concept_2_qnode.get('constraints')
+        if qnode2_constraints:
             # COHD does not yet support constraints
             self._valid_query = False
             self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} has not yet implemented support of constraints', 400
@@ -810,7 +810,7 @@ class CohdTrapi120(CohdTrapi):
         concept_class: OMOP concept class ID
         query_node_curie: CURIE used in the QNode corresponding to this KG Node
         query_node_categories: list of categories for this QNode
-        mapping: mapping between OMOP and Biolink        
+        mapping: mapping between OMOP and Biolink
 
         Returns
         -------
@@ -937,8 +937,8 @@ class CohdTrapi120(CohdTrapi):
 
     @staticmethod
     def _make_kg_node(name: Optional[str] = None, categories: Optional[List[str]] = None, attributes: Optional[List[Any]] = None):
-        """ Makes the KG node 
-        
+        """ Makes the KG node
+
         Parameters
         ----------
         name: node name
@@ -949,7 +949,7 @@ class CohdTrapi120(CohdTrapi):
             'categories': categories,
             'attributes': attributes
         }
-    
+
     def _add_kg_node(self, id, node):
         """ Adds the node to the knowledge graph
 
@@ -976,9 +976,9 @@ class CohdTrapi120(CohdTrapi):
             node['in_kgraph'] = True
 
         return kg_node
-    
+
     def _get_new_kg_edge_id(self) -> str:
-        """ Mint a new KG edge identifier 
+        """ Mint a new KG edge identifier
         """
         return 'ke{id:06d}'.format(id=len(self._knowledge_graph['edges']))
 
