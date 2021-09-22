@@ -207,6 +207,7 @@ class CohdTrapi120(CohdTrapi):
 
         try:
             self._json_data = self._request.get_json()
+            logging.info(f'Client: {self._request.remote_addr}')
             logging.info(str(self._json_data))
         except werkzeug.exceptions.BadRequest:
             self._valid_query = False
