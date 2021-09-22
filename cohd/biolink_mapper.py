@@ -127,10 +127,10 @@ class BiolinkConceptMapper:
     """ Maps between OMOP concepts and Biolink Model
 
     When mapping from OMOP conditions to Biolink Model diseases, since SNOMED-CT, ICD10CM, ICD9CM, and MedDRA are now
-    included in Biolink Model, map to these source vocabularies using the OMOP concept definitions. 
+    included in Biolink Model, map to these source vocabularies using the OMOP concept definitions.
 
     When mapping from OMOP drugs (non-ingredients), use RXCUI for RXNORM identifiers. When mapping from OMOP drug
-    ingredients, map through MESH. 
+    ingredients, map through MESH.
     """
 
     # Store mappings keyed by omop/biolink IDs in memory
@@ -142,15 +142,14 @@ class BiolinkConceptMapper:
     def prefetch_mappings():
         sql = """SELECT m.*, c.concept_name
         FROM biolink.mappings m
-        JOIN concept c ON m.omop_id = c.concept_id
-        WHERE preferred = true;"""
+        JOIN concept c ON m.omop_id = c.concept_id"""
         conn = sql_connection()
         cur = conn.cursor()
         cur.execute(sql)
         mapping_rows = cur.fetchall()
         BiolinkConceptMapper._map_omop = {r['omop_id']:r for r in mapping_rows}
-        BiolinkConceptMapper._map_biolink = {r['biolink_id']:r for r in mapping_rows}
-    
+        BiolinkConceptMapper._map_biolink = {r['biolink_id']:r for r in mapping_rows if r['preferred']}
+
     @staticmethod
     def map_to_omop(curies: List[str]) -> Optional[Tuple[Dict[str, Optional[OmopBiolinkMapping]], Dict[str, Optional[NormalizedNode]]]]:
         """ Map to OMOP concept from Biolink
@@ -162,24 +161,24 @@ class BiolinkConceptMapper:
         Returns
         -------
         Tuple (Dict of Mapping objects, normalized curies from SRI)
-        """        
+        """
         # Default response
         omop_mappings = {curie:None for curie in curies}
-        
+
         # Get equivalent identifiers from SRI Node Normalizer
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
         if normalized_nodes is None:
             logging.error('Failure with querying SRI Node Normalizer')
             return omop_mappings, normalized_nodes
-                
+
         # Query internal mappings
         canonical_ids = [nn.normalized_identifier.id for nn in normalized_nodes.values() if nn is not None]
         canonical_str = ','.join([f"'{id}'" for id in canonical_ids])
         if not canonical_ids:
             # No normalized nodes found
             return omop_mappings, normalized_nodes
-        
-        for curie in curies:            
+
+        for curie in curies:
             normalized_node = normalized_nodes.get(curie)
             if normalized_node is None:
                 omop_mappings[curie] = None
@@ -187,12 +186,12 @@ class BiolinkConceptMapper:
             normalized_id = normalized_node.normalized_identifier.id
 
             # Get label from SRI Node Normalizer
-            biolink_label = ''            
+            biolink_label = ''
             for equiv_id in normalized_node.equivalent_identifiers:
                 if equiv_id.id == curie:
                     biolink_label = equiv_id.label
                     break
-            
+
             # Create mapping object
             r = BiolinkConceptMapper._map_biolink.get(normalized_id)
             if r is None:
@@ -200,18 +199,19 @@ class BiolinkConceptMapper:
                 continue
             omop_curie = f"OMOP:{r['omop_id']}"
             distance = r['distance'] + (curie != normalized_id)
-            mapping = OmopBiolinkMapping(omop_curie, curie, r['concept_name'], biolink_label, r['provenance'], distance)            
+            mapping = OmopBiolinkMapping(omop_curie, curie, r['concept_name'], biolink_label, r['provenance'], distance)
             omop_mappings[curie] = mapping
 
         return omop_mappings, normalized_nodes
 
     @staticmethod
-    def map_from_omop(concept_id: int) -> Tuple[Optional[OmopBiolinkMapping], Optional[List]]:
+    def map_from_omop(concept_id: int, preferred: bool = False) -> Tuple[Optional[OmopBiolinkMapping], Optional[List]]:
         """ Map from OMOP concept to Biolink
 
         Parameters
         ----------
         concept_id: OMOP concept ID
+        preferred: True - return only preferred mappings; False - return mapping regardless if preferred or not
 
         Returns
         -------
@@ -219,10 +219,12 @@ class BiolinkConceptMapper:
         """
         r = BiolinkConceptMapper._map_omop.get(concept_id)
         if r:
-            omop_curie = f'OMOP:{concept_id}'            
-            mapping = OmopBiolinkMapping(omop_curie, r['biolink_id'], r['concept_name'], r['biolink_label'], r['provenance'], r['distance'])
-            categories = json.loads(r['categories'])
-            return mapping, categories
+            if not preferred or r['preferred']:
+                omop_curie = f'OMOP:{concept_id}'
+                mapping = OmopBiolinkMapping(omop_curie, r['biolink_id'], r['concept_name'], r['biolink_label'],
+                                            r['provenance'], r['distance'])
+                categories = json.loads(r['categories'])
+                return mapping, categories
 
         return None, None
 
@@ -309,7 +311,7 @@ class BiolinkConceptMapper:
 
         ########################## Drugs - non-ingredients ##########################
         logging.info('Mapping drug concepts')
-        
+
         # Get all active RXNORM drug (non-ingredient) concepts
         sql = """
         SELECT c.concept_id, c.concept_name, c.vocabulary_id, c.concept_code, c.concept_class_id, standard_concept
@@ -333,13 +335,13 @@ class BiolinkConceptMapper:
             categories = json.dumps(['biolink:Drug'])
             provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
             distance = 1
-            string_similarity = 1 
+            string_similarity = 1
             params.extend([omop_id, mapped_id, biolink_label, categories, provenance, False, distance, string_similarity])
             mapping_count += 1
 
         ########################## Drug ingredients ##########################
         logging.info('Mapping drug ingredient concepts')
-        
+
         # Get all active drug ingredients which have OMOP mappings to MESH
         sql = """
         SELECT c.concept_id, c.concept_name, '|||', c_mesh.concept_code AS mesh_code, c_mesh.concept_name AS mesh_name
@@ -368,7 +370,7 @@ class BiolinkConceptMapper:
             omop_biolink[omop_id].append(mapped_id)
             mapped_ids.append(mapped_id)
         normalized_ids = SriNodeNormalizer.get_normalized_nodes(mapped_ids)
-        
+
         for omop_id in omop_concepts:
             mapped_ids = omop_biolink[omop_id]
             for mapped_id in mapped_ids:
@@ -394,9 +396,9 @@ class BiolinkConceptMapper:
 
         ########################## Procedures ##########################
         logging.info('Mapping procedure concepts')
-        
+
         # Note: Biolink doesn't list any prefixes in biolink:Procedure. Use vocabularies that are supported
-        # by Biolink in general (SNOMED, CPT4, MedDRA, HCPCS, and ICD9CM). Currently unsupported vocabularies 
+        # by Biolink in general (SNOMED, CPT4, MedDRA, HCPCS, and ICD9CM). Currently unsupported vocabularies
         # include ICD10PCS and ICD9Proc
         sql = """
         SELECT c.concept_id, c.concept_name, c.vocabulary_id, c.concept_code, c.concept_class_id, standard_concept
@@ -408,7 +410,7 @@ class BiolinkConceptMapper:
         """
         cur.execute(sql)
         procedure_concepts = cur.fetchall()
-        
+
         # Use the vocabulary concept codes as the Biolink IDs
         omop_concepts = {c['concept_id']:c for c in procedure_concepts}
         omop_biolink = {c['concept_id']:prefix_map[c['vocabulary_id']] + ':' + c['concept_code'] for c in procedure_concepts if c['vocabulary_id'] in prefix_map}
@@ -456,13 +458,13 @@ class BiolinkConceptMapper:
             dist AS (SELECT biolink_id, MIN(distance) AS distance
                 FROM biolink.mappings
                 GROUP BY biolink_id),
-            
+
             -- Next, use string similarity
             string_sim AS (SELECT m.biolink_id, m.distance, MAX(string_similarity) AS string_similarity
                 FROM biolink.mappings m
                 JOIN dist ON m.biolink_id = dist.biolink_id AND m.distance = dist.distance
                 GROUP BY biolink_id, distance),
-            
+
             -- Next, use max concept count from COHD data
             max_count AS (SELECT m.biolink_id, m.distance, m.string_similarity, MAX(cc.concept_count) AS concept_count
                 FROM biolink.mappings m
@@ -500,7 +502,7 @@ class BiolinkConceptMapper:
         """
         cur.execute(sql)
         missing_ingredient_concepts = cur.fetchall()
-        
+
         # First, collect responses from SRI Lookup service
         total_errors = 0
         max_total_errors = 10
@@ -512,7 +514,7 @@ class BiolinkConceptMapper:
             if total_errors >= max_total_errors:
                 logging.error(f'Biolink Mapper Max Total Errors')
                 break
-            
+
             tries = 1
             # SRI Lookup service can be a little flakey, retry a couple times
             while tries <= max_tries:
@@ -520,7 +522,7 @@ class BiolinkConceptMapper:
                     omop_id = r['concept_id']
                     concept_name = r['concept_name']
                     omop_labels[omop_id] = concept_name
-                    
+
                     # Lookup
                     j = SriNameResolution.name_lookup(concept_name)
                     if j is None:
@@ -537,13 +539,13 @@ class BiolinkConceptMapper:
                             break
                 except urllib3.exception.ConnectionError as e:
                     total_errors += 1
-                
+
                 tries += 1
 
         # Call SRI Node Normalizer to get categories for all potential CURIEs
         potential_curies = list(set(potential_curies))
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(potential_curies)
-        
+
         # For each search result, find the first result that is a biolink:ChemicalEntity and high string similarity
         string_sim_criteria = 0.9
         string_match_count = 0
@@ -565,7 +567,7 @@ class BiolinkConceptMapper:
                         break
                 if not is_chemical_descendant:
                     continue
-                
+
                 # Check if any of the labels match well enough
                 found_match = False
                 for label in labels:
@@ -580,7 +582,7 @@ class BiolinkConceptMapper:
 
                 if found_match:
                     break
-        
+
         # Insert new string-based mappings
         sql = """
         INSERT INTO biolink.mappings (omop_id, biolink_id, biolink_label, categories, provenance, string_search, distance, string_similarity) VALUES
@@ -596,18 +598,18 @@ class BiolinkConceptMapper:
         preferred AS (SELECT DISTINCT biolink_id
             FROM biolink.mappings
             WHERE preferred = 1),
-        
+
         not_preferred AS (SELECT DISTINCT m.biolink_id AS biolink_id
             FROM biolink.mappings m
             LEFT JOIN preferred p ON m.biolink_id = p.biolink_id
             WHERE p.biolink_id IS NULL),
-        
+
         -- Next, use string similarity
         string_sim AS (SELECT m.biolink_id, MAX(string_similarity) AS string_similarity
             FROM biolink.mappings m
             JOIN not_preferred np ON m.biolink_id = np.biolink_id
             GROUP BY biolink_id),
-        
+
         -- Next, use max concept count from COHD data
         max_count AS (SELECT m.biolink_id, m.string_similarity, MAX(cc.concept_count) AS concept_count
             FROM biolink.mappings m
@@ -632,6 +634,6 @@ class BiolinkConceptMapper:
                 Updated to new mappings.
                 """
         return status_message, 200
-        
+
 
 BiolinkConceptMapper.prefetch_mappings()
