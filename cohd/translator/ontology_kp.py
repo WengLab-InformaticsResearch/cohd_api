@@ -25,7 +25,7 @@ class OntologyKP:
                 return resp.json()
             else:
                 # Return None, indicating an error occurred
-                logging.warning(f'Received a non-200 status response code from Ontology KP meta_kg ({url}): ' 
+                logging.warning(f'Received a non-200 status response code from Ontology KP meta_kg ({url}): '
                                 f'{(resp.status_code, resp.text)}')
                 return None
         except requests.RequestException:
@@ -166,14 +166,15 @@ class OntologyKP:
                     nodes = kg.get('nodes')
                     edges = kg.get('edges')
                     if nodes is not None and edges is not None:
-                        # Return all nodes in KG except for reflexive CURIE node if it's different from original CURIE
-                        # This is to prevent the same concept from being queried twice with 2 different IDs
-                        for pc in preferred_curies:
-                            if pc not in curies:
+                        # Replace preferred CURIEs with the original queried CURIE
+                        for curie, pc in preferred_curies.items():
+                            if curie != pc:
+                                nodes[curie] = nodes[pc]
                                 del nodes[pc]
 
                         # Also return a dictionary indicating the QNode IDs that are ancestors of each descendant
-                        ancestor_dict = {e['subject']:original_curies[e['object']] for e in edges.values() if e['predicate'] == 'biolink:subclass_of'}
+                        ancestor_dict = {original_curies[e['subject']] if e['subject'] in original_curies else e['subject']:original_curies[e['object']]
+                                for e in edges.values() if e['predicate'] == 'biolink:subclass_of'}
 
                         return nodes, ancestor_dict
                     else:
