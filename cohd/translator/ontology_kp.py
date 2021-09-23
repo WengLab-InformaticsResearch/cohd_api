@@ -168,7 +168,7 @@ class OntologyKP:
                     if nodes is not None and edges is not None:
                         # Replace preferred CURIEs with the original queried CURIE
                         for curie, pc in preferred_curies.items():
-                            if curie != pc:
+                            if pc in nodes and curie != pc:
                                 nodes[curie] = nodes[pc]
                                 del nodes[pc]
 
