@@ -485,7 +485,8 @@ class CohdTrapi120(CohdTrapi):
         # Keep track of all categories
         if normalized_nodes is not None:
             for nn in normalized_nodes.values():
-                self._id_categories = self._id_categories.union(nn.categories)
+                if nn is not None:
+                    self._id_categories = self._id_categories.union(nn.categories)
 
         # Map as many IDs to OMOP as possible
         for curie in ids:
@@ -568,7 +569,8 @@ class CohdTrapi120(CohdTrapi):
             # Keep track of all categories
             if normalized_nodes is not None:
                 for nn in normalized_nodes.values():
-                    self._id_categories = self._id_categories.union(nn.categories)
+                    if nn is not None:
+                        self._id_categories = self._id_categories.union(nn.categories)
 
             # Map as many of the QNode IDs to OMOP as we can
             self._concept_2_omop_ids = list()
