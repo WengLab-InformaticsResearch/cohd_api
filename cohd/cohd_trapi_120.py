@@ -207,6 +207,7 @@ class CohdTrapi120(CohdTrapi):
 
         try:
             self._json_data = self._request.get_json()
+            logging.info(f'Client: {self._request.remote_addr}')
             logging.info(str(self._json_data))
         except werkzeug.exceptions.BadRequest:
             self._valid_query = False
@@ -438,6 +439,13 @@ class CohdTrapi120(CohdTrapi):
                         dc_pair = map_blm_class_to_omop_domain(supported_cat)
                         self._domain_class_pairs = self._domain_class_pairs.union(dc_pair)
 
+            # Remove any domain-class pairs where the concept_class_id is specified if the broader domain is also there
+            dcps_to_remove = set()
+            for dcp in self._domain_class_pairs:
+                if dcp.concept_class_id is not None and DomainClass(dcp.domain_id, None) in self._domain_class_pairs:
+                    dcps_to_remove.add(dcp)
+            self._domain_class_pairs -= dcps_to_remove
+
             if self._domain_class_pairs is None or len(self._domain_class_pairs) == 0:
                 # None of the categories for this QNode were mapped to OMOP
                 self._valid_query = False
@@ -460,6 +468,7 @@ class CohdTrapi120(CohdTrapi):
             descendant_ids = list(set(descendants.keys()) - set(ids))
             if len(descendant_ids) > 0:
                 ids.extend(descendant_ids)
+                ids = SriNodeNormalizer.remove_equivalents(ids)
                 self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
@@ -542,6 +551,7 @@ class CohdTrapi120(CohdTrapi):
                 descendant_ids = list(set(descendants.keys()) - set(ids))
                 if len(descendant_ids) > 0:
                     ids.extend(descendant_ids)
+                    ids = SriNodeNormalizer.remove_equivalents(ids)
                     self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:

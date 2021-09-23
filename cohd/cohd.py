@@ -191,6 +191,7 @@ def api_translator_query_version(version):
 
 @app.route('/api/meta_knowledge_graph', methods=['GET'])
 @app.route('/api/translator/meta_knowledge_graph', methods=['GET'])
+@cache.cached(timeout=3600)
 def api_translator_meta_knowledge_graph():
     return api_call('translator', 'meta_knowledge_graph')
 
