@@ -3,21 +3,21 @@ info:
   description: |
     The Columbia Open Health Data (COHD) TRAPI API provides access to associations derived from clinical data between
     diseases, phenotypic features, drugs, procedures, and demographic features.
-    
+
     COHD was developed at the [Columbia University Department of Biomedical Informatics](https://www.dbmi.columbia.edu/)
     as a collaboration between the [Weng Lab](http://people.dbmi.columbia.edu/~chw7007/),
     [Tatonetti Lab](http://tatonettilab.org/), and the
     [NCATS Biomedical Data Translator](https://ncats.nih.gov/translator) program.
     This work was supported in part by grants: NCATS OT2TR003434, NCATS OT3TR002027, NLM R01LM009886-08A1, and
     NIGMS R01GM107145.
-    
+
     The following external resources may be useful:
     [OHDSI](https://www.ohdsi.org/)
     [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 5.0.0
+  version: 5.1.0
   title: COHD TRAPI 1.2
   contact:
     name: Casey Ta
@@ -94,7 +94,7 @@ paths:
         Query the COHD API following the
         [NCATS Translator Reasoner Standard API](https://github.com/NCATSTranslator/ReasonerAPI).
         Only single hop queries are supported. See the example query_graph.
-        
+
         The COHD data are natively represented using OMOP. COHD will attempt to map between Biolink and OMOP both in the
         input and response.
       operationId: query
