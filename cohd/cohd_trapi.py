@@ -50,7 +50,7 @@ class CohdTrapi(ABC):
 
     # Default options
     default_method = 'obsExpRatio'
-    default_min_cooccurrence = 10
+    default_min_cooccurrence = 0
     default_confidence_interval = 0.99
     default_dataset_id = 3
     default_local_oxo = False

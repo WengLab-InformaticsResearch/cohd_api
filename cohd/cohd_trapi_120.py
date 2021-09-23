@@ -28,7 +28,7 @@ class CohdTrapi120(CohdTrapi):
     # Biolink predicates that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 5.0.0'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 5.1.0'
     _SCHEMA_VERSION = '1.2'
 
     def __init__(self, request):
@@ -255,9 +255,13 @@ class CohdTrapi120(CohdTrapi):
 
         # Get the query_option for dataset ID
         self._dataset_id = self._query_options.get('dataset_id')
+        self._dataset_auto = False
+        self._id_categories = set()
+        self._qnode_categories = set()
         if self._dataset_id is None or not self._dataset_id or not isinstance(self._dataset_id, Number):
             self._dataset_id = CohdTrapi.default_dataset_id
             self._query_options['dataset_id'] = CohdTrapi.default_dataset_id
+            self._dataset_auto = True
 
         # Get the query_option for minimum co-occurrence
         self._min_cooccurrence = self._query_options.get('min_cooccurrence')
@@ -384,6 +388,7 @@ class CohdTrapi120(CohdTrapi):
         self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
         if self._concept_1_qnode_categories is not None:
             self._concept_1_qnode_categories = CohdTrapi120._process_qnode_category(self._concept_1_qnode_categories)
+            self._qnode_categories = self._qnode_categories.union(self._concept_1_qnode_categories)
 
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
@@ -414,6 +419,7 @@ class CohdTrapi120(CohdTrapi):
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
             self._concept_2_qnode_categories = CohdTrapi120._process_qnode_category(self._concept_2_qnode_categories)
+            self._qnode_categories = self._qnode_categories.union(self._concept_2_qnode_categories)
             concept_2_qnode['categories'] = self._concept_2_qnode_categories
 
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
@@ -475,6 +481,12 @@ class CohdTrapi120(CohdTrapi):
 
         # Find BLM - OMOP mappings for all identified query nodes
         node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
+
+        # Keep track of all categories
+        if normalized_nodes is not None:
+            for nn in normalized_nodes.values():
+                if nn is not None:
+                    self._id_categories = self._id_categories.union(nn.categories)
 
         # Map as many IDs to OMOP as possible
         for curie in ids:
@@ -553,6 +565,12 @@ class CohdTrapi120(CohdTrapi):
 
             # Find BLM - OMOP mappings for all identified query nodes
             node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
+
+            # Keep track of all categories
+            if normalized_nodes is not None:
+                for nn in normalized_nodes.values():
+                    if nn is not None:
+                        self._id_categories = self._id_categories.union(nn.categories)
 
             # Map as many of the QNode IDs to OMOP as we can
             self._concept_2_omop_ids = list()
@@ -657,6 +675,27 @@ class CohdTrapi120(CohdTrapi):
         if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
             self._criteria.append(ResultCriteria(function=criteria_confidence,
                                                  kargs={'confidence': self._confidence_interval}))
+
+        if self._dataset_auto:
+            # Automatically select the dataset based on which data types being queried
+            # Use the non-hierarchical 5-year dataset when drugs are not involved
+            self._dataset_id = 1
+
+            # Check if any QNode IDs are chemicals
+            chemical_descendants = bm_toolkit.get_descendants('biolink:ChemicalEntity', reflexive=True, formatted=True)
+            for id_category in self._id_categories:
+                if id_category in chemical_descendants:
+                    # Use the hierarchical 5-year dataset when IDs that are chemicals are queried
+                    self._dataset_id = 3
+                    break
+
+            # Check if any of the QNode categories include chemicals
+            for qnode_category in self._qnode_categories:
+                cat_descendants = set(bm_toolkit.get_descendants(qnode_category, reflexive=True, formatted=True))
+                if len(cat_descendants.intersection(chemical_descendants)) > 0:
+                    # Use the hierarchical 5-year dataset whenever categories may include chemicals
+                    self._dataset_id = 3
+                    break
 
         if self._valid_query:
             return True
