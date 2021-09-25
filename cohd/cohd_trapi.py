@@ -56,6 +56,7 @@ class CohdTrapi(ABC):
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
+    default_max_results_per_input = 50
     default_max_results = 500
     default_log_level = logging.INFO
     default_time_limit = 20  # seconds
