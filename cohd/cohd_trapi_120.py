@@ -34,6 +34,9 @@ class CohdTrapi120(CohdTrapi):
     def __init__(self, request):
         super().__init__(request)
 
+        self._start_time = datetime.now()
+        self._time_limit = CohdTrapi.default_time_limit
+
         self._valid_query = False
         self._invalid_query_response = None
         self._json_data = None
@@ -208,7 +211,7 @@ class CohdTrapi120(CohdTrapi):
         try:
             self._json_data = self._request.get_json()
             logging.info(f'Client: {self._request.remote_addr}')
-            logging.info(str(self._json_data))
+            logging.info(json.dumps(self._json_data))
         except werkzeug.exceptions.BadRequest:
             self._valid_query = False
             self._invalid_query_response = ('Request body is not valid JSON', 400)
@@ -714,8 +717,15 @@ class CohdTrapi120(CohdTrapi):
             self._cohd_results = []
             self._initialize_trapi_response()
 
+            new_cohd_results = []
             for concept_1_omop_id in self._concept_1_omop_ids:
-                new_cohd_results = []
+                # Limit the amount of time the TRAPI query runs for
+                ellapsed_time = (datetime.now() - self._start_time).total_seconds()
+                if ellapsed_time > self._time_limit:
+                    description = f'Maximum time limit {self._time_limit} sec reached before all input IDs processed.'
+                    self.log(description, level=logging.WARNING)
+                    break
+
                 if self._concept_2_omop_ids is None:
                     # Node 2's IDs were not specified
                     if self._domain_class_pairs:

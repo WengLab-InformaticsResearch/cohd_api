@@ -58,6 +58,7 @@ class CohdTrapi(ABC):
     default_biolink_only = True
     default_max_results = 500
     default_log_level = logging.INFO
+    default_time_limit = 20  # seconds
     limit_max_results = 500
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
