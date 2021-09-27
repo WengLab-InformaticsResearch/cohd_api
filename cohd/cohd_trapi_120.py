@@ -894,6 +894,15 @@ class CohdTrapi120(CohdTrapi):
         self._results.append(result)
         return result
 
+    def _sort_results(self):
+        """ Sort the TRAPI results in descending order of score
+        """
+        if not self._results:
+            return
+
+        scores = [result['score'] for result in self._results]
+        self._results = [self._results[i] for i in list(reversed(argsort(scores)))]
+
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
                      query_node_categories=None, mapping: OmopBiolinkMapping = None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
@@ -1337,6 +1346,7 @@ class CohdTrapi120(CohdTrapi):
 
         self._response['description'] = f'{CohdTrapi._SERVICE_NAME} returned {len(self._results)} results.'
 
+        self._sort_results()
         self._response['message'] = {
             'results': self._results,
             'query_graph': self._query_graph,
