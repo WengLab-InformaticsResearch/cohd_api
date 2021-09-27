@@ -730,7 +730,6 @@ class CohdTrapi120(CohdTrapi):
             self._cohd_results = []
             self._initialize_trapi_response()
 
-            new_cohd_results = []
             for i, concept_1_omop_id in enumerate(self._concept_1_omop_ids):
                 # Limit the amount of time the TRAPI query runs for
                 ellapsed_time = (datetime.now() - self._start_time).total_seconds()
@@ -741,6 +740,7 @@ class CohdTrapi120(CohdTrapi):
                     self.log(description, level=logging.WARNING)
                     break
 
+                new_cohd_results = list()
                 if self._concept_2_omop_ids is None:
                     # Node 2's IDs were not specified
                     if self._domain_class_pairs:
