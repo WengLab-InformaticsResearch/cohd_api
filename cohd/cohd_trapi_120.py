@@ -784,7 +784,7 @@ class CohdTrapi120(CohdTrapi):
                 if results_limit_reached:
                     curie = self._kg_omop_curie_map[concept_1_omop_id]
                     self.log(f'Results limit ({self._max_results_per_input}) reached for {curie}. '
-                                'There may be additional associations.', level=logging.WARNING)
+                             'There may be additional associations.', level=logging.WARNING)
                     if len(self._results) >= self._max_results:
                         if i < len(self._concept_1_omop_ids) - 1:
                             skipped_ids = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i+1:]]

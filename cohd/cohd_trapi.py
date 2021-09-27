@@ -52,6 +52,7 @@ class CohdTrapi(ABC):
     default_method = 'obsExpRatio'
     default_min_cooccurrence = 0
     default_confidence_interval = 0.99
+    default_ln_ratio_ci_thresohld = 1.0
     default_dataset_id = 3
     default_local_oxo = False
     default_mapping_distance = 3
@@ -181,7 +182,7 @@ def criteria_threshold(cohd_result, threshold):
         return False
 
 
-def criteria_confidence(cohd_result, confidence):
+def criteria_confidence(cohd_result, confidence, threshold=CohdTrapi.default_ln_ratio_ci_thresohld):
     """ Checks the confidence interval of the result for significance using alpha. Only applies to observed-expected
     frequency ratio. Returns True for all other types of results.
 
@@ -189,18 +190,19 @@ def criteria_confidence(cohd_result, confidence):
     ----------
     cohd_result
     confidence
+    threshold
 
     Returns
     -------
     True if significant
     """
-    if 'ln_ratio_ci' in cohd_result:
+    if 'ln_ratio' in cohd_result:
         # obsExpFreq
-        return ci_significance(cohd_result['ln_ratio_ci'])
-    elif 'ln_ratio' in cohd_result:
-        # obsExpFreq
-        ci = ln_ratio_ci(cohd_result['concept_pair_count'], cohd_result['ln_ratio'], confidence)
-        return ci_significance(ci)
+        if 'ln_ratio_ci' in cohd_result:
+            ci = cohd_result['ln_ratio_ci']
+        else:
+            ci = ln_ratio_ci(cohd_result['concept_pair_count'], cohd_result['ln_ratio'], confidence)
+        return ci_significance(ci) and ((ci[0] > 0 and ci[0] >= threshold) or (ci[1] < 0 and abs(ci[1]) >= threshold))
     else:
         # relativeFrequency doesn't have a good cutoff for confidence interval, and chiSquare uses
         # p-value for significance, so allow methods other than obsExpRatio to pass
