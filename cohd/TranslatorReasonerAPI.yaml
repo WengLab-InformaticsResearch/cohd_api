@@ -17,7 +17,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 5.1.0
+  version: 5.1.1
   title: COHD TRAPI 1.2
   contact:
     name: Casey Ta
