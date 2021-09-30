@@ -468,9 +468,11 @@ class CohdTrapi120(CohdTrapi):
         ids = SriNodeNormalizer.remove_equivalents(ids)
 
         # Get subclasses for all CURIEs using ontology KP
-        descendants, ancestor_dict = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
-        if descendants is not None:
+        descendant_ids = list()
+        descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
+        if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list
+            descendants, ancestor_dict = descendant_results
             descendant_ids = list(set(descendants.keys()) - set(ids))
             if len(descendant_ids) > 0:
                 ids.extend(descendant_ids)
@@ -559,9 +561,11 @@ class CohdTrapi120(CohdTrapi):
             self._domain_class_pairs = None
 
             # Get subclasses for all CURIEs using ontology KP
-            descendants, ancestor_dict = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
-            if descendants is not None:
+            descendant_ids = list()
+            descendant_results = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
+            if descendant_results is not None:
                 # Add new descendant CURIEs to the end of IDs list
+                descendants, ancestor_dict = descendant_results
                 descendant_ids = list(set(descendants.keys()) - set(ids))
                 if len(descendant_ids) > 0:
                     ids.extend(descendant_ids)
