@@ -19,7 +19,7 @@ _s = namedtuple('_s', ['key', 'type'])
 cr.server = 'https://covid.cohd.io/api'
 
 # Proxy for main TRAPI version
-reasoner_validator = reasoner_validator_11x
+from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 translator_query = cr.translator_query_110
 
 
@@ -945,7 +945,7 @@ def test_translator_query():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    reasoner_validator.validate_Response(json)
+    validate_trapi(json, "Response")
 
     # There should be at least 1 result
     assert len(json['message']['results']) > 0

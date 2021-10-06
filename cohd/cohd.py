@@ -23,6 +23,7 @@ from . import query_cohd_mysql
 from . import cohd_translator
 from . import cohd_trapi
 from . import scheduled_tasks
+from . import biolink_mapper
 
 
 ##########
@@ -169,6 +170,7 @@ def api_translator_query_version(version):
 
 @app.route('/api/meta_knowledge_graph', methods=['GET'])
 @app.route('/api/translator/meta_knowledge_graph', methods=['GET'])
+@cache.cached(timeout=3600)
 def api_translator_meta_knowledge_graph():
     return api_call('translator', 'meta_knowledge_graph')
 
@@ -183,24 +185,14 @@ def api_translator_biolink_to_omop():
     return api_call('translator', 'biolink_to_omop')
 
 
-@app.route('/api/dev/build_cache_map_from', methods=['GET'])
-def api_internal_build_cache_map_from():
-    return api_call('dev', 'build_cache_map_from')
+@app.route('/api/dev/build_mappings', methods=['GET'])
+def api_internal_build_mappings():
+    return api_call('dev', 'build_mappings')
 
 
 @app.route('/api/dev/clear_cache', methods=['GET'])
 def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
-
-
-@app.route('/api/dev/clear_biolink_cache', methods=['GET'])
-def api_internal_clear_biolink_cache():
-    return api_call('dev', 'clear_biolink_cache')
-
-
-@app.route('/api/dev/force_biolink_cache_update', methods=['GET'])
-def api_internal_force_cahce_update():
-    return api_call('dev', 'force_biolink_cache_update')
 
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
@@ -286,16 +278,11 @@ def api_call(service=None, meta=None, query=None, version=None):
     elif service == 'dev':
         # Requires a key to run
         if 'DEV_KEY' in app.config and app.config['DEV_KEY'] == request.args.get('q', None):
-            if meta == 'build_cache_map_from':
-                result = cohd_trapi.BiolinkConceptMapper.build_cache_map_from()
+            if meta == 'build_mappings':
+                result = biolink_mapper.BiolinkConceptMapper.build_mappings()
             elif meta == 'clear_cache':
                 cache.clear()
                 result = 'Cleared cache', 200
-            elif meta == 'clear_biolink_cache':
-                cohd_trapi.BiolinkConceptMapper.clear_cache()
-                result = 'Cleared Biolink cache', 200
-            elif meta == 'force_biolink_cache_update':
-                result = cohd_trapi.BiolinkConceptMapper.set_cache_update(request)
             else:
                 result = 'meta not recognized', 400
         else:

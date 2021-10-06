@@ -7,11 +7,12 @@ from flask import jsonify
 from semantic_version import Version
 
 from . import cohd_trapi_120
-from .cohd_trapi import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
+from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
 # Get the static instance of the Biolink Model Toolkit from cohd_trapi
-from .cohd_trapi import bm_toolkit, CohdTrapi
+from .cohd_trapi import CohdTrapi
+from .translator import bm_toolkit
 
 
 def translator_meta_knowledge_graph():
@@ -188,8 +189,7 @@ def biolink_to_omop(request):
     else:
         return 'Bad request', 400
 
-    concept_mapper = BiolinkConceptMapper()
-    mappings, _ = concept_mapper.map_to_omop(curies)
+    mappings, _ = BiolinkConceptMapper.map_to_omop(curies)
 
     # Convert the Mappings object into a dict for return
     mappings_j = dict()
@@ -197,12 +197,12 @@ def biolink_to_omop(request):
         if mapping is None:
             mappings_j[curie] = None
         else:
-            omop_id = int(mapping.output_id.split(':')[1])
+            omop_id = int(mapping.omop_id.split(':')[1])
             mappings_j[curie] = {
-                'distance': mapping.get_distance(),
+                'distance': mapping.distance,
                 'omop_concept_id': omop_id,
-                'omop_concept_name': mapping.output_label,
-                'mapping_history': mapping.history
+                'omop_concept_name': mapping.omop_label,
+                'mapping_history': mapping.provenance
             }
 
     return jsonify(mappings_j)
@@ -237,33 +237,32 @@ def omop_to_biolink(request):
             if omop_id.isdigit():
                 omop_ids.append(int(omop_id))
 
-    # Map to Biolink using OxO
-    concept_mapper = BiolinkConceptMapper()
+    # Map to Biolink
     concept_definitions = omop_concept_definitions(omop_ids)
     mappings = dict()
     for omop_id in omop_ids:
         if omop_id in concept_definitions:
             domain_id = concept_definitions[omop_id]['domain_id']
             concept_class_id = concept_definitions[omop_id]['concept_class_id']
-            mapping, _ = concept_mapper.map_from_omop(omop_id, domain_id, concept_class_id)
+            mapping, _ = BiolinkConceptMapper.map_from_omop(omop_id)
             mappings[omop_id] = mapping
         else:
             mappings[omop_id] = None
 
     # Normalize with SRI Node Normalizer
     normalized_mappings = dict()
-    curies = [x.output_id for x in mappings.values() if x is not None]
-    normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
+    curies = [x.biolink_id for x in mappings.values() if x is not None]
+    normalized_nodes = SriNodeNormalizer.get_normalized_nodes_raw(curies)
 
     if normalized_nodes is None:
         return 'Unexpected response or no response received from SRI Node Normalizer', 503
 
     for omop_id in omop_ids:
         normalized_mapping = None
-        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].output_id] is not None:
+        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].biolink_id] is not None:
             m = mappings[omop_id]
-            normalized_mapping = normalized_nodes[m.output_id]
-            normalized_mapping['mapping_history'] = m.history
+            normalized_mapping = normalized_nodes[m.biolink_id]
+            normalized_mapping['mapping_history'] = m.provenance
         normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
