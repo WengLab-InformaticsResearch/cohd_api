@@ -257,6 +257,11 @@ class BiolinkConceptMapper:
         cur.execute(sql)
         current_count = cur.fetchone()['count']
 
+        # Get current number of mappings that are from string searches
+        sql = 'SELECT COUNT(*) AS count FROM biolink.mappings WHERE string_search = 1;'
+        cur.execute(sql)
+        current_count_string = cur.fetchone()['count']
+
         # Build the SQL insert
         mapping_count = 0
         params = list()
@@ -344,7 +349,8 @@ class BiolinkConceptMapper:
 
         # Get all active drug ingredients which have OMOP mappings to MESH
         sql = """
-        SELECT c.concept_id, c.concept_name, '|||', c_mesh.concept_code AS mesh_code, c_mesh.concept_name AS mesh_name
+        SELECT c.concept_id, c.concept_name, c_mesh.concept_code AS mesh_code, c_mesh.concept_name AS mesh_name,
+            c_mesh.invalid_reason
         FROM
         (SELECT DISTINCT concept_id FROM concept_counts) x
         JOIN concept c ON x.concept_id = c.concept_id
@@ -373,6 +379,9 @@ class BiolinkConceptMapper:
 
         for omop_id in omop_concepts:
             mapped_ids = omop_biolink[omop_id]
+            best_mapping = None
+            best_distance = 999
+            best_string_sim = 0
             for mapped_id in mapped_ids:
                 if normalized_ids[mapped_id] is None:
                     continue
@@ -381,18 +390,28 @@ class BiolinkConceptMapper:
                 biolink_norm_id = biolink_norm_node.normalized_identifier.id
                 biolink_label = biolink_norm_node.normalized_identifier.label
                 omop_label = omop_concepts[omop_id][mapped_id]['concept_name']
+                invalid_reason = omop_concepts[omop_id][mapped_id]['invalid_reason']
                 categories = json.dumps(biolink_norm_node.categories)
                 provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
                 distance = 1
+                # Don't exclude invalid or obsolete MeSH mappings, but add 1 to their distance to de-prioritize them
+                if invalid_reason is not None or 'obsolete' in biolink_label.lower():
+                    logging.debug(f'Invalid or obsolete mapping: {mapped_id} - {biolink_label}')
+                    distance += 1
                 string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
                 if mapped_id != biolink_norm_id:
                     provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
                     distance += 1
-                params.extend([omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity])
-                mapping_count += 1
 
-                # Naively use the first MESH ID that can be normalized
-                break
+                # Use the mapping with the best mapping distance & string similarity
+                if distance < best_distance or (distance == best_distance and string_similarity > best_string_sim):
+                    best_mapping = [omop_id, biolink_norm_id, biolink_label, categories, provenance, False, distance, string_similarity]
+                    best_distance = distance
+                    best_string_sim = string_similarity
+
+            if best_mapping is not None:
+                params.extend(best_mapping)
+                mapping_count += 1
 
         ########################## Procedures ##########################
         logging.info('Mapping procedure concepts')
@@ -429,8 +448,9 @@ class BiolinkConceptMapper:
         ########################## Update mappings ##########################
         # Make sure that the new mappings have at least 95% as many mappings as the existing mappings
         if mapping_count < (0.95 * current_count):
-            status_message = f"""Current number of mappings: {current_count}
-            New mappings: {mapping_count}
+            status_message = f"""Current number of mapped mappings: {current_count}
+            Current number of string mappings: {current_count_string}
+            New mapped mappings: {mapping_count}
             Retained old mappings"""
             logging.info(status_message)
             return status_message, 200
@@ -628,9 +648,10 @@ class BiolinkConceptMapper:
         cur.execute(sql)
         conn.commit()
 
-        status_message = f"""Current number of mappings: {current_count}
-                New mappings: {mapping_count}
-                String search mappings: {string_match_count}
+        status_message = f"""Current number of mapped mappings: {current_count}
+                Current number of string mappings: {current_count_string}
+                New mapped mappings: {mapping_count}
+                New string mappings: {string_match_count}
                 Updated to new mappings.
                 """
         return status_message, 200
