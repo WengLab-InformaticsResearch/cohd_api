@@ -9,7 +9,7 @@ class NormalizedNodeIdentifier:
         self.node_identifier_response = node_identifier_response
         self.id = self.node_identifier_response['identifier']
         self.label = self.node_identifier_response.get('label', '')
-        
+
 
 class NormalizedNode:
     def __init__(self, node_response: Dict):
@@ -45,7 +45,7 @@ class SriNodeNormalizer:
             logging.error('Received a non-200 response code from SRI Node Normalizer: '
                             f'{(response.status_code, response.text)}')
             return None
-    
+
     @staticmethod
     def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, NormalizedNode]]:
         """ Straightforward call to get_normalized_nodes. Returns json from response.
@@ -92,31 +92,31 @@ class SriNodeNormalizer:
     @staticmethod
     def remove_equivalents(curies: List[str]) -> List[str]:
         """ Remove equivalent identifiers from a list.
-        
+
         If the canonical node is in the list, keep it, and remove other equivalents IDs. Otherwise, keep the first equivalent ID.
-        
+
         Parameters
         ----------
         curies - list of CURIEs
-        
+
         Returns
         -------
-        list of curies with duplicates removed 
-        """        
+        list of curies with duplicates removed
+        """
         if len(curies) <= 1:
             # Not enough curies to have equivalents
             return curies
-        
+
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
         if normalized_nodes is None:
             logging.warning('Unable to check for duplicates in QNode IDs because of error calling SRI Node Normalizer')
             return curies
 
-        index = 0 
+        index = 0
         while index < len(curies):
             curie = curies[index]
-            normalized_node = normalized_nodes[curie]
-            
+            normalized_node = normalized_nodes.get(curie)
+
             if normalized_node is None:
                 # Couldn't find normalized nodes for this CURIE. Keep it
                 index += 1
