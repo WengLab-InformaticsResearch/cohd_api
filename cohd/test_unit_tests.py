@@ -227,10 +227,10 @@ def test_omop_concept_uri():
     x = cohd_utilities.omop_concept_uri('313217000000')
     # Check that the URI is formatted correctly
     assert x == 'http://api.ohdsi.org/WebAPI/vocabulary/concept/313217000000'
-    # The URI should have a missing response
+    # The URI should have a NOT_FOUND (404) response
     try:
         response = requests.get(x, timeout=5)
-        assert response.status_code == requests.status_codes.codes.OK
+        assert response.status_code == requests.status_codes.codes.NOT_FOUND
     except requests.exceptions.ConnectionError:
         # OHDSI API not always stable. Ignore connection errors
         pass
