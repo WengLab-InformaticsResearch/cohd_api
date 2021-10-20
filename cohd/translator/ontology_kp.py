@@ -88,7 +88,7 @@ class OntologyKP:
                     # This CURIE already allowed
                     preferred_curies[curie] = curie
                 else:
-                    if norm_nodes[curie] is None:
+                    if norm_nodes.get(curie) is None:
                         # No node normalizer info for this CURIE, try to use the CURIE as is
                         preferred_curies[curie] = curie
                         continue
