@@ -33,7 +33,7 @@ info:
     component: KP
     team:
       - Clinical Data Provider
-    infores: infores:cohd
+    infores: infores:cohd-covid
     biolink-version: 2.2.1
     externalDocs:
       description: >-
@@ -55,6 +55,7 @@ info:
 servers:
   - url: 'https://covid.cohd.io/api/'
     description: COHD for COVID-19 Research TRAPI Server
+    x-maturity: production
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services
