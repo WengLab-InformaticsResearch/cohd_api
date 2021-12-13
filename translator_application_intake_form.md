@@ -17,7 +17,7 @@ A database of frequencies of clinical concepts observed at Columbia University M
 
 3. **GitHub Repository URL:** https://github.com/WengLab-InformaticsResearch/cohd_api/
 
-4. **Component Framework:** Knowledge Provider
+4. **Component Framework:** Python Flask API, uWSGI, NGINX
 
 5. **System requirements**
 
@@ -68,7 +68,7 @@ A database of frequencies of clinical concepts observed at Columbia University M
     docker run -d -p <HOST:PORT>:80 -p <HOST:PORT>:443 --name=COHD cohd_image
     ```
     
-    Optionally use `certbot` to receive a signed SSL certificate for HTTPS connections. See instructions above. 
+    Optionally use `certbot` to receive a signed SSL certificate for HTTPS connections. See instructions in [README](https://github.com/WengLab-InformaticsResearch/cohd_api/blob/master/README.md). 
     
     Trigger COHD to update the OMOP-Biolink mappings    
     `curl --request GET 'https://<LOCATION>/api/dev/build_mappings?q=<DEV_KEY_FROM_STEP_3>'`
