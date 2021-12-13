@@ -6,6 +6,8 @@ A database of frequencies of clinical concepts observed at Columbia University M
 
 # Deploy COHD with Docker
 
+Note: For NCATS ITRB, please also see the [Translator Application Intake Form](https://github.com/WengLab-InformaticsResearch/cohd_api/blob/master/translator_application_intake_form.md)
+
 1.  Clone the COHD_API github repository  
     `git clone https://github.com/WengLab-InformaticsResearch/cohd_api.git/`  
     `cd cohd_api`
