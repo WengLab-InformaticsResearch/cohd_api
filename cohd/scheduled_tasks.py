@@ -1,13 +1,12 @@
 # import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from .cohd import cache
 from .biolink_mapper import BiolinkConceptMapper
 
 
 def task_build_cache():
     print('Running scheduled task to build cache')
-    BiolinkConceptMapper.build_cache_map_from()
+    BiolinkConceptMapper.build_mappings()
 
 
 # Schedule a task to build the cache every first Saturday of the month
