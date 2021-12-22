@@ -14,7 +14,7 @@ from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
+bm_toolkit = Toolkit()
 
 """
 tuple for storing pairs of (key, type) for results schemas
