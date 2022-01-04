@@ -80,15 +80,9 @@ class CohdTrapi120(CohdTrapi):
     def log(self, message: str, code: TrapiStatusCode = None, level=logging.DEBUG):
         # Add to TRAPI log if above desired log level
         if level >= self._log_level:
-            level_str = {
-                logging.DEBUG: 'DEBUG',
-                logging.INFO: 'INFO',
-                logging.WARNING: 'WARNING',
-                logging.ERROR: 'ERROR'
-            }
             self._logs.append({
                 'timestamp': datetime.now().isoformat(),
-                'level': level_str[level],
+                'level': logging.getLevelName(level),
                 'code': None if code is None else code.value,
                 'message': message
             })
