@@ -518,10 +518,12 @@ class CohdTrapi120(CohdTrapi):
             else:
                 # No OMOP mapping found. Just add the node to the KG.
                 unmapped_curies.append(curie)
-                nn = normalized_nodes.get(curie)
-                if nn is not None:
-                    # Use node norm info when available
-                    self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label, categories=nn.categories))
+                if normalized_nodes is not None:
+                    nn = normalized_nodes.get(curie)
+                    if nn is not None:
+                        # Use node norm info when available
+                        self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label,
+                                                                            categories=nn.categories))
                 else:
                     # No node norm info available, make an empty KG node
                     self._add_kg_node(curie, CohdTrapi120._make_kg_node())
@@ -608,11 +610,13 @@ class CohdTrapi120(CohdTrapi):
                     self._add_internal_node_to_kg(inode)
                 else:
                     # No OMOP mapping found. Just add the node to the KG.
-                    nn = normalized_nodes.get(curie)
                     unmapped_curies.append(curie)
-                    if nn is not None:
-                        # Use node norm info when available
-                        self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label, categories=nn.categories))
+                    if normalized_nodes is not None:
+                        nn = normalized_nodes.get(curie)
+                        if nn is not None:
+                            # Use node norm info when available
+                            self._add_kg_node(curie, CohdTrapi120._make_kg_node(name=nn.normalized_identifier.label,
+                                                                                categories=nn.categories))
                     else:
                         # No node norm info available, make an empty KG node
                         self._add_kg_node(curie, CohdTrapi120._make_kg_node())
