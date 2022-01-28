@@ -6,6 +6,7 @@ Intended to be run with pytest: pytest -s test_cohd_trapi.py
 """
 from collections import namedtuple
 from itertools import product
+import logging
 import requests
 import json as j
 from bmt import Toolkit
@@ -14,7 +15,7 @@ from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
-bm_toolkit = Toolkit('https://raw.githubusercontent.com/biolink/biolink-model/2.2.1/biolink-model.yaml')
+bm_toolkit = Toolkit()
 
 """
 tuple for storing pairs of (key, type) for results schemas
@@ -50,6 +51,24 @@ translator_query = cr.translator_query_110
 #     print('...passed')
 
 
+_logging_level_from_str = {logging.getLevelName(level): level for level in
+                           [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR]}
+
+
+def _print_trapi_log(trapi_response, log_level=logging.WARNING):
+    """ Prints TRAPI log on or above log_level """
+    logs = trapi_response.get('logs')
+    if len(logs) == 0:
+        return ''
+
+    log_strs = ['\nTRAPI LOG:']
+    for log in logs:
+        log_level = log.get('level')
+        if log_level in _logging_level_from_str and _logging_level_from_str[log_level] >= log_level:
+            log_strs.append(str(log))
+    return '\n'.join(log_strs)
+
+
 def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
     q2_categories.
@@ -68,7 +87,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     validate_trapi(json, "Response")
 
     # There should be 10 results
-    assert len(json['message']['results']) == 10
+    assert len(json['message']['results']) == 10, _print_trapi_log(json)
 
     # Check that all results are subclasses of qnode2
     descendants = bm_toolkit.get_descendants(q2_category, formatted=True, reflexive=True)
@@ -76,7 +95,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     for result in json['message']['results']:
         obj_node_id = result['node_bindings']['n01'][0]['id']
 
-        assert obj_node_id in kg_nodes
+        assert obj_node_id in kg_nodes, _print_trapi_log(json)
         obj_node = kg_nodes[obj_node_id]
 
         # Check that at least one of the categories is a descendant of the requested node category
@@ -86,7 +105,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
                 found = True
                 break
 
-        assert found, f"{obj_node['categories']} not a descendant of {q2_category}"
+        assert found, f"{obj_node['categories']} not a descendant of {q2_category}" + _print_trapi_log(json)
 
     print('...passed')
 
@@ -157,7 +176,7 @@ def test_translator_query_unsupported_category():
 
     # There should be 0 results or null
     results = json['message']['results']
-    assert results is None or len(results) == 0, 'Found results when expecting none'
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
     print('...passed')
 
@@ -218,7 +237,7 @@ def test_translator_query_no_predicate():
     validate_trapi(json, "Response")
 
     # There should be 10 results
-    assert len(json['message']['results']) == 10
+    assert len(json['message']['results']) == 10, _print_trapi_log(json)
 
     print('...passed')
 
@@ -266,7 +285,7 @@ def test_translator_query_related_to():
     validate_trapi(json, "Response")
 
     # There should be 10 results
-    assert len(json['message']['results']) == 10
+    assert len(json['message']['results']) == 10, _print_trapi_log(json)
 
     print('...passed')
 
@@ -396,13 +415,14 @@ def test_translator_query_q1_multiple_ids():
     validate_trapi(json, "Response")
 
     # There should be at least 3 results
-    assert len(json['message']['results']) >= 3, f'Expected 3 or more results.\n{json}'
+    assert len(json['message']['results']) >= 3, f'Expected 3 or more results.\n{json}' + _print_trapi_log(json)
 
     # All three queried CURIEs should appear in the results
     ids = ["UMLS:C0686169", "HP:0002907", "MONDO:0001375"]
     result_object_ids = [r['node_bindings']['subj'][0]['id'] for r in json['message']['results']]
     for qid in ids:
-        assert qid in result_object_ids, f'Result subject {qid} is not one of the original IDs {ids}'
+        assert qid in result_object_ids, f'Result subject {qid} is not one of the original IDs {ids}' + \
+                                         _print_trapi_log(json)
 
     print('...passed')
 
@@ -450,13 +470,14 @@ def test_translator_query_q2_multiple_ids():
     validate_trapi(json, "Response")
 
     # There should be at least 3 results
-    assert len(json['message']['results']) >= 3
+    assert len(json['message']['results']) >= 3, _print_trapi_log(json)
 
     # All three queried CURIEs should appear in the results
     ids = ["UMLS:C0686169", "HP:0002907", "MONDO:0001375"]
     result_object_ids = [r['node_bindings']['obj'][0]['id'] for r in json['message']['results']]
     for qid in ids:
-        assert qid in result_object_ids, f'Result object {qid} is not one of the original IDs {ids}'
+        assert qid in result_object_ids, f'Result object {qid} is not one of the original IDs {ids}' + \
+                                         _print_trapi_log(json)
 
     print('...passed')
 
@@ -505,7 +526,7 @@ def test_translator_query_q2_multiple_ids():
 #     validate_trapi(json, "Response")
 #
 #     # There should be at least 12 results
-#     assert len(json['message']['results']) >= 12
+#     assert len(json['message']['results']) >= 12, _print_trapi_log(json)
 #
 #     # All pairs of the queried IDs should appear in at least one of the results
 #     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
@@ -513,7 +534,8 @@ def test_translator_query_q2_multiple_ids():
 #     result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
 #                        for r in json['message']['results']]
 #     for pair in product(subj_ids, obj_ids):
-#         assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.'
+#         assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.' + \
+#                                         _print_trapi_log(json)
 #
 #     print('...passed')
 def test_translator_query_q1_q2_multiple_ids():
@@ -560,7 +582,7 @@ def test_translator_query_q1_q2_multiple_ids():
     validate_trapi(json, "Response")
 
     # There should be at least 12 results
-    assert len(json['message']['results']) >= 8
+    assert len(json['message']['results']) >= 8, _print_trapi_log(json)
 
     # All pairs of the queried IDs should appear in at least one of the results
     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
@@ -568,7 +590,8 @@ def test_translator_query_q1_q2_multiple_ids():
     result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
                        for r in json['message']['results']]
     for pair in product(subj_ids, obj_ids):
-        assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.'
+        assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.' + \
+                                        _print_trapi_log(json)
 
     print('...passed')
 
@@ -698,7 +721,7 @@ def test_translator_query_multiple_categories():
 
     assert num_results_disease <= num_results_combined and num_results_procedure <= num_results_combined and \
         num_results_combined <= (num_results_disease + num_results_procedure), \
-        'Number of results outside of expected range'
+        'Number of results outside of expected range' + _print_trapi_log(json_combined)
 
     print('...passed')
 
@@ -831,7 +854,7 @@ def test_translator_query_qnode_subclasses():
     validate_trapi(json, "Response")
 
     # There should be more than 1 result
-    assert len(json['message']['results']) > 1
+    assert len(json['message']['results']) > 1, _print_trapi_log(json)
 
     print('...passed')
 
@@ -884,7 +907,7 @@ def test_translator_query_qnode_empty_constraint():
     validate_trapi(json, "Response")
 
     # There should be at least 1 result
-    assert len(json['message']['results']) >= 1
+    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
 
     # Query with empty constraints
     query = '''
@@ -926,7 +949,7 @@ def test_translator_query_qnode_empty_constraint():
     validate_trapi(json, "Response")
 
     # There should be at least 1 result
-    assert len(json['message']['results']) >= 1
+    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
 
     print('...passed')
 
@@ -974,7 +997,7 @@ def test_translator_workflows():
     json = resp.json()
     validate_trapi(json, "Response")
     # There should be 1 result
-    assert len(json['message']['results']) == 1
+    assert len(json['message']['results']) == 1, _print_trapi_log(json)
 
     # Test with bad workflows: unsupported operation (overlay)
     j_query['workflow'] = [{'id': 'overlay'}]

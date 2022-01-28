@@ -6,6 +6,8 @@ A database of frequencies of clinical concepts observed at Columbia University M
 
 # Deploy COHD with Docker
 
+Note: For NCATS ITRB, please also see the [Translator Application Intake Form](https://github.com/WengLab-InformaticsResearch/cohd_api/blob/master/translator_application_intake_form.md)
+
 1.  Clone the COHD_API github repository  
     `git clone https://github.com/WengLab-InformaticsResearch/cohd_api.git/`  
     `cd cohd_api`
@@ -32,9 +34,8 @@ A database of frequencies of clinical concepts observed at Columbia University M
     1.  Test and reload the nginx configuration:  
         `nginx -t`  
         `service nginx reload`
-1.  [Recommended] Trigger COHD to build the OMOP-Biolink mapping cache 
-    (this takes a few hours but improves TRAPI query performance)  
-    `curl --request GET 'https://<LOCATION>/api/dev/build_cache_map_from?q=<DEV_KEY_FROM_STEP_3>'`
+1.  [Recommended] Trigger COHD to build the OMOP-Biolink mappings    
+    `curl --request GET 'https://<LOCATION>/api/dev/build_mappings?q=<DEV_KEY_FROM_STEP_3>'`
 
 
 # [DEPRECATED] Instructions for manually deploying COHD 
