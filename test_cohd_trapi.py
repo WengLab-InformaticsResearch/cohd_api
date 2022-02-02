@@ -55,7 +55,7 @@ _logging_level_from_str = {logging.getLevelName(level): level for level in
                            [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR]}
 
 
-def _print_trapi_log(trapi_response, log_level=logging.WARNING):
+def _print_trapi_log(trapi_response, print_level=logging.WARNING):
     """ Prints TRAPI log on or above log_level """
     logs = trapi_response.get('logs')
     if len(logs) == 0:
@@ -64,7 +64,7 @@ def _print_trapi_log(trapi_response, log_level=logging.WARNING):
     log_strs = ['\nTRAPI LOG:']
     for log in logs:
         log_level = log.get('level')
-        if log_level in _logging_level_from_str and _logging_level_from_str[log_level] >= log_level:
+        if log_level in _logging_level_from_str and _logging_level_from_str[log_level] >= print_level:
             log_strs.append(str(log))
     return '\n'.join(log_strs)
 
