@@ -20,14 +20,15 @@
 	  <h1 class="color-columbia">Columbia Open Health Data</h1>
     <h2 class="color-columbia">About</h2>
     <p>Columbia Open Health Data (COHD) provides access to counts and patient prevalence (i.e., prevalence from electronic health records) of conditions, procedures, drug exposures, and patient demographics, and the co-occurrence frequencies between them. Count and frequency data were derived from the Columbia University Irving Medical Center's OHDSI database including inpatient and outpatient data. Counts are the number of patients with the concept, e.g., diagnosed with a condition, exposed to a drug, or who had a procedure. Frequencies are the number of patients with the concept divided by the total number of patients in the dataset. Clinical concepts (e.g., conditions, procedures, drugs) are coded by their standard concept ID in the OMOP Common Data Model. To protect patient privacy, all concepts and pairs of concepts where the count &le; 10 were excluded, and counts were randomized by the Poisson distribution.</p>
-    <p>Two released data sets and one beta data set are available:</p>
+    <p>Three released data sets and one beta data set are available:</p>
     <ol>
       <li>5-year non-hierarchical dataset: Includes clinical data from 2013-2017</li>
       <li>lifetime non-hierarchical dataset: Includes clinical data from all dates</li>
-      <li>BETA! 5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.</li>
+      <li>5-year hierarchical dataset: Counts for each concept include patients from descendant concepts. Includes clinical data from 2013-2017.</li>
+      <li>Temporal beta: Quantifies temporal relations between all concept pairs. Includes clinical data from all dates.</li>
     </ol>
     <p>While the lifetime dataset captures a larger patient population and range of concepts, the 5-year dataset has better underlying data consistency. Please read our open <a href="https://www.nature.com/articles/sdata2018273" target="_blank">publication</a> in Scientific Data for an in depth description of our methods, results, and a discussion of the nuances of interpreting these data.</p>
-    <p>In the beta release of the 5-year hierarchical data set, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc.</p>
+    <p>In the 5-year hierarchical data set, the counts for each concept include the patients from all descendant concepts. For example, the count for ibuprofen (ID 1177480) includes patients with Ibuprofen 600 MG Oral Tablet (ID 19019073 patients), Ibuprofen 400 MG Oral Tablet (ID 19019072), Ibuprofen 20 MG/ML Oral Suspension (ID 19019050), etc.</p>
     <p>COHD was developed at the <a href="https://www.dbmi.columbia.edu" target="_blank">Columbia University Department of Biomedical Informatics</a> as a collaboration between the <a href="http://people.dbmi.columbia.edu/~chw7007/" target="_blank">Weng Lab</a>, <a href="http://tatonettilab.org/" target="_blank">Tatonetti Lab</a>, and the <a href="https://ncats.nih.gov/translator" target="_blank">NCATS Biomedical Data Translator</a> program (Red Team). This work was supported in part by grants: NCATS OT3TR002027, NLM R01LM009886-08A1, and NIGMS R01GM107145.
     </p>
     <h2 class="color-columbia">Instructions</h2>
