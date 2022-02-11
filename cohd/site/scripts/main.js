@@ -25,6 +25,8 @@ const exampleInputs2 = [
 
 const setDomains = new Set(["condition", "device", "drug", "ethnicity", "gender", "measurement", "observation", "procedure", "race"]);
 
+const setConceptClasses = new Set(["ingredient"]);
+
 const messageConcept1 = "For Concept 1, please either: 1) enter an OMOP concept ID; or 2) search for a concept by name and choose a concept ID from the list of suggestions.";
 
 const messageConcept2 = "For Concept 2, please either: 1) enter an OMOP concept ID; 2) search for a concept by name and choose a concept ID from the list of suggestions; 3) enter a domain; or 4) leave the field blank to retrieve associations with all concepts.";
@@ -112,8 +114,9 @@ function conceptAutocomplete(e, inp) {
       });
       return;
     } else if ((val.length > 0 && val.length < 3) ||    // Input is 1-2 charset
-        checkConceptID(val) ||                    // Input looks like a concept ID
-        setDomains.has(val.toLowerCase()))       // Input is a domain
+        checkConceptID(val) ||                          // Input looks like a concept ID
+        setDomains.has(val.toLowerCase()) ||            // Input is a domain
+        setConceptClasses.has(val.toLowerCase()))       // Input is a concept class
     {
       closeAutocompleteLists();
       return;
@@ -495,6 +498,16 @@ function pairedCounts() {
 
     // Prevent user interaction with site while loading association data
     $.blockUI(blockUIOptions);
+  } else if(setConceptClasses.has(input2.toLowerCase())) {
+    // Concept class specified for concept 2. Get co-occurrence counts between concept 1 and all concepts in class.
+    var urlEndpoint = new URL("/api/frequencies/associatedConceptDomainFreq?", baseURL);
+    var queryParams = {"concept_id": conceptID, "concept_class": input2, "dataset_id": datasetID};
+    var url = urlEndpoint + encodeQueryData(queryParams);
+    $.get(url, displayAssociatedCounts);
+    lastURL = url;
+
+    // Prevent user interaction with site while loading association data
+    $.blockUI(blockUIOptions);
   } else if(checkConceptID(input2)) {
     // Show single concept info for concept 2
     // Call concepts endpoint to get information about the concept
@@ -594,6 +607,15 @@ function pairedChi() {
 
     // Prevent user interaction with site while loading association data
     $.blockUI(blockUIOptions);
+  } else if(setConceptClasses.has(input2.toLowerCase())) {
+    // Concept class specified for concept 2. Get chi-square between concept 1 and all concepts in class.
+    var queryParams = {"concept_id_1": conceptID, "concept_class": input2, "dataset_id": datasetID};
+    var url = urlEndpoint + encodeQueryData(queryParams);
+    $.get(url, displayAssociatedChi);
+    lastURL = url;
+
+    // Prevent user interaction with site while loading association data
+    $.blockUI(blockUIOptions);
   } else if(checkConceptID(input2)) {
     // Show single concept info for concept 2
     var urlConcept = new URL("/api/omop/concepts?", baseURL);
@@ -679,6 +701,15 @@ function pairedOEFR() {
 
     // Prevent user interaction with site while loading association data
     $.blockUI(blockUIOptions);
+  } else if(setConceptClasses.has(input2.toLowerCase())) {
+    // Concept class specified for concept 2. Get OEFR between concept 1 and all concepts in class.
+    var queryParams = {"concept_id_1": conceptID, "concept_class": input2, "dataset_id": datasetID};
+    var url = urlEndpoint + encodeQueryData(queryParams);
+    $.get(url, displayAssociatedOEFR);
+    lastURL = url;
+
+    // Prevent user interaction with site while loading association data
+    $.blockUI(blockUIOptions);
   } else if(checkConceptID(input2)) {
     // Show single concept info for concept 2
     var urlConcept = new URL("/api/omop/concepts?", baseURL);
@@ -753,6 +784,15 @@ function pairedRF() {
   } else if(setDomains.has(input2.toLowerCase())) {
     // Domain specified for concept 2. Get RF between concept 1 and all concepts in domain.
     var queryParams = {"concept_id_1": conceptID, "domain": input2, "dataset_id": datasetID};
+    var url = urlEndpoint + encodeQueryData(queryParams);
+    $.get(url, displayAssociatedRF);
+    lastURL = url;
+
+    // Prevent user interaction with site while loading association data
+    $.blockUI(blockUIOptions);
+  } else if(setConceptClasses.has(input2.toLowerCase())) {
+    // Concept class specified for concept 2. Get RF between concept 1 and all concepts in class.
+    var queryParams = {"concept_id_1": conceptID, "concept_class": input2, "dataset_id": datasetID};
     var url = urlEndpoint + encodeQueryData(queryParams);
     $.get(url, displayAssociatedRF);
     lastURL = url;
