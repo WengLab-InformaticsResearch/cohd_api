@@ -8,7 +8,7 @@ from .sri_node_normalizer import SriNodeNormalizer
 
 
 class OntologyKP:
-    base_url = 'https://stars-app.renci.org/sparql-kp/'
+    base_url = 'https://ontology-kp.apps.renci.org/'
     endpoint_query = 'query'
     endpoint_meta_kg = 'meta_knowledge_graph'
     INFORES_ID = 'infores:sri-ontology'
