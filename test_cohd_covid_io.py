@@ -8,7 +8,7 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi import reasoner_validator_11x
+from test_cohd_trapi import _print_trapi_log
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
@@ -20,7 +20,7 @@ cr.server = 'https://covid.cohd.io/api'
 
 # Proxy for main TRAPI version
 from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
-translator_query = cr.translator_query_110
+translator_query = cr.translator_query_120
 
 
 def check_results_schema(json, schema):
@@ -938,6 +938,7 @@ def test_translator_query():
                                    method='obsExpRatio', dataset_id=4, confidence_interval=0.99,
                                    min_cooccurrence=50, threshold=0.5, max_results=10, local_oxo=False,
                                    timeout=300)
+    print(query)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -948,6 +949,6 @@ def test_translator_query():
     validate_trapi(json, "Response")
 
     # There should be at least 1 result
-    assert len(json['message']['results']) > 0
+    assert len(json['message']['results']) > 0, _print_trapi_log(json)
 
     print('...passed')
