@@ -10,6 +10,7 @@ import logging
 import requests
 import json as j
 from bmt import Toolkit
+import uuid
 
 from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
@@ -26,7 +27,7 @@ _s = namedtuple('_s', ['key', 'type'])
 cr.server = 'https://cohd.io/api'
 
 # Proxy for main TRAPI version
-translator_query = cr.translator_query_110
+translator_query = cr.translator_query_120
 
 # No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
 # between TRAPI 1.1 to 1.2
@@ -77,6 +78,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
+    print(query)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -165,6 +167,7 @@ def test_translator_query_unsupported_category():
     print(f'\ntest_cohd_trapi::test_translator_query_unsupported_category: testing TRAPI query with an unsupported '
           f'category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
+    print(query)
 
     # Should have 200 status response code
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -187,6 +190,7 @@ def test_translator_query_bad_category():
     print(f'\ntest_cohd_trapi::test_translator_query_bad_category: testing TRAPI query with a non-biolink category on '
           f'{cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
+    print(query)
 
     # Should have 200 status response code
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
@@ -226,7 +230,10 @@ def test_translator_query_no_predicate():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -274,7 +281,10 @@ def test_translator_query_related_to():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -322,7 +332,10 @@ def test_translator_query_unsupported_predicate():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 400 status response
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
@@ -363,7 +376,10 @@ def test_translator_query_bad_predicate():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
@@ -404,7 +420,10 @@ def test_translator_query_q1_multiple_ids():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -459,7 +478,10 @@ def test_translator_query_q2_multiple_ids():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -515,7 +537,10 @@ def test_translator_query_q2_multiple_ids():
 #         }
 #     }
 #     '''
-#     resp = requests.post(url, json=j.loads(query), timeout=300)
+#     query = j.loads(query)
+#     query['query_options']['query_id'] = str(uuid.uuid4())
+#     print(query)
+#     resp = requests.post(url, json=query, timeout=300)
 #
 #     # Expect HTTP 200 status response
 #     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -571,7 +596,10 @@ def test_translator_query_q1_q2_multiple_ids():
         }
     }
     '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -631,7 +659,10 @@ def test_translator_query_multiple_categories():
         }
     }
     '''
-    resp_disease = requests.post(url, json=j.loads(query_disease), timeout=300)
+    query_disease = j.loads(query_disease)
+    query_disease['query_options']['query_id'] = str(uuid.uuid4())
+    print(query_disease)
+    resp_disease = requests.post(url, json=query_disease, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp_disease.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -669,7 +700,10 @@ def test_translator_query_multiple_categories():
         }
     }
     '''
-    resp_procedure = requests.post(url, json=j.loads(query_procedure), timeout=300)
+    query_procedure = j.loads(query_procedure)
+    query_procedure['query_options']['query_id'] = str(uuid.uuid4())
+    print(query_procedure)
+    resp_procedure = requests.post(url, json=query_procedure, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp_procedure.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -707,7 +741,10 @@ def test_translator_query_multiple_categories():
         }
     }
     '''
-    resp_combined = requests.post(url, json=j.loads(query_combined), timeout=300)
+    query_combined = j.loads(query_combined)
+    query_combined['query_options']['query_id'] = str(uuid.uuid4())
+    print(query_combined)
+    resp_combined = requests.post(url, json=query_combined, timeout=300)
 
     # Expect HTTP 200 status response
     assert resp_combined.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -722,6 +759,247 @@ def test_translator_query_multiple_categories():
     assert num_results_disease <= num_results_combined and num_results_procedure <= num_results_combined and \
         num_results_combined <= (num_results_disease + num_results_procedure), \
         'Number of results outside of expected range' + _print_trapi_log(json_combined)
+
+    print('...passed')
+
+
+def test_translator_query_qnode_subclasses():
+    """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
+    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
+    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
+    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
+    maps to OMOP standard concept. """
+    print(f'\ntest_cohd_trapi::test_translator_query_qnode_subclasses: testing TRAPI query with multiple IDs in both '
+          f'query nodes on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["MONDO:0005015"]
+                    },
+                    "obj": {
+                        "ids": ["PUBCHEM.COMPOUND:3476"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 50
+        }
+    }
+    '''
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+
+    # There should be more than 1 result
+    assert len(json['message']['results']) > 1, _print_trapi_log(json)
+
+    print('...passed')
+
+
+def test_translator_query_qnode_empty_constraint():
+    """ Check the TRAPI endpoint to make sure it allows null & empty constraints on QNodes. The null constraints should be
+    ignored regardless of whether or not COHD implements constraints. """
+    print(f'\ntest_cohd_trapi::test_translator_query_qnode_empty_constraint: testing TRAPI query with null constraints '
+          f'on QNodes {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+
+    # Query with null constraints
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"],
+                        "constraints": null
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
+                        "constraints": null
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
+
+    # Query with empty constraints
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"],
+                        "constraints": []
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
+                        "constraints": []
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(query)
+    resp = requests.post(url, json=query, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
+
+    print('...passed')
+
+
+def test_translator_workflows():
+    """ Check the TRAPI endpoint to make sure COHD only responds when workflow is a single lookup operation. """
+    print(f'\ntest_cohd_trapi::test_translator_workflows: testing TRAPI query with workflows on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "subj": {
+                        "ids": ["DOID:9053"]
+                    },
+                    "obj": {
+                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
+                    }
+                },
+                "edges": {
+                    "e0": {
+                        "subject": "subj",
+                        "object": "obj",
+                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                    }
+                }
+            }
+        },
+        "workflow": [
+            {"id": "lookup"}
+        ],
+        "query_options": {
+            "max_results": 1
+        }
+    }
+    '''
+    j_query = j.loads(query)
+    j_query['query_options']['query_id'] = str(uuid.uuid4())
+    print(j_query)
+    resp = requests.post(url, json=j_query, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+    # There should be 1 result
+    assert len(json['message']['results']) == 1, _print_trapi_log(json)
+
+    # Test with bad workflows: unsupported operation (overlay)
+    j_query['workflow'] = [{'id': 'overlay'}]
+    resp = requests.post(url, json=j_query, timeout=300)
+    # Expect HTTP 400 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Test with bad workflows: multiple lookups
+    j_query['workflow'] = [{'id': 'lookup'}, {'id': 'lookup'}]
+    resp = requests.post(url, json=j_query, timeout=300)
+    # Expect HTTP 400 status response
+    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    print('...passed')
+
+
+def test_translator_meta_knowledge_graph():
+    """ Check the /meta_knowledge_graph endpoint to make sure it returns a valid response. """
+    print(f'\ntest_cohd_trapi::test_translator_meta_knowledge_graph: testing TRAPI /meta_knowledge_graph '
+          f'on QNodes {cr.server}..... ')
+
+    url = f'{cr.server}/meta_knowledge_graph'
+    resp = requests.get(url, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "MetaKnowledgeGraph")
 
     print('...passed')
 
@@ -802,234 +1080,5 @@ def test_omop_to_biolink_bad():
     for omop_id in omop_ids:
         assert omop_id in j, f'Did not find OMOP ID {omop_id} in response'
         assert j[omop_id] is None, f'Found a non-null mapping for OMOP ID {omop_id}'
-
-    print('...passed')
-
-
-def test_translator_query_qnode_subclasses():
-    """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
-    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
-    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
-    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
-    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
-    maps to OMOP standard concept. """
-    print(f'\ntest_cohd_trapi::test_translator_query_qnode_subclasses: testing TRAPI query with multiple IDs in both '
-          f'query nodes on {cr.server}..... ')
-
-    url = f'{cr.server}/query'
-    query = '''
-    {
-        "message": {
-            "query_graph": {
-                "nodes": {
-                    "subj": {
-                        "ids": ["MONDO:0005015"]
-                    },
-                    "obj": {
-                        "ids": ["PUBCHEM.COMPOUND:3476"]
-                    }
-                },
-                "edges": {
-                    "e0": {
-                        "subject": "subj",
-                        "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
-                    }
-                }
-            }
-        },
-        "query_options": {
-            "max_results": 50
-        }
-    }
-    '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "Response")
-
-    # There should be more than 1 result
-    assert len(json['message']['results']) > 1, _print_trapi_log(json)
-
-    print('...passed')
-
-
-def test_translator_query_qnode_empty_constraint():
-    """ Check the TRAPI endpoint to make sure it allows null & empty constraints on QNodes. The null constraints should be
-    ignored regardless of whether or not COHD implements constraints. """
-    print(f'\ntest_cohd_trapi::test_translator_query_qnode_empty_constraint: testing TRAPI query with null constraints '
-          f'on QNodes {cr.server}..... ')
-
-    url = f'{cr.server}/query'
-
-    # Query with null constraints
-    query = '''
-    {
-        "message": {
-            "query_graph": {
-                "nodes": {
-                    "subj": {
-                        "ids": ["DOID:9053"],
-                        "constraints": null
-                    },
-                    "obj": {
-                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
-                        "constraints": null
-                    }
-                },
-                "edges": {
-                    "e0": {
-                        "subject": "subj",
-                        "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
-                    }
-                }
-            }
-        },
-        "query_options": {
-            "max_results": 10
-        }
-    }
-    '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "Response")
-
-    # There should be at least 1 result
-    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
-
-    # Query with empty constraints
-    query = '''
-    {
-        "message": {
-            "query_graph": {
-                "nodes": {
-                    "subj": {
-                        "ids": ["DOID:9053"],
-                        "constraints": []
-                    },
-                    "obj": {
-                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
-                        "constraints": []
-                    }
-                },
-                "edges": {
-                    "e0": {
-                        "subject": "subj",
-                        "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
-                    }
-                }
-            }
-        },
-        "query_options": {
-            "max_results": 10
-        }
-    }
-    '''
-    resp = requests.post(url, json=j.loads(query), timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "Response")
-
-    # There should be at least 1 result
-    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
-
-    print('...passed')
-
-
-def test_translator_workflows():
-    """ Check the TRAPI endpoint to make sure COHD only responds when workflow is a single lookup operation. """
-    print(f'\ntest_cohd_trapi::test_translator_workflows: testing TRAPI query with workflows on {cr.server}..... ')
-
-    url = f'{cr.server}/query'
-    query = '''
-    {
-        "message": {
-            "query_graph": {
-                "nodes": {
-                    "subj": {
-                        "ids": ["DOID:9053"]
-                    },
-                    "obj": {
-                        "categories": ["biolink:DiseaseOrPhenotypicFeature"]
-                    }
-                },
-                "edges": {
-                    "e0": {
-                        "subject": "subj",
-                        "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
-                    }
-                }
-            }
-        },
-        "query_options": {
-            "max_results": 1
-        }
-    }
-    '''
-    j_query = j.loads(query)
-
-    # Test with a good workflow (single lookup operation)
-    j_query['workflow'] = [{'id': 'lookup'}]
-    resp = requests.post(url, json=j_query, timeout=300)
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "Response")
-    # There should be 1 result
-    assert len(json['message']['results']) == 1, _print_trapi_log(json)
-
-    # Test with bad workflows: unsupported operation (overlay)
-    j_query['workflow'] = [{'id': 'overlay'}]
-    resp = requests.post(url, json=j_query, timeout=300)
-    # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Test with bad workflows: multiple lookups
-    j_query['workflow'] = [{'id': 'lookup'}, {'id': 'lookup'}]
-    resp = requests.post(url, json=j_query, timeout=300)
-    # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    print('...passed')
-
-
-def test_translator_meta_knowledge_graph():
-    """ Check the /meta_knowledge_graph endpoint to make sure it returns a valid response. """
-    print(f'\ntest_cohd_trapi::test_translator_meta_knowledge_graph: testing TRAPI /meta_knowledge_graph '
-          f'on QNodes {cr.server}..... ')
-
-    url = f'{cr.server}/meta_knowledge_graph'
-    resp = requests.get(url, timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "MetaKnowledgeGraph")
 
     print('...passed')

@@ -536,10 +536,13 @@ class CohdTrapi120(CohdTrapi):
         reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_1_omop_ids}
         message = f"Mapped node '{self._concept_1_qnode_key}' IDs to OMOP: {reverse_map}"
         self.log(message, level=logging.INFO)
-        message = f"Could not map node '{self._concept_1_qnode_key}' IDs {unmapped_curies} to OMOP concepts"
-        self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
+        if found and len(unmapped_curies) > 0:
+            # Couldn't map some CURIEs in qnode to OMOP
+            message = f"Could not map node '{self._concept_1_qnode_key}' IDs {unmapped_curies} to OMOP concepts"
+            self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
 
         if not found:
+            # Couldn't map any CURIEs in qnode to OMOP
             self._valid_query = False
             description = f"Could not map node '{self._concept_1_qnode_key}' to OMOP concept"
             self.log(description, code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
@@ -629,10 +632,13 @@ class CohdTrapi120(CohdTrapi):
             reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_2_omop_ids}
             message = f"Mapped node '{self._concept_2_qnode_key}' IDs to OMOP: {reverse_map}"
             self.log(message, level=logging.INFO)
-            message = f"Could not map node '{self._concept_2_qnode_key}' IDs {unmapped_curies} to OMOP concepts"
-            self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
+            if found and len(unmapped_curies) > 0:
+                # Couldn't map some CURIEs in qnode to OMOP
+                message = f"Could not map node '{self._concept_2_qnode_key}' IDs {unmapped_curies} to OMOP concepts"
+                self.log(message, TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, logging.WARNING)
 
             if not found:
+                # Couldn't map any CURIEs in qnode to OMOP
                 self._valid_query = False
                 description = f"Could not map node '{self._concept_2_qnode_key}' to OMOP concept"
                 self.log(description, code=TrapiStatusCode.COULD_NOT_MAP_CURIE_TO_LOCAL_KG, level=logging.WARNING)
