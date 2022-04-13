@@ -172,25 +172,19 @@ class BiolinkConceptMapper:
             return omop_mappings, normalized_nodes
 
         # Query internal mappings
-        canonical_ids = [nn.normalized_identifier.id for nn in normalized_nodes.values() if nn is not None]
-        canonical_str = ','.join([f"'{id}'" for id in canonical_ids])
-        if not canonical_ids:
-            # No normalized nodes found
-            return omop_mappings, normalized_nodes
-
         for curie in curies:
-            normalized_node = normalized_nodes.get(curie)
-            if normalized_node is None:
-                omop_mappings[curie] = None
-                continue
-            normalized_id = normalized_node.normalized_identifier.id
-
-            # Get label from SRI Node Normalizer
+            # Retrieve the normalized node if available
+            normalized_id = curie
             biolink_label = ''
-            for equiv_id in normalized_node.equivalent_identifiers:
-                if equiv_id.id == curie:
-                    biolink_label = equiv_id.label
-                    break
+            normalized_node = normalized_nodes.get(curie)
+            if normalized_node is not None:
+                normalized_id = normalized_node.normalized_identifier.id
+
+                # Get label from SRI Node Normalizer
+                for equiv_id in normalized_node.equivalent_identifiers:
+                    if equiv_id.id == curie:
+                        biolink_label = equiv_id.label
+                        break
 
             # Create mapping object
             r = BiolinkConceptMapper._map_biolink.get(normalized_id)
