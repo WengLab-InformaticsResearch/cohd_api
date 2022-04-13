@@ -53,7 +53,7 @@ class CohdTrapi(ABC):
     default_min_cooccurrence = 0
     default_confidence_interval = 0.99
     default_ln_ratio_ci_thresohld = 1.0
-    default_dataset_id = 3
+    default_dataset_id = 4
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True

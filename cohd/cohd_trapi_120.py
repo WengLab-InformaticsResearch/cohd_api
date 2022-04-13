@@ -702,23 +702,23 @@ class CohdTrapi120(CohdTrapi):
 
         if self._dataset_auto:
             # Automatically select the dataset based on which data types being queried
-            # Use the non-hierarchical 5-year dataset when drugs are not involved
+            # Use the non-hierarchical full COVID dataset when drugs are not involved
             self._dataset_id = 1
 
             # Check if any QNode IDs are chemicals
             chemical_descendants = bm_toolkit.get_descendants('biolink:ChemicalEntity', reflexive=True, formatted=True)
             for id_category in self._id_categories:
                 if id_category in chemical_descendants:
-                    # Use the hierarchical 5-year dataset when IDs that are chemicals are queried
-                    self._dataset_id = 3
+                    # Use the hierarchical full COVID dataset when IDs that are chemicals are queried
+                    self._dataset_id = 4
                     break
 
             # Check if any of the QNode categories include chemicals
             for qnode_category in self._qnode_categories:
                 cat_descendants = set(bm_toolkit.get_descendants(qnode_category, reflexive=True, formatted=True))
                 if len(cat_descendants.intersection(chemical_descendants)) > 0:
-                    # Use the hierarchical 5-year dataset whenever categories may include chemicals
-                    self._dataset_id = 3
+                    # Use the hierarchical full COVID dataset whenever categories may include chemicals
+                    self._dataset_id = 4
                     break
 
         if self._valid_query:
@@ -1127,14 +1127,14 @@ class CohdTrapi120(CohdTrapi):
                 'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://cohd.io/api/query'
+                'value_url': 'https://covid.cohd.io/api/query'
             },
             {
                 'attribute_type_id': 'biolink:supporting_data_source',
                 'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://cohd.io/api/'
+                'value_url': 'https://covid.cohd.io/api/'
             },
             # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
             {
@@ -1144,7 +1144,7 @@ class CohdTrapi120(CohdTrapi):
                 'value_type_id': 'EDAM:data_1669',  # P-value
                 'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://edamontology.org/data_1669',
-                'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
+                'description': 'Chi-square p-value, unadjusted. https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:p_value',
@@ -1154,7 +1154,7 @@ class CohdTrapi120(CohdTrapi):
                 'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': 'http://edamontology.org/data_1669',
                 'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
-                               'http://cohd.io/about.html'
+                               'https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:has_evidence',
@@ -1162,7 +1162,7 @@ class CohdTrapi120(CohdTrapi):
                 'value': cohd_result['ln_ratio'],
                 'value_type_id': 'EDAM:data_1772',  # Score
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
+                'description': 'Observed-expected frequency ratio. https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:has_confidence_level',
@@ -1179,7 +1179,7 @@ class CohdTrapi120(CohdTrapi):
                                      'relative_frequency_2'],
                 'value_type_id': 'EDAM:data_1772',  # Score
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
+                'description': 'Relative frequency, relative to the subject node. https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:has_confidence_level',
@@ -1197,7 +1197,7 @@ class CohdTrapi120(CohdTrapi):
                                      'relative_frequency_1'],
                 'value_type_id': 'EDAM:data_1772',  # Score
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
+                'description': 'Relative frequency, relative to the object node. https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:has_confidence_level',
@@ -1238,7 +1238,7 @@ class CohdTrapi120(CohdTrapi):
                 'value': cohd_result['expected_count'],
                 'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
+                'description': 'Calculated expected count of concept pair. For ln_ratio. https://covid.cohd.io/about.html'
             },
             {
                 'attribute_type_id': 'biolink:provided_by',  # Database ID
