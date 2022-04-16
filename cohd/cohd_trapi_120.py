@@ -987,12 +987,16 @@ class CohdTrapi120(CohdTrapi):
                     blm_categories = normalized_categories
 
                 # Check if at least 1 of the blm_categories is a descendant of the queried category
-                for query_category in query_node_categories:
-                    desc = bm_toolkit.get_descendants(query_category, reflexive=True, formatted=True)
-                    for blm_category in blm_categories:
-                        if blm_category in desc:
-                            query_category_compliant = True
-                            break
+                if not query_node_categories:
+                    # No categories specified, then all are allowed
+                    query_category_compliant = True
+                else:
+                    for query_category in query_node_categories:
+                        desc = bm_toolkit.get_descendants(query_category, reflexive=True, formatted=True)
+                        for blm_category in blm_categories:
+                            if blm_category in desc:
+                                query_category_compliant = True
+                                break
 
             # Create representations for the knowledge graph node and query node, but don't add them to the graphs yet
             internal_id = '{id:06d}'.format(id=len(self._kg_nodes))
