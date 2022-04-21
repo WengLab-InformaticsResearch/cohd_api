@@ -235,7 +235,9 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps to be executed.
-          $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          allOf:
+            - $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          nullable: true
       additionalProperties: true
       required:
         - message
@@ -274,7 +276,9 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps to be executed.
-          $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          allOf:
+            - $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          nullable: true
       additionalProperties: true
       required:
         - callback
@@ -315,7 +319,9 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps that were executed.
-          $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          allOf:
+            - $ref: http://standards.ncats.io/workflow/1.0.0/schema
+          nullable: true
       additionalProperties: true
       required:
         - message
@@ -440,6 +446,7 @@ components:
             A numerical score associated with this result indicating the
             relevance or confidence of this result relative to others in the
             returned set. Higher MUST be better.
+          nullable: true
       additionalProperties: true
       required:
         - node_bindings
@@ -580,18 +587,18 @@ components:
             to AND)
           items:
             $ref: '#/components/schemas/QueryConstraint'
-          nullable: true
+          default: []
       additionalProperties: true
     QEdge:
       type: object
       description: >-
         An edge in the QueryGraph used as an filter pattern specification in a
-        query. If optional predicate or relation properties are not specified,
-        they are assumed to be wildcard matches to the target knowledge space.
+        query. If the optional predicate property is not specified,
+        it is assumed to be a wildcard match to the target knowledge space.
         If specified, the ontological inheritance hierarchy associated with
-        the terms provided is assumed, such that edge bindings returned may be
-        an exact match to the given QEdge predicate or relation term ('class'),
-        or to a term which is a subclass of the QEdge specified term.
+        the term provided is assumed, such that edge bindings returned may be
+        an exact match to the given QEdge predicate term,
+        or to a term that is a descendant of the QEdge predicate term.
       properties:
         predicates:
           type: array
@@ -621,7 +628,7 @@ components:
             to AND)
           items:
             $ref: '#/components/schemas/QueryConstraint'
-          nullable: true
+          default: []
       additionalProperties: true
       required:
         - subject
@@ -898,7 +905,9 @@ components:
             for which the predicate is the most specific available.
           items:
             $ref: '#/components/schemas/MetaEdge'
-          minItems: 1
+      required:
+        - nodes
+        - edges
     MetaNode:
       type: object
       description: >-
@@ -919,6 +928,7 @@ components:
             Node attributes provided by this TRAPI web service.
           items:
             $ref: '#/components/schemas/MetaAttribute'
+          nullable: true
       required:
         - id_prefixes
       additionalProperties: false
@@ -949,6 +959,7 @@ components:
             Edge attributes provided by this TRAPI web service.
           items:
             $ref: '#/components/schemas/MetaAttribute'
+          nullable: true
       required:
         - subject
         - predicate
@@ -968,12 +979,15 @@ components:
           description: >-
             Source of an attribute provided by this TRAPI web service.
           example: infores:chembl
+          nullable: true
         original_attribute_names:
           type: array
           items:
             type: string
           description: >-
             Names of an the attribute as provided by the source.
+          nullable: true
+          minItems: 1
         constraint_use:
           type: boolean
           description: >-
@@ -986,6 +1000,7 @@ components:
             Human-readable name or label for the constraint concept.
             Required whenever constraint_use is true.
           example: p-value
+          nullable: true
       required:
         - attribute_type_id
     QueryConstraint:
@@ -1004,7 +1019,6 @@ components:
             submit the new type for consideration by the appropriate
             authority.
           example: EDAM:data_0844
-          nullable: false
         name:
           type: string
           description: >-
@@ -1013,7 +1027,6 @@ components:
             as the 'id'. This is redundant but required for human
             readability.
           example: molecular mass
-          nullable: false
         not:
           type: boolean
           default: false
@@ -1054,6 +1067,7 @@ components:
             property. The Units of Measurement Ontology (UO) should be used
             if possible. The unit_id MUST be provided for (lists of)
             numerical values that correspond to a quantity that has units.
+          nullable: true
         unit_name:
           example: kilodalton
           description: >-
@@ -1062,6 +1076,7 @@ components:
             property. The Units of Measurement Ontology (UO) SHOULD be used
             if possible. This property SHOULD be provided if a unit_id is
             provided. This is redundant but recommended for human readability.
+          nullable: true
       required:
         - name
         - id
