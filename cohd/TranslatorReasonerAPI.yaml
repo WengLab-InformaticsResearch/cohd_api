@@ -235,8 +235,8 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps to be executed.
-          allOf:
-            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
+#          allOf:
+#            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
           nullable: true
       additionalProperties: true
       required:
@@ -276,8 +276,8 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps to be executed.
-          allOf:
-            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
+#          allOf:
+#            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
           nullable: true
       additionalProperties: true
       required:
@@ -319,8 +319,8 @@ components:
           nullable: true
         workflow:
           description: List of workflow steps that were executed.
-          allOf:
-            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
+#          allOf:
+#            - $ref: https://standards.ncats.io/workflow/1.0.0/schema
           nullable: true
       additionalProperties: true
       required:
