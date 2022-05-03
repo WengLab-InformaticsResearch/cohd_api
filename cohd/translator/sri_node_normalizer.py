@@ -1,5 +1,6 @@
 import logging
 import requests
+import json
 from requests.compat import urljoin
 from typing import Union, Any, Optional, Dict, List
 
@@ -37,18 +38,24 @@ class SriNodeNormalizer:
         JSON response from endpoint or None. Each input curie will be a key in the response. If no normalized node is
         found, the entry will be null.
         """
+        if not curies:
+            return None
+
         url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
-        response = requests.post(url=url, json={'curies': curies})
+        data = {'curies': curies}
+        response = requests.post(url=url, json=data)
         if response.status_code == 200:
             return response.json()
         else:
             logging.error('Received a non-200 response code from SRI Node Normalizer: '
-                            f'{(response.status_code, response.text)}')
+                          f'{(response.status_code, response.text)}\n'
+                          f'Posted data:\n{json.dumps(data)}'
+                          )
             return None
 
     @staticmethod
     def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, NormalizedNode]]:
-        """ Straightforward call to get_normalized_nodes. Returns json from response.
+        """ Wraps a NodeNorm call to return a dictionary of NormalizedNode objects per response item
 
         Parameters
         ----------

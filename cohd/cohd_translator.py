@@ -249,20 +249,23 @@ def omop_to_biolink(request):
         else:
             mappings[omop_id] = None
 
-    # Normalize with SRI Node Normalizer
-    normalized_mappings = dict()
     curies = [x.biolink_id for x in mappings.values() if x is not None]
-    normalized_nodes = SriNodeNormalizer.get_normalized_nodes_raw(curies)
+    if not curies:
+        # No mappings found for input OMOP IDs
+        normalized_mappings = {omop_id: None for omop_id in omop_ids}
+    else:
+        # Normalize with SRI Node Normalizer
+        normalized_mappings = dict()
+        normalized_nodes = SriNodeNormalizer.get_normalized_nodes_raw(curies)
+        if normalized_nodes is None:
+            return 'Unexpected response or no response received from SRI Node Normalizer', 503
 
-    if normalized_nodes is None:
-        return 'Unexpected response or no response received from SRI Node Normalizer', 503
-
-    for omop_id in omop_ids:
-        normalized_mapping = None
-        if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].biolink_id] is not None:
-            m = mappings[omop_id]
-            normalized_mapping = normalized_nodes[m.biolink_id]
-            normalized_mapping['mapping_history'] = m.provenance
-        normalized_mappings[omop_id] = normalized_mapping
+        for omop_id in omop_ids:
+            normalized_mapping = None
+            if mappings[omop_id] is not None and normalized_nodes[mappings[omop_id].biolink_id] is not None:
+                m = mappings[omop_id]
+                normalized_mapping = normalized_nodes[m.biolink_id]
+                normalized_mapping['mapping_history'] = m.provenance
+            normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)

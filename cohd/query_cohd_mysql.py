@@ -19,6 +19,9 @@ URL_OXO_SEARCH = 'https://www.ebi.ac.uk/spot/oxo/api/search'
 _DEFAULT_OXO_DISTANCE = 2
 DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
 
+# Strict JSON doesn't allow NaN or Inf, replace with value:
+JSON_INFINITY_REPLACEMENT = 999
+
 
 def sql_connection():
     # Connect to MySQL database
@@ -962,10 +965,9 @@ def query_db(service, method, args):
             if confidence_level < 0 or confidence_level >= 1:
                 return 'Confidence should be a number between 0-1'
             for row in json_return:
-                ci = ln_ratio_ci(row['observed_count'], row['ln_ratio'], confidence_level)
-                # The lower bound may hit -Inf which causes issues with JSON serialization. Limit it to -999
-                row['confidence_interval'] = max(ci[0], -999), ci[1]
-
+                # The CI bounds may hit Inf, which causes issues with JSON serialization. Limit it to 999
+                row['confidence_interval'] = ln_ratio_ci(row['observed_count'], row['ln_ratio'], confidence_level,
+                                                         JSON_INFINITY_REPLACEMENT)
 
         # Returns relative frequency between pairs of concepts
         # e.g. /api/v1/query?service=association&meta=relativeFrequency&dataset_id=1&concept_id_1=192855&concept_id_2=2008271
@@ -1375,13 +1377,12 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
         c2 = row['concept_2_count']
 
         # Confidence interval for obsExpRatio
-        ci = ln_ratio_ci(cpc, row['ln_ratio'], confidence)
-        # The lower bound of relative freq may hit -Inf which causes issues with JSON serialization. Limit it to -999
-        row['ln_ratio_ci'] = max(ci[0], -999), ci[1]
+        # The CI bounds may hit Inf, which causes issues with JSON serialization. Limit it to 999
+        row['ln_ratio_ci'] = ln_ratio_ci(cpc, row['ln_ratio'], confidence, JSON_INFINITY_REPLACEMENT)
 
         # Confidence intervals for relative frequencies
-        row['relative_frequency_1_ci'] = rel_freq_ci(cpc, c1, confidence)
-        row['relative_frequency_2_ci'] = rel_freq_ci(cpc, c2, confidence)
+        row['relative_frequency_1_ci'] = rel_freq_ci(cpc, c1, confidence, JSON_INFINITY_REPLACEMENT)
+        row['relative_frequency_2_ci'] = rel_freq_ci(cpc, c2, confidence, JSON_INFINITY_REPLACEMENT)
 
         # Chi-square
         cpc = float(cpc)

@@ -62,6 +62,7 @@ class CohdTrapi(ABC):
     default_log_level = logging.INFO
     default_time_limit = 60  # seconds
     limit_max_results = 500
+    json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
     # Deprecated. Only used in old versions of cohd_trapi_VERSION
@@ -201,7 +202,8 @@ def criteria_confidence(cohd_result, confidence, threshold=CohdTrapi.default_ln_
         if 'ln_ratio_ci' in cohd_result:
             ci = cohd_result['ln_ratio_ci']
         else:
-            ci = ln_ratio_ci(cohd_result['concept_pair_count'], cohd_result['ln_ratio'], confidence)
+            ci = ln_ratio_ci(cohd_result['concept_pair_count'], cohd_result['ln_ratio'], confidence,
+                             CohdTrapi.json_inf_replacement)
         return ci_significance(ci) and ((ci[0] > 0 and ci[0] >= threshold) or (ci[1] < 0 and abs(ci[1]) >= threshold))
     else:
         # relativeFrequency doesn't have a good cutoff for confidence interval, and chiSquare uses

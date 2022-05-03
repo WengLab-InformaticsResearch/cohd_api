@@ -121,35 +121,35 @@ def test_rel_freq_ci():
 
     x = cohd_utilities.rel_freq_ci(50, 5000)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.005349636988918609, 0.015726567414552316), dp)
+           _crr(x, (0.0063669689369091256, 0.014318323303589956), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 5000, 0.99)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.005349636988918609, 0.015726567414552316), dp)
+           _crr(x, (0.0063669689369091256, 0.014318323303589956), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 5000, 0.95)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.006370656370656371, 0.01430941518042306), dp)
+           _crr(x, (0.007199844327690212, 0.01316330728095434), dp)
 
     x = cohd_utilities.rel_freq_ci(50, 100, 0.95)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.2619047619047619, 0.9078947368421053), dp)
+           _crr(x, (0.30833333333333335, 0.7901234567901234), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.009493796881718718, 0.010516903601748128), dp)
+           _crr(x, (0.009603006643790029, 0.010403870087117106), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000, 0.99)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.009493796881718718, 0.010516903601748128), dp)
+           _crr(x, (0.009603006643790029, 0.010403870087117106), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 500000, 0.95)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.009609501888221286, 0.010397284662800804), dp)
+           _crr(x, (0.009697119584511733, 0.010306549141120905), dp)
 
     x = cohd_utilities.rel_freq_ci(5000, 10000, 0.95)
     assert isinstance(x, tuple) and len(x) == 2 and _isnumeric(x) and \
-           _crr(x, (0.47020965382740126, 0.5314455729968195), dp)
+           _crr(x, (0.4768536681051393, 0.5241738066095472), dp)
 
 
 def test_ci_significance():
