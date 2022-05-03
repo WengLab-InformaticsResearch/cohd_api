@@ -21,7 +21,9 @@ def poisson_ci(freq, confidence=0.99):
 
     # Same result as using poisson.interval, but much faster calculation
     alpha = 1 - confidence
-    return tuple(poisson.ppf([alpha / 2, 1 - alpha / 2], freq))
+    ci = poisson.ppf([alpha / 2, 1 - alpha / 2], freq)
+    ci[0] = max(ci[0], 1)  # min possible count is 1
+    return tuple(ci)
 
 
 def double_poisson_ci(freq, confidence=0.99):
@@ -48,7 +50,7 @@ def double_poisson_ci(freq, confidence=0.99):
     return poisson_ci(freq, confidence_adjusted)
 
 
-def ln_ratio_ci(freq, ln_ratio, confidence=0.99):
+def ln_ratio_ci(freq, ln_ratio, confidence=0.99, replace_inf=None):
     """ Estimates the confidence interval of the log ratio using the double poisson method
 
     Parameters
@@ -56,16 +58,21 @@ def ln_ratio_ci(freq, ln_ratio, confidence=0.99):
     freq: float - co-occurrence count
     ln_ratio: float - log ratio
     confidence: float - desired confidence. range: [0, 1]
+    replace_inf: (Optional) If specified, replaces +Inf or -Inf with +replace_inf or -replace_inf (useful because JSON
+                 doesn't allow Infinity)
 
     Returns
     -------
     (lower bound, upper bound)
     """
     # Convert ln_ratio back to ratio and calculate confidence intervals for the ratios
-    return tuple(np.log(np.array(double_poisson_ci(freq, confidence)) * np.exp(ln_ratio) / freq))
+    ci = tuple(np.log(np.array(double_poisson_ci(freq, confidence)) * np.exp(ln_ratio) / freq))
+    if replace_inf:
+        ci = max(ci[0], -replace_inf), min(ci[1], replace_inf)
+    return ci
 
 
-def rel_freq_ci(pair_count, base_count, confidence=0.99):
+def rel_freq_ci(pair_count, base_count, confidence=0.99, replace_inf=None):
     """ Estimates the confidence interval of the relative frequency using the double poisson method
 
     Parameters
@@ -73,14 +80,19 @@ def rel_freq_ci(pair_count, base_count, confidence=0.99):
     pair_count: int - co-occurrence count
     base_count: int - base concept count
     confidence: float - desired confidence. range: [0, 1]
+    replace_inf: (Optional) If specified, replaces +Inf or -Inf with +replace_inf or -replace_inf (useful because JSON
+                 doesn't allow Infinity)
 
     Returns
     -------
     (lower bound, upper bound)
     """
-    pair_count_ci = double_poisson_ci(pair_count, confidence)
-    base_count_ci = double_poisson_ci(base_count, confidence)
-    return pair_count_ci[0] / base_count_ci[1], pair_count_ci[1] / base_count_ci[0]
+    pair_count_ci = poisson_ci(pair_count, confidence)
+    base_count_ci = poisson_ci(base_count, confidence)
+    ci = pair_count_ci[0] / base_count_ci[1], pair_count_ci[1] / base_count_ci[0]
+    if replace_inf:
+        ci = ci[0], min(ci[1], replace_inf)
+    return ci
 
 
 def ci_significance(ci1, ci2=None):
