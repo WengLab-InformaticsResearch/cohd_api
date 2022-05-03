@@ -55,7 +55,7 @@ info:
   x-accessRestriction: none
   x-implementationLanguage: Python
 servers:
-  - url: 'https://cohd.io/api/'
+  - url: 'https://cohd.io/api'
     description: COHD production server
 tags:
   - name: Metadata
