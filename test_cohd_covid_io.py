@@ -919,8 +919,8 @@ def test_relativeFrequency():
             "concept_id_2": 434610,
             "concept_pair_count": 17,
             "confidence_interval": [
-                0.015527950310559006,
-                0.14883720930232558
+                0.02258064516129032,
+                0.12389380530973451
             ],
             "dataset_id": 3,
             "relative_frequency": 0.06367041198501873
