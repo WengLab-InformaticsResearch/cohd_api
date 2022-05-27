@@ -11,16 +11,14 @@ Note: For NCATS ITRB, please also see the [Translator Application Intake Form](h
 1.  Clone the COHD_API github repository  
     `git clone https://github.com/WengLab-InformaticsResearch/cohd_api.git/`  
     `cd cohd_api`
-1.  Edit the MySql database configuration file `cohd_api/docker_config_files/database.cnf`  
-    Note: The COHD MySql database has not yet been dockerized. Please request database
-    connection information from Casey Ta (ct2865 [at] cumc [dot] columbia [dot] edu)  
-    A dockerized database will be set up in the near future
+1.  Edit the MySQL database configuration file with MySQL credentials `cohd_api/database.cnf`  
+    Note: Please request MySQL database dump file from @CaseyTa
 1.  Change `DEV_KEY` in `cohd_api/cohd/cohd_flask.conf`. This key allows certain privileged developer API calls.
-1.  [Optional] If necessary, edit the nginx configuration file `cohd_api/docker_config_files/nginx.conf`
+1.  [Optional] If necessary, edit the nginx configuration file `cohd_api/nginx.conf`
 1.  Build the COHD docker image  
     `docker build -t cohd_image .`
-1.  Run the COHD docker container  
-    `docker run -d -p <HOST:PORT>:80 -p <HOST:PORT>:443 --name=COHD cohd_image`
+1.  Run the COHD docker container (the second port mapping to 443 is only necessary if enabling HTTPS)  
+    `docker run -d -p <HOST:PORT>:80 -p <HOST:PORT>:443 --name=cohd cohd_image`  
 1.  [Optional] If necessary, use tools like certbot to enable HTTPS. In the COHD container:
     1.  Start a shell to the COHD container  
         `docker container exec -it cohd bash`
