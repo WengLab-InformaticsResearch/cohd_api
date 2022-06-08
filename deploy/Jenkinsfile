@@ -31,10 +31,6 @@ pipeline {
                     expression {
                         return !params.BUILD_VERSION
                     }
-                    anyOf {
-                        changeset "./**"
-                        triggeredBy 'UserIdCause'
-                    }
                 }
             }
             steps{
