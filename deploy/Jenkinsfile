@@ -60,7 +60,7 @@ pipeline {
         stage('Deploy to AWS EKS Blue') {
             steps {
                 sshagent (credentials: ['labshare-svc']) {
-                   sh 'git clone git@github.com:Sphinx-Automation/translator-ops.git'
+                   sh 'git clone -b cohd_api git@github.com:Sphinx-Automation/translator-ops.git'
                 }
                 dir('translator-ops/ops/cdskp/cohd_api/') {
                     configFileProvider([
