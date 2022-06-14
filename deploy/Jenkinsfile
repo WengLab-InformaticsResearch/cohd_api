@@ -59,7 +59,9 @@ pipeline {
         }
         stage('Deploy to AWS EKS Blue') {
             steps {
-                sh 'git clone git@github.com:Sphinx-Automation/translator-ops.git'
+                sshagent (credentials: ['labshare-svc']) {
+                   sh 'git clone git@github.com:Sphinx-Automation/translator-ops.git'
+                }
                 dir('translator-ops/ops/cdskp/cohd_api/') {
                     configFileProvider([
                         configFile(fileId: 'values-ci.yaml', targetLocation: 'values-ncats.yaml'),
