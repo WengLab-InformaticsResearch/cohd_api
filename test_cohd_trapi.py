@@ -25,6 +25,7 @@ _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
 cr.server = 'https://cohd.io/api'
+# cr.server = 'https://cohd-api.transltr.io/api'
 
 # Proxy for main TRAPI version
 translator_query = cr.translator_query_120
@@ -109,8 +110,6 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
 
         assert found, f"{obj_node['categories']} not a descendant of {q2_category}" + _print_trapi_log(json)
 
-    print('...passed')
-
 
 def test_translator_query_named_thing():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:NamedThing
@@ -181,8 +180,6 @@ def test_translator_query_unsupported_category():
     results = json['message']['results']
     assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
-    print('...passed')
-
 
 def test_translator_query_bad_category():
     """ Check the TRAPI endpoint against a category that's not in biolink (biolink:Fake). Expect COHD to return a 400.
@@ -195,8 +192,6 @@ def test_translator_query_bad_category():
     # Should have 200 status response code
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
-
-    print('...passed')
 
 
 def test_translator_query_no_predicate():
@@ -245,8 +240,6 @@ def test_translator_query_no_predicate():
 
     # There should be 10 results
     assert len(json['message']['results']) == 10, _print_trapi_log(json)
-
-    print('...passed')
 
 
 def test_translator_query_related_to():
@@ -297,8 +290,6 @@ def test_translator_query_related_to():
     # There should be 10 results
     assert len(json['message']['results']) == 10, _print_trapi_log(json)
 
-    print('...passed')
-
 
 def test_translator_query_unsupported_predicate():
     """ Check the TRAPI endpoint when using an unsupported predicate (biolink:affects). Expect COHD to 400 status """
@@ -341,8 +332,6 @@ def test_translator_query_unsupported_predicate():
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
 
-    print('...passed')
-
 
 def test_translator_query_bad_predicate():
     """ Check the TRAPI endpoint when using an bad predicate (biolink:correlated). Expect COHD to return a 400 """
@@ -384,8 +373,6 @@ def test_translator_query_bad_predicate():
     # Expect HTTP 200 status response
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
-
-    print('...passed')
 
 
 def test_translator_query_q1_multiple_ids():
@@ -443,8 +430,6 @@ def test_translator_query_q1_multiple_ids():
         assert qid in result_object_ids, f'Result subject {qid} is not one of the original IDs {ids}' + \
                                          _print_trapi_log(json)
 
-    print('...passed')
-
 
 def test_translator_query_q2_multiple_ids():
     """ Check the TRAPI endpoint when using multiple IDs in the object node. Expect COHD to return 3+ results """
@@ -500,8 +485,6 @@ def test_translator_query_q2_multiple_ids():
     for qid in ids:
         assert qid in result_object_ids, f'Result object {qid} is not one of the original IDs {ids}' + \
                                          _print_trapi_log(json)
-
-    print('...passed')
 
 
 # TODO: Temporarily replacing this test to not use CHEMBL.COMPOUND since Node Norm is currently missing mappings to MeSH
@@ -620,8 +603,6 @@ def test_translator_query_q1_q2_multiple_ids():
     for pair in product(subj_ids, obj_ids):
         assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.' + \
                                         _print_trapi_log(json)
-
-    print('...passed')
 
 
 def test_translator_query_multiple_categories():
@@ -760,8 +741,6 @@ def test_translator_query_multiple_categories():
         num_results_combined <= (num_results_disease + num_results_procedure), \
         'Number of results outside of expected range' + _print_trapi_log(json_combined)
 
-    print('...passed')
-
 
 def test_translator_query_qnode_subclasses():
     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
@@ -815,8 +794,6 @@ def test_translator_query_qnode_subclasses():
 
     # There should be more than 1 result
     assert len(json['message']['results']) > 1, _print_trapi_log(json)
-
-    print('...passed')
 
 
 def test_translator_query_qnode_empty_constraint():
@@ -917,8 +894,6 @@ def test_translator_query_qnode_empty_constraint():
     # There should be at least 1 result
     assert len(json['message']['results']) >= 1, _print_trapi_log(json)
 
-    print('...passed')
-
 
 def test_translator_workflows():
     """ Check the TRAPI endpoint to make sure COHD only responds when workflow is a single lookup operation. """
@@ -982,8 +957,6 @@ def test_translator_workflows():
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
 
-    print('...passed')
-
 
 def test_translator_meta_knowledge_graph():
     """ Check the /meta_knowledge_graph endpoint to make sure it returns a valid response. """
@@ -1001,8 +974,6 @@ def test_translator_meta_knowledge_graph():
     json = resp.json()
     validate_trapi(json, "MetaKnowledgeGraph")
 
-    print('...passed')
-
 
 def test_biolink_to_omop():
     """ Check that the /translator/biolink_to_omop is functioning with good CURIEs """
@@ -1019,8 +990,6 @@ def test_biolink_to_omop():
     j = response.json()
     for curie in curies:
         assert j.get(curie) is not None, f'Did not find a mapping for curie {curie}'
-
-    print('...passed')
 
 
 def test_biolink_to_omop_bad():
@@ -1041,8 +1010,6 @@ def test_biolink_to_omop_bad():
         assert curie in j, f'Did not find curie {curie} in response'
         assert j[curie] is None, f'Found a non-null mapping for curie {curie}'
 
-    print('...passed')
-
 
 def test_omop_to_biolink():
     """ Check that the /translator/omop_to_biolink is functioning with good OMOP IDs """
@@ -1059,8 +1026,6 @@ def test_omop_to_biolink():
     j = response.json()
     for omop_id in omop_ids:
         assert j.get(omop_id) is not None, f'Did not find a mapping for OMOP ID {omop_id}'
-
-    print('...passed')
 
 
 def test_omop_to_biolink_bad():
@@ -1080,5 +1045,3 @@ def test_omop_to_biolink_bad():
     for omop_id in omop_ids:
         assert omop_id in j, f'Did not find OMOP ID {omop_id} in response'
         assert j[omop_id] is None, f'Found a non-null mapping for OMOP ID {omop_id}'
-
-    print('...passed')

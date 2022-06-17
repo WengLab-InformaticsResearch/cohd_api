@@ -1403,6 +1403,31 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
     return json_return
 
 
+def health():
+    """ Quick health check of MySQL database
+    Simply queries the dataset table
+
+    Returns
+    -------
+    True if healthy, False if unhealthy
+    """
+    conn = sql_connection()
+    cur = conn.cursor()
+
+    try:
+        sql = '''SELECT *
+            FROM cohd.dataset;'''
+        cur.execute(sql)
+        datasets = cur.fetchall()
+        healthy = len(datasets) > 0
+    except:
+        healthy = False
+
+    cur.close()
+    conn.close()
+    return healthy
+
+
 def omop_concept_definition(concept_id):
     """ Get the OMOP concept definition
 
