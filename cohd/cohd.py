@@ -249,9 +249,6 @@ def api_call(service=None, meta=None, query=None, version=None):
     if meta is None:
         meta = request.args.get('meta')
 
-    print("Service: ", service)
-    print("Meta/Method: ", meta)
-
     if service == [''] or service is None:
         result = 'No service selected', 400
     elif service == 'metadata':
