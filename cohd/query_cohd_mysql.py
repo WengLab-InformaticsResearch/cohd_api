@@ -94,7 +94,7 @@ def query_db(service, method, args):
 
     query = args.get('q')
 
-    logging.info(msg=f"Service: {service}; Method: {method}, Query: {query}")
+    logging.debug(msg=f"Service: {service}; Method: {method}, Query: {query}")
 
     if service == 'metadata':
         # The datasets in the COHD database
