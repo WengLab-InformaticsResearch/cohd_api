@@ -2,6 +2,7 @@ import pymysql
 from flask import jsonify
 from scipy.stats import chisquare
 from numpy import argsort
+import logging
 
 from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
@@ -25,7 +26,7 @@ JSON_INFINITY_REPLACEMENT = 999
 
 def sql_connection():
     # Connect to MySQL database
-    # print u"Connecting to MySQL database"
+    logging.debug(msg='Connecting to MySQL database')
     return pymysql.connect(read_default_file=CONFIG_FILE,
                            charset='utf8mb4',
                            cursorclass=pymysql.cursors.DictCursor)
@@ -85,8 +86,6 @@ def get_arg_boolean(args, param_name):
 
 def query_db(service, method, args):
 
-    # print u"Connecting to the MySQL API..."
-
     # Connect to MYSQL database
     conn = sql_connection()
     cur = conn.cursor()
@@ -95,7 +94,7 @@ def query_db(service, method, args):
 
     query = args.get('q')
 
-    print("Service: {s}; Method: {m}, Query: {q}".format(s=service, m=method, q=query))
+    logging.info(msg=f"Service: {service}; Method: {method}, Query: {query}")
 
     if service == 'metadata':
         # The datasets in the COHD database
@@ -1095,8 +1094,8 @@ def query_db(service, method, args):
                 row['confidence_interval'] = rel_freq_ci(row['concept_pair_count'], row['concept_2_count'],
                                                           confidence_level)
 
-    # print cur._executed
-    # print(json_return)
+    logging.debug(cur._executed)
+    logging.debug(json_return)
 
     cur.close()
     conn.close()

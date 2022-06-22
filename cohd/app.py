@@ -27,7 +27,7 @@ logging.config.dictConfig({
         'formatter': 'default'
     }},
     'root': {
-        'level': 'INFO',
+        'level': 'WARNING',
         'handlers': ['wsgi']
     }
 })
