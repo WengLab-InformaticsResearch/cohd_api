@@ -55,6 +55,9 @@ servers:
   - url: 'https://cohd.io/api'
     description: COHD TRAPI Production Server
     x-maturity: production
+  - url: 'https://cohd-api.ci.transltr.io/api'
+    description: COHD TRAPI ITRB CI Server
+    x-maturity: staging
   - url: 'https://dev.cohd.io/api'
     description: COHD TRAPI Development Server
     x-maturity: development
