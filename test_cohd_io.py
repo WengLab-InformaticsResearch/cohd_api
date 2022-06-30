@@ -15,8 +15,10 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
-cr.server = 'https://cohd.io/api'
-# cr.server = 'https://cohd-api.transltr.io/api'
+# cr.server = 'https://cohd.io/api'
+# cr.server = 'https://cohd-api.ci.transltr.io/api'
+# cr.server = 'https://cohd-api.test.transltr.io/api'
+cr.server = 'https://cohd-api.transltr.io/api'
 
 
 def check_results_schema(json, schema):
