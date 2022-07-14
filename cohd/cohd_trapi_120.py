@@ -44,6 +44,8 @@ class CohdTrapi120(CohdTrapi):
         self._query_graph = None
         self._concept_1_qnode_key = None
         self._concept_2_qnode_key = None
+        self._concept_1_ancestor_dict = None
+        self._concept_2_ancestor_dict = None
         # Boolean indicating if concept_1 (from API context) is the subject node (True) or object node (False)
         self._concept_1_is_subject_qnode = True
         self._query_options = None
@@ -480,6 +482,9 @@ class CohdTrapi120(CohdTrapi):
             self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
                      level=logging.WARNING)
 
+        # Update the ancestor dictionary for concept 1
+        self._concept_1_ancestor_dict = ancestor_dict
+
         # Find BLM - OMOP mappings for all identified query nodes
         node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
 
@@ -577,6 +582,9 @@ class CohdTrapi120(CohdTrapi):
                 # Add a warning that we didn't get descendants from Ontology KP
                 self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
                          level=logging.WARNING)
+
+            # Update the ancestor dictionary for concept 2
+            self._concept_2_ancestor_dict = ancestor_dict
 
             # Find BLM - OMOP mappings for all identified query nodes
             node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
@@ -824,6 +832,7 @@ class CohdTrapi120(CohdTrapi):
         # Get node for concept 1
         concept_1_id = cohd_result['concept_id_1']
         node_1 = self._get_kg_node(concept_1_id, query_node_categories=self._concept_1_qnode_categories)
+        
 
         if not node_1.get('query_category_compliant', False) or \
                 (self._biolink_only and not node_1.get('biolink_compliant', False)):
@@ -885,10 +894,12 @@ class CohdTrapi120(CohdTrapi):
         result = {
             'node_bindings': {
                 self._concept_1_qnode_key: [{
-                    'id': kg_node_1_id
+                    'id': kg_node_1_id,
+                    'query_id': self._concept_1_ancestor_dict.get('primary_curie')
                 }],
                 self._concept_2_qnode_key: [{
-                    'id': kg_node_2_id
+                    'id': kg_node_2_id,
+                    'query_id': self._concept_2_ancestor_dict.get('primary_curie')
                 }]
             },
             'edge_bindings': {

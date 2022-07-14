@@ -1,6 +1,6 @@
 [client]
-host = 127.0.0.1
+host = tr-kp-clinical-db.ncats.io
 port = 3306
-user = cohd_user
-password = CHANGE_ME
+user = CHANGE-ME
+password = CHANGE-ME
 database = cohd
