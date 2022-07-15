@@ -78,3 +78,28 @@ def validate_trapi_12x(instance, component):
     """
     url = 'https://raw.githubusercontent.com/NCATSTranslator/ReasonerAPI/8dd458d27ae9df2cd1d17e563f989314ea51fed8/TranslatorReasonerAPI.yaml'
     return validate_trapi(instance, component, url)
+
+
+def validate_trapi_13x(instance, component):
+    """Validate instance against schema.
+
+    Parameters
+    ----------
+    instance
+        instance to validate
+    component : str
+        component to validate against
+
+    Raises
+    ------
+    `ValidationError <https://python-jsonschema.readthedocs.io/en/latest/errors/#jsonschema.exceptions.ValidationError>`_
+        If the instance is invalid.
+
+    Examples
+    --------
+    >>> validate({"message": {}}, "Query")
+    """
+    url = 'https://raw.githubusercontent.com/NCATSTranslator/ReasonerAPI/1.3/TranslatorReasonerAPI.yaml'
+    return validate_trapi(instance, component, url)
+
+

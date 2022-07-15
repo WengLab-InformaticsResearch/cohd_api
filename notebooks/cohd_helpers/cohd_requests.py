@@ -1021,6 +1021,10 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
     return response, query
 
 
+# TRAPI 1.3 query on COHD is currently the same as TRAPI 1.2 query
+translator_query_130 = translator_query_120
+
+
 def translator_biolink_to_omop(curies):
     """ Map Biolink to OMOP
 

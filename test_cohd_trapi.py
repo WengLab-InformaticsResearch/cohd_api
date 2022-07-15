@@ -13,7 +13,7 @@ from bmt import Toolkit
 import uuid
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
+from cohd.trapi.reasoner_validator import validate_trapi_13x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -24,13 +24,13 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
-# cr.server = 'https://cohd.io/api'
+cr.server = 'https://cohd.io/api'  # Default to the DEV instance for TRAPI 1.3 development
 # cr.server = 'https://cohd-api.ci.transltr.io/api'
 # cr.server = 'https://cohd-api.test.transltr.io/api'
-cr.server = 'https://cohd-api.transltr.io/api'
+# cr.server = 'https://cohd-api.transltr.io/api'
 
 # Proxy for main TRAPI version
-translator_query = cr.translator_query_120
+translator_query = cr.translator_query_130
 
 # No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
 # between TRAPI 1.1 to 1.2
@@ -805,51 +805,6 @@ def test_translator_query_qnode_empty_constraint():
           f'on QNodes {cr.server}..... ')
 
     url = f'{cr.server}/query'
-
-    # Query with null constraints
-    query = '''
-    {
-        "message": {
-            "query_graph": {
-                "nodes": {
-                    "subj": {
-                        "ids": ["DOID:9053"],
-                        "constraints": null
-                    },
-                    "obj": {
-                        "categories": ["biolink:DiseaseOrPhenotypicFeature"],
-                        "constraints": null
-                    }
-                },
-                "edges": {
-                    "e0": {
-                        "subject": "subj",
-                        "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
-                    }
-                }
-            }
-        },
-        "query_options": {
-            "max_results": 10
-        }
-    }
-    '''
-    query = j.loads(query)
-    query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
-    resp = requests.post(url, json=query, timeout=300)
-
-    # Expect HTTP 200 status response
-    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-                                    f'Received {resp.status_code}: {resp.text}'
-
-    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-    json = resp.json()
-    validate_trapi(json, "Response")
-
-    # There should be at least 1 result
-    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
 
     # Query with empty constraints
     query = '''
