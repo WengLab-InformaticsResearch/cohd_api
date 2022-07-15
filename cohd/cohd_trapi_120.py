@@ -894,12 +894,10 @@ class CohdTrapi120(CohdTrapi):
         result = {
             'node_bindings': {
                 self._concept_1_qnode_key: [{
-                    'id': kg_node_1_id,
-                    'query_id': self._concept_1_ancestor_dict.get('primary_curie')
+                    'id': kg_node_1_id
                 }],
                 self._concept_2_qnode_key: [{
-                    'id': kg_node_2_id,
-                    'query_id': self._concept_2_ancestor_dict.get('primary_curie')
+                    'id': kg_node_2_id
                 }]
             },
             'edge_bindings': {
@@ -909,6 +907,17 @@ class CohdTrapi120(CohdTrapi):
             },
             'score': score
         }
+
+        # If there is an id present, add the query id
+
+        qnode1 = self._find_query_node(self._concept_1_qnode_key)
+        if 'ids' in qnode1:
+            result['node_bindings'][self._concept_1_qnode_key][0]['query_id'] = self._concept_1_ancestor_dict.get('primary_curie')
+
+        qnode2 = self._find_query_node(self._concept_2_qnode_key)
+        if 'ids' in qnode2:
+            result['node_bindings'][self._concept_2_qnode_key][0]['query_id'] = self._concept_2_ancestor_dict.get('primary_curie')
+
         self._results.append(result)
         return result
 
