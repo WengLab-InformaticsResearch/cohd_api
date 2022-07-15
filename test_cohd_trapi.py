@@ -795,7 +795,18 @@ def test_translator_query_qnode_subclasses():
     validate_trapi(json, "Response")
 
     # There should be more than 1 result
-    assert len(json['message']['results']) > 1, _print_trapi_log(json)
+    results = json['message']['results']
+    assert len(results) > 1, _print_trapi_log(json)
+
+    # We are expecting COHD to provide descendant results for the "subj" QNode (MONDO:0005015)
+    # Check that query_id is specified in the node bindings
+    original_query_id = 'MONDO:0005015'
+    for result in results:
+        subj_binding = result['node_bindings']['subj'][0]
+        assert ((subj_binding['id'] == original_query_id) or
+               (subj_binding['id'] != original_query_id and
+                'query_id' in subj_binding and
+                subj_binding['query_id'] == original_query_id))
 
 
 def test_translator_query_qnode_empty_constraint():
