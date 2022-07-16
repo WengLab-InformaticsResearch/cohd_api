@@ -28,8 +28,8 @@ class CohdTrapi120(CohdTrapi):
     # Biolink predicates that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 5.1.1'
-    _SCHEMA_VERSION = '1.2'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.0.0'
+    _SCHEMA_VERSION = '1.3'
 
     def __init__(self, request):
         super().__init__(request)
