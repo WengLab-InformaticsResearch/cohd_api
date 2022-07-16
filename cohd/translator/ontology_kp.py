@@ -184,7 +184,7 @@ class OntologyKP:
             else:
                 logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
         except requests.Timeout:
-            logging.warning('Encountered a Timeout exception when querying descendants from Ontology KP')
+            logging.warning(f'OntologyKP timed out when querying for descendants ({OntologyKP._TIMEOUT} sec)')
             return None
         except requests.RequestException:
             # Return None, indicating an error occurred
