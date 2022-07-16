@@ -12,7 +12,7 @@ class OntologyKP:
     endpoint_query = 'query'
     endpoint_meta_kg = 'meta_knowledge_graph'
     INFORES_ID = 'infores:sri-ontology'
-    _TIMEOUT = 30  # Query timeout (seconds)
+    _TIMEOUT = 10  # Query timeout (seconds)
 
     @staticmethod
     @cache.memoize(timeout=86400, cache_none=False)
@@ -183,6 +183,9 @@ class OntologyKP:
                         return dict(), dict()
             else:
                 logging.warning(f'Ontology KP returned status code {response.status_code}: {response.content}')
+        except requests.Timeout:
+            logging.warning('Encountered a Timeout exception when querying descendants from Ontology KP')
+            return None
         except requests.RequestException:
             # Return None, indicating an error occurred
             logging.warning('Encountered an RequestException when querying descendants from Ontology KP')
