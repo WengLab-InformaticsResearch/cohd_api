@@ -911,16 +911,12 @@ class CohdTrapi120(CohdTrapi):
         # If there is an id present, add the query id
 
         qnode1 = self._find_query_node(self._concept_1_qnode_key)
-        if 'ids' in qnode1:
-            if 'ids' is not None:
-                if kg_node_1_id not in 'ids':
-                    result['node_bindings'][self._concept_1_qnode_key][0]['query_id'] = self._concept_1_ancestor_dict.get(kg_node_1_id)
+        if 'ids' in qnode1 and qnode1['ids'] is not None and kg_node_1_id not in qnode1['ids']:
+            result['node_bindings'][self._concept_1_qnode_key][0]['query_id'] = self._concept_1_ancestor_dict.get(kg_node_1_id)
 
         qnode2 = self._find_query_node(self._concept_2_qnode_key)
-        if 'ids' in qnode2:
-            if 'ids' is not None:
-                if kg_node_2_id not in 'ids':
-                    result['node_bindings'][self._concept_2_qnode_key][0]['query_id'] = self._concept_2_ancestor_dict.get(kg_node_2_id)
+        if 'ids' in qnode2 and qnode2['ids'] is not None and kg_node_2_id not in qnode2['ids']:
+            result['node_bindings'][self._concept_2_qnode_key][0]['query_id'] = self._concept_2_ancestor_dict.get(kg_node_2_id)
 
         self._results.append(result)
         return result
