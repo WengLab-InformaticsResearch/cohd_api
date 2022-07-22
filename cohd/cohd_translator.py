@@ -151,6 +151,9 @@ def translator_query(request, version='1.3.0'):
     Response message with JSON data in Translator Reasoner API Standard or error status response for unsupported
     requested version
     """
+    if version is None:
+        version = '1.3.0'
+
     try:
         version = Version(version)
     except ValueError:
