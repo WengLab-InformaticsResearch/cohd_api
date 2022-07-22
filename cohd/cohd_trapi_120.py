@@ -28,8 +28,8 @@ class CohdTrapi120(CohdTrapi):
     # Biolink predicates that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.0.0'
-    _SCHEMA_VERSION = '1.3'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 5.1.1'
+    _SCHEMA_VERSION = '1.2'
 
     def __init__(self, request):
         super().__init__(request)
@@ -44,8 +44,6 @@ class CohdTrapi120(CohdTrapi):
         self._query_graph = None
         self._concept_1_qnode_key = None
         self._concept_2_qnode_key = None
-        self._concept_1_ancestor_dict = None
-        self._concept_2_ancestor_dict = None
         # Boolean indicating if concept_1 (from API context) is the subject node (True) or object node (False)
         self._concept_1_is_subject_qnode = True
         self._query_options = None
@@ -482,9 +480,6 @@ class CohdTrapi120(CohdTrapi):
             self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
                      level=logging.WARNING)
 
-        # Update the ancestor dictionary for concept 1
-        self._concept_1_ancestor_dict = ancestor_dict
-
         # Find BLM - OMOP mappings for all identified query nodes
         node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
 
@@ -582,9 +577,6 @@ class CohdTrapi120(CohdTrapi):
                 # Add a warning that we didn't get descendants from Ontology KP
                 self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
                          level=logging.WARNING)
-
-            # Update the ancestor dictionary for concept 2
-            self._concept_2_ancestor_dict = ancestor_dict
 
             # Find BLM - OMOP mappings for all identified query nodes
             node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
@@ -832,7 +824,6 @@ class CohdTrapi120(CohdTrapi):
         # Get node for concept 1
         concept_1_id = cohd_result['concept_id_1']
         node_1 = self._get_kg_node(concept_1_id, query_node_categories=self._concept_1_qnode_categories)
-        
 
         if not node_1.get('query_category_compliant', False) or \
                 (self._biolink_only and not node_1.get('biolink_compliant', False)):
@@ -907,17 +898,6 @@ class CohdTrapi120(CohdTrapi):
             },
             'score': score
         }
-
-        # If there is an id present, add the query id
-        
-        qnode1 = self._find_query_node(self._concept_1_qnode_key)
-        if 'ids' in qnode1 and qnode1['ids'] is not None and kg_node_1_id not in qnode1['ids']:
-            result['node_bindings'][self._concept_1_qnode_key][0]['query_id'] = self._concept_1_ancestor_dict.get(kg_node_1_id)
-
-        qnode2 = self._find_query_node(self._concept_2_qnode_key)
-        if 'ids' in qnode2 and qnode2['ids'] is not None and kg_node_2_id not in qnode2['ids']:
-            result['node_bindings'][self._concept_2_qnode_key][0]['query_id'] = self._concept_2_ancestor_dict.get(kg_node_2_id)
-
         self._results.append(result)
         return result
 

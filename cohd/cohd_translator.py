@@ -6,7 +6,7 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 from flask import jsonify
 from semantic_version import Version
 
-from . import cohd_trapi_120
+from . import cohd_trapi_120, cohd_trapi_130
 from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
@@ -23,7 +23,7 @@ def translator_meta_knowledge_graph():
     json response object
     """
     # Supported categories in most recent TRAPI implementation
-    categories = cohd_trapi_120.CohdTrapi120.supported_categories
+    categories = cohd_trapi_130.CohdTrapi130.supported_categories
 
     # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
     nodes = dict()
@@ -136,7 +136,7 @@ def translator_meta_knowledge_graph():
     })
 
 
-def translator_query(request, version=None):
+def translator_query(request, version='1.3.0'):
     """ Implementation of query endpoint for TRAPI
 
     Calls the requested version of the TRAPI message
@@ -151,9 +151,6 @@ def translator_query(request, version=None):
     Response message with JSON data in Translator Reasoner API Standard or error status response for unsupported
     requested version
     """
-    if version is None:
-        version = '1.2.0'
-
     try:
         version = Version(version)
     except ValueError:
@@ -161,6 +158,9 @@ def translator_query(request, version=None):
 
     if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
         trapi = cohd_trapi_120.CohdTrapi120(request)
+        return trapi.operate()
+    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
+        trapi = cohd_trapi_130.CohdTrapi130(request)
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501
