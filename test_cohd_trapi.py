@@ -17,6 +17,7 @@ from cohd.trapi.reasoner_validator import validate_trapi_13x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
+print(f'Biolink Version: {bm_toolkit.get_model_version()}')
 
 """
 tuple for storing pairs of (key, type) for results schemas
