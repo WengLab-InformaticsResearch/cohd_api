@@ -203,12 +203,11 @@ class CohdTrapi120(CohdTrapi):
         True if input is valid, otherwise (False, message)
         """
         # Log that TRAPI 1.2 was called because there's no clear indication otherwise
-        logging.info('Query issued against TRAPI 1.2')
+        logging.debug('Query issued against TRAPI 1.2')
 
         try:
             self._json_data = self._request.get_json()
-            logging.info(f'Client: {self._request.remote_addr}')
-            logging.info(json.dumps(self._json_data))
+            logging.info(f'Client: {self._request.remote_addr}\n{json.dumps(self._json_data)}')
         except werkzeug.exceptions.BadRequest:
             self._valid_query = False
             self._invalid_query_response = ('Request body is not valid JSON', 400)

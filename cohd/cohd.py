@@ -195,6 +195,12 @@ def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
 
 
+@app.route('/health', methods=['GET'])
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    return api_call('health')
+
+
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
 # are missing
 def args_to_query(args, arg_names):
@@ -221,9 +227,6 @@ def api_call(service=None, meta=None, query=None, version=None):
         service = request.args.get('service')
     if meta is None:
         meta = request.args.get('meta')
-
-    print("Service: ", service)
-    print("Meta/Method: ", meta)
 
     if service == [''] or service is None:
         result = 'No service selected', 400
@@ -275,6 +278,13 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.biolink_to_omop(request)
         else:
             result = 'meta not recognized', 400
+    elif service == 'health':
+        # elastic load balancing health check
+        mysql_health = query_cohd_mysql.health()
+        if not mysql_health:
+            result = 'unhealthy MySQL server', 503
+        else:
+            result = 'healthy', 200
     elif service == 'dev':
         # Requires a key to run
         if 'DEV_KEY' in app.config and app.config['DEV_KEY'] == request.args.get('q', None):
