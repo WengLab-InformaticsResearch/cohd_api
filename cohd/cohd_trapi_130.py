@@ -674,18 +674,21 @@ class CohdTrapi130(CohdTrapi):
             self._domain_class_pairs = None
             self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
 
+        # COHD does not yet support constraints
         if concept_1_qnode.get('constraints'):
             self._valid_query = False
-            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} does not support constraints on a QNode with '\
-                                           'ids specified', 400
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
-        qnode2_constraints = concept_2_qnode.get('constraints')
-        if qnode2_constraints:
-            # COHD does not yet support constraints
+        if concept_2_qnode.get('constraints'):
             self._valid_query = False
-            self._invalid_query_response = f'{CohdTrapi._SERVICE_NAME} has not yet implemented support of constraints',\
-                                           400
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Criteria for returning results
