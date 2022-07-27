@@ -456,6 +456,29 @@ class CohdTrapi130(CohdTrapi):
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
+        # If client provided non-empty QNode constraints, respond with error code
+        if concept_1_qnode.get('constraints'):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        if concept_2_qnode.get('constraints'):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        if self._query_edge.get("attribute_constraints"):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
@@ -673,30 +696,6 @@ class CohdTrapi130(CohdTrapi):
             self._concept_2_omop_ids = None
             self._domain_class_pairs = None
             self.log(f'Querying associations to all OMOP domains', level=logging.INFO)
-
-        # If client provided non-empty QNode constraints, respond with error code
-        if concept_1_qnode.get('constraints'):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        if concept_2_qnode.get('constraints'):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        if self._query_edge.get('attribute_constraints'):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        
 
         # Criteria for returning results
         self._criteria = []
