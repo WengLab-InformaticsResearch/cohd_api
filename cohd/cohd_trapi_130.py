@@ -479,6 +479,29 @@ class CohdTrapi130(CohdTrapi):
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
+        # Check to see if cohd recognizes any properties
+        node_properties = {'ids','categories','is_set','constraints'}
+        edge_properties = {'knowledge_type','predicates','subject','object','attribute_constraints','qualifier_constraints'}
+
+        qnode1_properties = set(concept_1_qnode.keys())
+        qnode2_properties = set(concept_2_qnode.keys())
+        qedge_properties = set(self._query_edge.keys())
+
+        for property in qnode1_properties:
+            if (property in qnode1_properties-node_properties):
+                description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
+
+        for property in qnode2_properties:
+            if (property in qnode2_properties-node_properties):
+                description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
+                
+        for property in qedge_properties:
+            if (property in qedge_properties-edge_properties):
+                description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
+        
+
+
+
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
