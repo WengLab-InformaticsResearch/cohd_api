@@ -490,17 +490,17 @@ class CohdTrapi130(CohdTrapi):
         for property in qnode1_properties:
             if (property in qnode1_properties-node_properties):
                 description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
-                logging.log(description, logging.WARNING)
+                self.log(description, logging.WARNING)
 
         for property in qnode2_properties:
             if (property in qnode2_properties-node_properties):
                 description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
-                logging.log(description, logging.WARNING)
+                self.log(description, logging.WARNING)
 
         for property in qedge_properties:
             if (property in qedge_properties-edge_properties):
                 description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following property: {property}. {CohdTrapi._SERVICE_NAME} will ignore this property.'
-                logging.log(description, logging.WARNING)
+                self.log(description, logging.WARNING)
 
 
 
