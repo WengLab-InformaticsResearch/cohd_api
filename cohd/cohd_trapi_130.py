@@ -479,28 +479,28 @@ class CohdTrapi130(CohdTrapi):
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
-        # Check to see if cohd recognizes any properties
-        node_properties = {'ids','categories','is_set','constraints'}
-        edge_properties = {'knowledge_type','predicates','subject','object','attribute_constraints','qualifier_constraints'}
+        # Check to see if cohd doesn't recognize any properties
+        qnode_properties = {'ids','categories', 'is_set', 'constraints'}
+        qedge_properties = {'knowledge_type', 'predicates', 'subject', 'object', 'attribute_constraints',
+                            'qualifier_constraints'}
+        sep = ', '
+        unrec_properties = set(concept_1_qnode.keys()) - qnode_properties
+        if unrec_properties:
+            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
+                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
+            self.log(description, level=logging.WARNING)
 
-        qnode1_properties = set(concept_1_qnode.keys())
-        qnode2_properties = set(concept_2_qnode.keys())
-        qedge_properties = set(self._query_edge.keys())
+        unrec_properties = set(concept_2_qnode.keys()) - qnode_properties
+        if unrec_properties:
+            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
+                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
+            self.log(description, level=logging.WARNING)
 
-        separator_string = ', '
-
-        if (len(qnode1_properties-node_properties)!=0):
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: {separator_string.join(qnode1_properties-node_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, logging.WARNING)
-        
-        if (len(qnode2_properties-node_properties)!=0):
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: {separator_string.join(qnode2_properties-node_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, logging.WARNING)
-
-        if (len(qedge_properties-edge_properties)!=0):
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: {separator_string.join(qedge_properties-edge_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, logging.WARNING)
-
+        unrec_properties = set(self._query_edge.keys()) - qedge_properties
+        if unrec_properties:
+            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
+                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
+            self.log(description, level=logging.WARNING)
 
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
