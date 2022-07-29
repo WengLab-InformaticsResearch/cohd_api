@@ -487,7 +487,7 @@ class CohdTrapi130(CohdTrapi):
         qnode2_properties = set(concept_2_qnode.keys())
         qedge_properties = set(self._query_edge.keys())
 
-        separator_string = ','
+        separator_string = ', '
 
         if (len(qnode1_properties-node_properties)!=0):
             description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: {separator_string.join(qnode1_properties-node_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
