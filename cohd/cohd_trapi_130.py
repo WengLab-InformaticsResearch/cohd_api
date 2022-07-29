@@ -475,7 +475,7 @@ class CohdTrapi130(CohdTrapi):
             self._valid_query = False
             description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
             self.log(description, TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, description)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
