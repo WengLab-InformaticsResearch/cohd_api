@@ -24,7 +24,7 @@ class TrapiStatusCode(Enum):
     COULD_NOT_MAP_CURIE_TO_LOCAL_KG = 'CouldNotMapCurieToLocalKG'
     UNSUPPORTED_QNODE_CATEGORY = 'UnsupportedQNodeCategory'
     UNSUPPORTED_CONSTRAINT = 'UnsupportedConstraint'
-    UNSUPOPRTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
+    UNSUPPORTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
 
 
 class CohdTrapi(ABC):
