@@ -510,6 +510,7 @@ class CohdTrapi130(CohdTrapi):
 
         # Get subclasses for all CURIEs using ontology KP
         descendant_ids = list()
+        ancestor_dict = dict()
         descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
         if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list
@@ -611,6 +612,7 @@ class CohdTrapi130(CohdTrapi):
 
             # Get subclasses for all CURIEs using ontology KP
             descendant_ids = list()
+            ancestor_dict = dict()
             descendant_results = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
             if descendant_results is not None:
                 # Add new descendant CURIEs to the end of IDs list
