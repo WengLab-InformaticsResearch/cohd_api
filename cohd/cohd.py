@@ -241,8 +241,6 @@ def google_analytics(endpoint=None, service=None, meta=None):
         GoogleAnalytics.google_analytics(request, tid, endpoint, service, meta)
 
 
-@app.route('/api/query')
-@app.route('/api/v1/query')
 def api_call(service=None, meta=None, query=None, version=None):
     if service is None:
         service = request.args.get('service')
