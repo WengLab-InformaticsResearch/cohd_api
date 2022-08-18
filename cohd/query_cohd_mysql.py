@@ -23,6 +23,9 @@ DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
 # Strict JSON doesn't allow NaN or Inf, replace with value:
 JSON_INFINITY_REPLACEMENT = 999
 
+# ARAX displays p-value of 0 as None. Replace with a minimum p-value
+MIN_P = 1e-12
+
 
 def sql_connection():
     # Connect to MySQL database
@@ -1392,8 +1395,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
         o = [neg, c1 - cpc, c2 - cpc, cpc]
         e = [(pts - c1) * (pts - c2) / pts, c1 * (pts - c2) / pts, c2 * (pts - c1) / pts, c1 * c2 / pts]
         cs = chisquare(o, e, 2)
-        row['chi_square_p-value'] = cs.pvalue
-        row['chi_square_p-value_adjusted'] = min(cs.pvalue * pair_count, 1.0)  # Bonferonni adjustment
+        row['chi_square_p-value'] = max(cs.pvalue, MIN_P)
+        row['chi_square_p-value_adjusted'] = max(min(cs.pvalue * pair_count, 1.0), MIN_P)  # Bonferonni adjustment
 
     cur.close()
     conn.close()
