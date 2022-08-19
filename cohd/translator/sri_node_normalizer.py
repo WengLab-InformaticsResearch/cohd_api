@@ -32,7 +32,7 @@ class SriNodeNormalizer:
         'ITRB-TEST': 'https://nodenorm.test.transltr.io/1.2',
         'ITRB-PROD': 'https://nodenorm.transltr.io/1.2'
     }
-    deployment_env = app.config.get('deployment_env', 'dev')
+    deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
     base_url = base_urls.get(deployment_env, base_url_default)
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Norm @ {base_url}')
 

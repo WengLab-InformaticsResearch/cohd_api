@@ -14,7 +14,7 @@ class SriNameResolution:
         'ITRB-TEST': 'https://name-lookup.test.transltr.io',
         'ITRB-PROD': 'https://name-lookup.transltr.io'
     }
-    deployment_env = app.config.get('deployment_env', 'dev')
+    deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
     server_url = server_urls.get(deployment_env, server_url_default)
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Resolution @ {server_url}')
 
