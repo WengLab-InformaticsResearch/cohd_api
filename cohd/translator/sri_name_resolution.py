@@ -1,10 +1,22 @@
 import requests
 from urllib.parse import urljoin
 import logging
+from ..app import app
 
 
 class SriNameResolution:
-    server_url = url= 'https://name-resolution-sri.renci.org/'
+    # server_url = url= 'https://name-resolution-sri.renci.org/'
+
+    server_url_default = 'https://name-lookup.transltr.io'
+    server_urls = {
+        'dev': 'https://name-resolution-sri.renci.org',
+        'ITRB-CI': 'https://name-lookup.ci.transltr.io',
+        'ITRB-TEST': 'https://name-lookup.test.transltr.io',
+        'ITRB-PROD': 'https://name-lookup.transltr.io'
+    }
+    deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
+    server_url = server_urls.get(deployment_env, server_url_default)
+    logging.info(f'Deployment environment "{deployment_env}" --> using Node Resolution @ {server_url}')
 
     @staticmethod
     def name_lookup(text, offset=0, limit=10):
