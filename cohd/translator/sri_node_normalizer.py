@@ -3,7 +3,7 @@ import requests
 import json
 from requests.compat import urljoin
 from typing import Union, Any, Optional, Dict, List
-
+from ..app import app
 
 class NormalizedNodeIdentifier:
     def __init__(self, node_identifier_response):
@@ -21,9 +21,21 @@ class NormalizedNode:
 
 
 class SriNodeNormalizer:
-    base_url = 'https://nodenormalization-sri.renci.org/'
+    # base_url = 'https://nodenormalization-sri.renci.org/'
     # base_url = 'https://nodenormalization-sri-dev.renci.org/'
     # base_url = 'https://nodenormalization-sri.renci.org/1.2/'
+
+    base_url_default = 'https://nodenorm.transltr.io/1.2'
+    base_urls = {
+        'dev': 'https://nodenormalization-sri.renci.org/',
+        'ITRB-CI': 'https://nodenorm.ci.transltr.io/1.2',
+        'ITRB-TEST': 'https://nodenorm.test.transltr.io/1.2',
+        'ITRB-PROD': 'https://nodenorm.transltr.io/1.2'
+    }
+    deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
+    base_url = base_urls.get(deployment_env, base_url_default)
+    logging.info(f'Deployment environment "{deployment_env}" --> using Node Norm @ {base_url}')
+
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
     INFORES_ID = 'infores:sri-node-normalizer'
 
