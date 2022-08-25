@@ -1183,133 +1183,203 @@ class CohdTrapi130(CohdTrapi):
                 'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://cohd.io/api/query'
+                'value_url': 'http://cohd.io/api/query',
+                'description': 'The COHD KP defines associations between biomedical concepts based on statistical '
+                               'analysis of clinical/EHR data.'
             },
             {
-                'attribute_type_id': 'biolink:supporting_data_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://cohd.io/api/'
-            },
-            # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
-            {
-                'attribute_type_id': 'biolink:p_value',
-                'original_attribute_name': 'p-value',
-                'value': cohd_result['chi_square_p-value'],
-                'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://edamontology.org/data_1669',
-                'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:p_value',
-                'original_attribute_name': 'p-value adjusted',
-                'value': cohd_result['chi_square_p-value_adjusted'],
-                'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://edamontology.org/data_1669',
-                'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
-                               'http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'ln_ratio',
-                'value': cohd_result['ln_ratio'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'ln_ratio_confidence_interval',
-                'value': cohd_result['ln_ratio_ci'],
-                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'relative_frequency_subject',
-                'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_2'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'relative_freq_subject_confidence_interval',
-                'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_2_ci'],
-                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'relative_frequency_object',
-                'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_1'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'relative_freq_object_confidence_interval',
-                'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_1_ci'],
-                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
-            },
-            {
-                'attribute_type_id': 'biolink:has_count',
-                'original_attribute_name': 'concept_pair_count',
-                'value': cohd_result['concept_pair_count'],
-                'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed concept count between the pair of subject and object nodes'
-            },
-            {
-                'attribute_type_id': 'biolink:has_count',
-                'original_attribute_name': 'concept_count_subject',
-                'value': cohd_result['concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
-                'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed concept count of the subject node'
-            },
-            {
-                'attribute_type_id': 'biolink:has_count',
-                'original_attribute_name': 'concept_count_object',
-                'value': cohd_result['concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
-                'value_type_id': 'EDAM:data_0006',  # Data
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed concept count of the object node'
-            },
-            {
-                'attribute_type_id': 'EDAM:operation_3438',
-                'original_attribute_name': 'expected_count',
-                'value': cohd_result['expected_count'],
-                'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:provided_by',  # Database ID
+                'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
                 'original_attribute_name': 'dataset_id',
-                'value': cohd_result['dataset_id'],
+                'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                 'value_type_id': 'EDAM:data_1048',  # Database ID
                 'attribute_source': CohdTrapi._INFORES_ID,
                 'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+            },
+            # Basic counts
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:supporting_study_result",
+                "description": "A study result describing the initial count of concepts",
+                "value": None,
+                "value_type_id": "biolink:ConceptCountAnalysisResult",
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:concept_pair_count',
+                        'original_attribute_name': 'concept_pair_count',
+                        'value': cohd_result['concept_pair_count'],
+                        'value_type_id': 'EDAM:data_0006',  # Data
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed concept count between the pair of subject and object nodes'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:concept_count_subject',
+                        'original_attribute_name': 'concept_count_subject',
+                        'value': cohd_result[
+                            'concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
+                        'value_type_id': 'EDAM:data_0006',  # Data
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed concept count of the subject node'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:concept_count_object',
+                        'original_attribute_name': 'concept_count_object',
+                        'value': cohd_result[
+                            'concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
+                        'value_type_id': 'EDAM:data_0006',  # Data
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed concept count of the object node'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{cohd_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    }
+                ]
+            },
+            # Chi-square analysis
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:supporting_study_result",
+                "description": "A study result describing a chi-squared analysis on a single pair of concepts",
+                "value": None,
+                "value_type_id": "biolink:ChiSquaredAnalysisResult",
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:unadjusted_p-value',
+                        'original_attribute_name': 'p-value',
+                        'value': cohd_result['chi_square_p-value'],
+                        'value_type_id': 'EDAM:data_1669',  # P-value
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'value_url': 'http://edamontology.org/data_1669',
+                        'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:bonferonni_adjusted_p-value',
+                        'original_attribute_name': 'p-value adjusted',
+                        'value': cohd_result['chi_square_p-value_adjusted'],
+                        'value_type_id': 'EDAM:data_1669',  # P-value
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'value_url': 'http://edamontology.org/data_1669',
+                        'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
+                                       'http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{cohd_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    }
+                ]
+            },
+            # Observed-expected frequency ratio analysis
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:supporting_study_result",
+                "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
+                "value": None,
+                "value_type_id": "biolink:Observed-ExpectedFrequencyAnalysisResult",
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:expected_count',
+                        'original_attribute_name': 'expected_count',
+                        'value': cohd_result['expected_count'],
+                        'value_type_id': 'EDAM:operation_3438',
+                        # Calculation (not sure if it's correct to use an operation)
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:ln_ratio',
+                        'original_attribute_name': 'ln_ratio',
+                        'value': cohd_result['ln_ratio'],
+                        'value_type_id': 'EDAM:data_1772',  # Score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:ln_ratio_99_confidence_interval',
+                        'original_attribute_name': 'ln_ratio_confidence_interval',
+                        'value': cohd_result['ln_ratio_ci'],
+                        'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{cohd_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    }
+                ]
+            },
+            # Relative frequency analysis
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:supporting_study_result",
+                "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
+                "value": None,
+                "value_type_id": "biolink:RelativeFrequencyAnalysisResult",
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:relative_frequency_subject',
+                        'original_attribute_name': 'relative_frequency_subject',
+                        'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
+                                             'relative_frequency_2'],
+                        'value_type_id': 'EDAM:data_1772',  # Score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:relative_freq_subject_confidence_interval',
+                        'original_attribute_name': 'relative_freq_subject_confidence_interval',
+                        'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
+                                             'relative_frequency_2_ci'],
+                        'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:relative_frequency_object',
+                        'original_attribute_name': 'relative_frequency_object',
+                        'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
+                                             'relative_frequency_1'],
+                        'value_type_id': 'EDAM:data_1772',  # Score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:relative_freq_object_confidence_interval',
+                        'original_attribute_name': 'relative_freq_object_confidence_interval',
+                        'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
+                                             'relative_frequency_1_ci'],
+                        'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{cohd_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    }
+                ]
             }
         ]
         # From calculation of chi_square
+        chi_study_results_attributes = attributes[3]['attributes']
         for key in ['n', 'n_c1', 'n_c1_c2', 'n_c1_~c2', 'n_c2', 'n_~c1_c2', 'n_~c1_~c2']:
             if key in cohd_result:
-                attributes.append({
-                    'attribute_type_id': 'biolink:has_count',
+                chi_study_results_attributes.append({
+                    'attribute_type_id': f'biolink:has_count_{key}',
                     'original_attribute_name': key,
                     'value': cohd_result[key],
                     'value_type_id': 'EDAM:data_0006',  # Data
