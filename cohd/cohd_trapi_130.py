@@ -1188,7 +1188,7 @@ class CohdTrapi130(CohdTrapi):
                                'analysis of clinical/EHR data.'
             },
             {
-                'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                 'original_attribute_name': 'dataset_id',
                 'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                 'value_type_id': 'EDAM:data_1048',  # Database ID
@@ -1230,7 +1230,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Observed concept count of the object node'
                     },
                     {
-                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
                         'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                         'value_type_id': 'EDAM:data_1048',  # Database ID
@@ -1248,7 +1248,7 @@ class CohdTrapi130(CohdTrapi):
                 "value_type_id": "biolink:ChiSquaredAnalysisResult",
                 "attributes": [
                     {
-                        'attribute_type_id': 'biolink:unadjusted_p-value',
+                        'attribute_type_id': 'biolink:unadjusted_p_value',
                         'original_attribute_name': 'p-value',
                         'value': cohd_result['chi_square_p-value'],
                         'value_type_id': 'EDAM:data_1669',  # P-value
@@ -1257,7 +1257,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
                     },
                     {
-                        'attribute_type_id': 'biolink:bonferonni_adjusted_p-value',
+                        'attribute_type_id': 'biolink:bonferonni_adjusted_p_value',
                         'original_attribute_name': 'p-value adjusted',
                         'value': cohd_result['chi_square_p-value_adjusted'],
                         'value_type_id': 'EDAM:data_1669',  # P-value
@@ -1267,7 +1267,7 @@ class CohdTrapi130(CohdTrapi):
                                        'http://cohd.io/about.html'
                     },
                     {
-                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
                         'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                         'value_type_id': 'EDAM:data_1048',  # Database ID
@@ -1282,7 +1282,7 @@ class CohdTrapi130(CohdTrapi):
                 "attribute_type_id": "biolink:supporting_study_result",
                 "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
                 "value": None,
-                "value_type_id": "biolink:Observed-ExpectedFrequencyAnalysisResult",
+                "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:expected_count',
@@ -1302,7 +1302,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
                     },
                     {
-                        'attribute_type_id': 'biolink:ln_ratio_99_confidence_interval',
+                        'attribute_type_id': 'biolink:ln_ratio_confidence_interval',
                         'original_attribute_name': 'ln_ratio_confidence_interval',
                         'value': cohd_result['ln_ratio_ci'],
                         'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
@@ -1310,7 +1310,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
                     },
                     {
-                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
                         'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                         'value_type_id': 'EDAM:data_1048',  # Database ID
@@ -1337,7 +1337,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
                     },
                     {
-                        'attribute_type_id': 'biolink:relative_freq_subject_confidence_interval',
+                        'attribute_type_id': 'biolink:relative_frequency_subject_confidence_interval',
                         'original_attribute_name': 'relative_freq_subject_confidence_interval',
                         'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
                                              'relative_frequency_2_ci'],
@@ -1355,7 +1355,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
                     },
                     {
-                        'attribute_type_id': 'biolink:relative_freq_object_confidence_interval',
+                        'attribute_type_id': 'biolink:relative_frequency_object_confidence_interval',
                         'original_attribute_name': 'relative_freq_object_confidence_interval',
                         'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
                                              'relative_frequency_1_ci'],
@@ -1364,7 +1364,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
                     },
                     {
-                        'attribute_type_id': 'biolink:supporting_dataset',  # Database ID
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
                         'value': f"COHD:dataset_{cohd_result['dataset_id']}",
                         'value_type_id': 'EDAM:data_1048',  # Database ID
