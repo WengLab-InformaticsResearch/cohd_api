@@ -52,14 +52,8 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-trapi/
 servers:
-  - url: 'https://cohd-api.transltr.io/api'
-    description: COHD TRAPI ITRB Production Server
-    x-maturity: production
-  - url: 'https://cohd-api.test.transltr.io/api'
-    description: COHD TRAPI ITRB Test Server
-    x-maturity: testing
   - url: 'https://dev.cohd.io/api'
-    description: COHD TRAPI Development Server
+    description: COHD Development Server
     x-maturity: development
 externalDocs:
   description: >-
