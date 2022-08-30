@@ -113,6 +113,7 @@ class OntologyKP:
             return {curie:curie for curie in curies}
 
     @staticmethod
+    @cache.memoize(timeout=3600, cache_none=False)
     def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """ Get descendant CURIEs from Ontology KP
 
