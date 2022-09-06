@@ -1200,7 +1200,7 @@ class CohdTrapi130(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:supporting_study_result",
                 "description": "A study result describing the initial count of concepts",
-                "value": None,
+                "value": "N/A",
                 "value_type_id": "biolink:ConceptCountAnalysisResult",
                 "attributes": [
                     {
@@ -1244,7 +1244,7 @@ class CohdTrapi130(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:supporting_study_result",
                 "description": "A study result describing a chi-squared analysis on a single pair of concepts",
-                "value": None,
+                "value": "N/A",
                 "value_type_id": "biolink:ChiSquaredAnalysisResult",
                 "attributes": [
                     {
@@ -1281,7 +1281,7 @@ class CohdTrapi130(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:supporting_study_result",
                 "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
-                "value": None,
+                "value": "N/A",
                 "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
                 "attributes": [
                     {
@@ -1324,7 +1324,7 @@ class CohdTrapi130(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:supporting_study_result",
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
-                "value": None,
+                "value": "N/A",
                 "value_type_id": "biolink:RelativeFrequencyAnalysisResult",
                 "attributes": [
                     {
