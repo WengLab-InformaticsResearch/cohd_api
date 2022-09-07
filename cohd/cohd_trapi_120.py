@@ -11,7 +11,7 @@ from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
-from .trapi.reasoner_validator import validate_trapi_12x as validate_trapi
+from .trapi.reasoner_validator_ext import validate_trapi_12x as validate_trapi
 from .translator import bm_toolkit
 from .translator.ontology_kp import OntologyKP
 

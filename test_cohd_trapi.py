@@ -13,7 +13,7 @@ from bmt import Toolkit
 import uuid
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi.reasoner_validator import validate_trapi_13x as validate_trapi
+from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -24,10 +24,10 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Choose which server to test
-cr.server = 'https://cohd.io/api'  # Default to the DEV instance for TRAPI 1.3 development
+# cr.server = 'https://cohd.io/api'
 # cr.server = 'https://cohd-api.ci.transltr.io/api'
 # cr.server = 'https://cohd-api.test.transltr.io/api'
-# cr.server = 'https://cohd-api.transltr.io/api'
+cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Proxy for main TRAPI version
 translator_query = cr.translator_query_130
