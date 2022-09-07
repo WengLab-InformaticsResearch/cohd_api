@@ -8,7 +8,6 @@ from collections import namedtuple
 from pprint import pformat
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi import reasoner_validator_11x
 
 """ 
 tuple for storing pairs of (key, type) for results schemas
