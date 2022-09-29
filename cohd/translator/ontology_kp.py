@@ -7,6 +7,10 @@ from ..app import cache
 from .sri_node_normalizer import SriNodeNormalizer
 
 
+def _bypass_cache(f, *args, **kwargs):
+    return kwargs.get('bypass', False)
+
+
 class OntologyKP:
     base_url = 'https://ontology-kp.apps.renci.org/'
     endpoint_query = 'query'
@@ -112,9 +116,11 @@ class OntologyKP:
             # Didn't get a valid response from meta_knowledge_graph. Don't alter the input CURIEs
             return {curie:curie for curie in curies}
 
+
     @staticmethod
-    @cache.memoize(timeout=3600, cache_none=False)
-    def get_descendants(curies: List[str], categories: Optional[List[str]] = None) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    @cache.memoize(timeout=3600, cache_none=False, unless=_bypass_cache)
+    def get_descendants(curies: List[str], categories: Optional[List[str]] = None, timeout: int = _TIMEOUT, bypass: bool = False) -> \
+            Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
         """ Get descendant CURIEs from Ontology KP
 
         Parameters
@@ -158,8 +164,11 @@ class OntologyKP:
                     }
                 }
             }
+
+            print(m)
+
             url = urljoin(OntologyKP.base_url, OntologyKP.endpoint_query)
-            response = requests.post(url=url, json=m, timeout=OntologyKP._TIMEOUT)
+            response = requests.post(url=url, json=m, timeout=timeout)
             if response.status_code == 200:
                 j = response.json()
                 if 'message' in j and 'knowledge_graph' in j['message']:
