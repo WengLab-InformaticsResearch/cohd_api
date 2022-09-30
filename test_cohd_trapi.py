@@ -11,9 +11,12 @@ import requests
 import json as j
 from bmt import Toolkit
 import uuid
+from datetime import datetime
+import warnings
 
 from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
+from cohd.translator.ontology_kp import OntologyKP
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -111,6 +114,30 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
                 break
 
         assert found, f"{obj_node['categories']} not a descendant of {q2_category}" + _print_trapi_log(json)
+
+
+def _test_ontology_kp():
+    """ Check if Ontology KP is responding within a desired time """
+    issue = False
+    t1 = datetime.now()
+    r = OntologyKP.get_descendants(curies=['MONDO:0005148'], timeout=None, bypass=True)
+    s = (datetime.now() - t1).seconds
+
+    if s > OntologyKP._TIMEOUT:
+        warnings.warn(f'OntologyKP::getDescendants took {s} seconds to respond, which is longer than the default timeout ({OntologyKP._TIMEOUT} seconds).')
+        issue = True
+
+    if r is None:
+        warnings.warn(f'OntologyKP::getDescendants had an error.')
+        issue = True
+    elif len(r[0]) < 2:
+        warnings.warn(f'OntologyKP::getDescendants returned {len(r[0])} descendant nodes for T2DM.')
+        issue = True
+
+    return issue
+
+
+_ontology_kp_issue = _test_ontology_kp()
 
 
 def test_translator_query_named_thing():
@@ -796,6 +823,13 @@ def test_translator_query_qnode_subclasses():
 
     # There should be more than 1 result
     results = json['message']['results']
+    if _ontology_kp_issue and len(results) < 2:
+        # There was previously an issue observed with the OntologyKP, which may degrade results here.
+        # Issue warning, but don't fail the test
+        warnings.warn('test_translator_query_qnode_subclasses: Expected more than 1 result but only found '
+                      f'{len(results)} results. However, OntologyKP may be having issues right now.')
+        return
+
     assert len(results) > 1, _print_trapi_log(json)
 
     # We are expecting COHD to provide descendant results for the "subj" QNode (MONDO:0005015)
