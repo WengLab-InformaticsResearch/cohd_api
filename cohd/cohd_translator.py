@@ -62,7 +62,7 @@ def translator_meta_knowledge_graph():
     common_edge_attributes = [
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:original_knowledge_source",
+            "attribute_type_id": "biolink:primary_knowledge_source",
             "constraint_use": False
         },
         {

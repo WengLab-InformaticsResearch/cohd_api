@@ -1179,7 +1179,7 @@ class CohdTrapi130(CohdTrapi):
             # Information Resource - Source Retrieval Provenance
             # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
             {
-                'attribute_type_id': 'biolink:original_knowledge_source',
+                'attribute_type_id': 'biolink:primary_knowledge_source',
                 'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
