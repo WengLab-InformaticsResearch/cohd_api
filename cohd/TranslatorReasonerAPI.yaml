@@ -53,6 +53,7 @@ info:
         this external JSON schema. See schema and examples at url
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-trapi/
+    test_data_location: "https://raw.githubusercontent.com/WengLab-InformaticsResearch/cohd_api/master/cohd/translator/sri_testing_triples.json"
 servers:
   - url: 'https://cohd-api.transltr.io/api'
     description: COHD ITRB Production Server
