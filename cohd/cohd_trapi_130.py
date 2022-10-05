@@ -21,12 +21,21 @@ class CohdTrapi130(CohdTrapi):
     Pseudo-reasoner conforming to NCATS Biomedical Data Translator Reasoner API Spec 1.0
     """
 
-    # Biolink categories that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
+    # Biolink categories that COHD TRAPI supports (only the lowest level listed, not including ancestors)
     supported_categories = ['biolink:Disease', 'biolink:Drug', 'biolink:PhenotypicFeature', 'biolink:Procedure',
                             'biolink:SmallMolecule']
 
-    # Biolink predicates that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
-    supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
+    # Biolink predicates that COHD TRAPI supports (only the lowest level listed, not including ancestors)
+    supported_edge_types = ['biolink:positively_correlated_with', 'biolink:negatively_correlated_with',
+                            'biolink:has_real_world_evidence_of_association_with']
+
+    # Biolink predicates that request positive associations only
+    edge_types_positive = ['biolink:positively_correlated_with']
+    default_positive_predicate = edge_types_positive[0]
+
+    # Biolink predicates that request positive associations only
+    edge_types_negative = ['biolink:negatively_correlated_with']
+    default_negative_predicate = edge_types_negative[0]
 
     _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
     _SCHEMA_VERSION = '1.3'
@@ -308,12 +317,14 @@ class CohdTrapi130(CohdTrapi):
             self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries', 400)
             return self._valid_query, self._invalid_query_response
 
-        # Check if the edge type is supported by COHD Reasoner
+        # Check if the edge type is supported by COHD Reasoner and how it should be processed
         self._query_edge_key = list(edges.keys())[0]  # Get first and only edge
         self._query_edge = edges[self._query_edge_key]
         self._query_edge_predicates = self._query_edge.get('predicates')
         if self._query_edge_predicates is not None:
             edge_supported = False
+            positive_edge = False
+            negative_edge = False
             for edge_predicate in self._query_edge_predicates:
                 # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
@@ -326,13 +337,35 @@ class CohdTrapi130(CohdTrapi):
                 for pd in predicate_descendants:
                     if pd in CohdTrapi130.supported_edge_types:
                         edge_supported = True
-                        # Use the first supported predicate for the KG edge
-                        self._kg_edge_predicate = pd
                         break
 
-                if edge_supported:
-                    break
-            if not edge_supported:
+                # Check directionality of predicate
+                if edge_predicate in CohdTrapi130.edge_types_positive:
+                    positive_edge = True
+                elif edge_predicate in CohdTrapi130.edge_types_negative:
+                    negative_edge = True
+                else:
+                    positive_edge = True
+                    negative_edge = True
+
+            if edge_supported:
+                # Determine which predicate to use - temporary legacy support of has RWE predicate
+                if len(self._query_edge_predicates) == 1 and \
+                        self._query_edge_predicates[0] == 'biolink:has_real_world_evidence_of_association_with':
+                    self._kg_edge_predicate = 'biolink:has_real_world_evidence_of_association_with'
+                    self._association_direction = 0  # query both positive and negative associations
+                else:
+                    # Will use pos/negatively correlated with predicates as determined by data
+                    self._kg_edge_predicate = None
+
+                    # Determine which association directions to query for
+                    if positive_edge and not negative_edge:
+                        self._association_direction = 1
+                    elif negative_edge and not positive_edge:
+                        self._association_direction = -1
+                    else:
+                        self._association_direction = 0
+            else:
                 self._valid_query = False
                 self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
                                                 f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
@@ -340,6 +373,7 @@ class CohdTrapi130(CohdTrapi):
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
             self._kg_edge_predicate = CohdTrapi.default_predicate
+            self._association_direction = 0
 
         # Get the QNodes
         # Note: qnode_key refers to the key identifier for the qnode in the QueryGraph's nodes property, e.g., "n00"
@@ -801,6 +835,7 @@ class CohdTrapi130(CohdTrapi):
                                                                         dataset_id=self._dataset_id,
                                                                         domain_id=domain_id,
                                                                         concept_class_id=concept_class_id,
+                                                                        ln_ratio_sign=self._association_direction,
                                                                         confidence=self._confidence_interval)
                             if json_results:
                                 new_cohd_results.extend(json_results['results'])
@@ -809,6 +844,7 @@ class CohdTrapi130(CohdTrapi):
                         # domains
                         json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
                                                                     dataset_id=self._dataset_id, domain_id=None,
+                                                                    ln_ratio_sign=self._association_direction,
                                                                     confidence=self._confidence_interval)
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
@@ -1386,9 +1422,22 @@ class CohdTrapi130(CohdTrapi):
                     'attribute_source': CohdTrapi._INFORES_ID
                 })
 
+        # Determine which predicate to use
+        predicate = CohdTrapi.default_predicate
+        if self._kg_edge_predicate is not None:
+            predicate = self._kg_edge_predicate
+        else:
+            ln_ratio = cohd_result['ln_ratio']
+            if ln_ratio > 0:
+                predicate = self.default_positive_predicate
+            elif ln_ratio < 0:
+                predicate = self.default_negative_predicate
+            else:
+                predicate = self.default_predicate
+
         # Set the knowledge graph edge properties
         kg_edge = {
-            'predicate': self._kg_edge_predicate,
+            'predicate': predicate,
             'subject': node_1['primary_curie'],
             'object': node_2['primary_curie'],
             'attributes': attributes

@@ -67,12 +67,6 @@ class CohdTrapi(ABC):
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
-    # Deprecated. Only used in old versions of cohd_trapi_VERSION
-    # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
-    supported_edge_types = [
-        'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
-    ]
-
     # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
     default_predicate = 'biolink:correlated_with'
     method_predicates = {

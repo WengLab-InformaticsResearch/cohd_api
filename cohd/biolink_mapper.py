@@ -376,7 +376,8 @@ class BiolinkConceptMapper:
         LEFT JOIN cohd_covid.concept ccc ON x.concept_id = ccc.concept_id AND ccc.domain_id = 'drug' AND ccc.concept_class_id = 'ingredient'
         JOIN concept_relationship cccr ON ccc.concept_id = cccr.concept_id_2
         JOIN concept ccc_mesh ON cccr.concept_id_1 = ccc_mesh.concept_id AND ccc_mesh.vocabulary_id = 'MeSH'      
-        WHERE ccc.concept_id IS NOT NULL OR cc.concept_id IS NOT NULL;   
+        WHERE (ccc.concept_id IS NOT NULL OR cc.concept_id IS NOT NULL) AND 
+            (ccc_mesh.concept_code = cc_mesh.concept_code OR ccc_mesh.concept_code IS NULL OR cc_mesh.concept_code IS NULL);    
         """
         cur.execute(sql)
         ingredient_concepts = cur.fetchall()
@@ -401,6 +402,7 @@ class BiolinkConceptMapper:
             best_string_sim = 0
             for mapped_id in mapped_ids:
                 if normalized_ids[mapped_id] is None:
+                    logging.debug(f'OMOP{omop_id}--{mapped_id}--(node norm not found)')
                     continue
 
                 biolink_norm_node = normalized_ids[mapped_id]
@@ -411,14 +413,15 @@ class BiolinkConceptMapper:
                 categories = json.dumps(biolink_norm_node.categories)
                 provenance = f'(OMOP:{omop_id})-[OMOP Map]-({mapped_id})'
                 distance = 1
-                # Don't exclude invalid or obsolete MeSH mappings, but add 1 to their distance to de-prioritize them
+                # Don't exclude invalid or obsolete MeSH mappings, but add 3 to their distance to de-prioritize them
                 if invalid_reason is not None or 'obsolete' in biolink_label.lower():
                     logging.debug(f'Invalid or obsolete mapping: {mapped_id} - {biolink_label}')
-                    distance += 1
+                    distance += 3
                 string_similarity = difflib.SequenceMatcher(None, omop_label.lower(), biolink_label.lower()).ratio()
                 if mapped_id != biolink_norm_id:
                     provenance += f'-[SRI Node Norm]-({biolink_norm_id})'
                     distance += 1
+                logging.debug(f'OMOP:{omop_id}--{mapped_id}--{biolink_norm_id}; d:{distance}, s:{string_similarity}')
 
                 # Use the mapping with the best mapping distance & string similarity
                 if distance < best_distance or (distance == best_distance and string_similarity > best_string_sim):
