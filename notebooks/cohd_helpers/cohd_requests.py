@@ -844,7 +844,7 @@ def translator_query_100(node_1_curie, node_2_curie=None, node_2_type=None, max_
     return response, query
 
 
-def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=None, max_results=500,
+def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=None, predicates=None, max_results=500,
                          confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
                          min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=300,
                          query_id=True):
@@ -870,6 +870,9 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
     -------
     Translator Reasoner Standard API Message JSON
     """
+    if predicates is None:
+        predicates = ['biolink:correlated_with']
+
     url = f'{server}/query'
 
     # Node 1
@@ -922,7 +925,7 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
           },
           "edges": {
             "e00": {
-              "predicates": ["biolink:correlated_with"],
+              "predicates": predicates,
               "subject": "n00",
               "object": "n01"
             }
