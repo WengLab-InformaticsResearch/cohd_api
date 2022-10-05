@@ -116,17 +116,10 @@ def translator_meta_knowledge_graph():
     edges = list()
     for subject in categories:
         for object in categories:
-            # Temporarily support both correlated_with and has_real_world_evidence_of_association_with
             edges.append({
                 'subject': subject,
                 'object': object,
                 'predicate': 'biolink:correlated_with',
-                'attributes': common_edge_attributes
-            })
-            edges.append({
-                'subject': subject,
-                'object': object,
-                'predicate': 'biolink:has_real_world_evidence_of_association_with',
                 'attributes': common_edge_attributes
             })
 

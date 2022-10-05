@@ -73,9 +73,8 @@ class CohdTrapi(ABC):
         'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
     ]
 
-    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all
-    # has_real_world_evidence_of_association_with
-    default_predicate = 'biolink:has_real_world_evidence_of_association_with'
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
+    default_predicate = 'biolink:correlated_with'
     method_predicates = {
         'obsExpRatio': default_predicate,
         'relativeFrequency': default_predicate,
