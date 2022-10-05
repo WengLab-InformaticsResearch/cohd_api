@@ -317,7 +317,7 @@ class CohdTrapi130(CohdTrapi):
             self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries', 400)
             return self._valid_query, self._invalid_query_response
 
-        # Check if the edge type is supported by COHD Reasoner
+        # Check if the edge type is supported by COHD Reasoner and how it should be processed
         self._query_edge_key = list(edges.keys())[0]  # Get first and only edge
         self._query_edge = edges[self._query_edge_key]
         self._query_edge_predicates = self._query_edge.get('predicates')
@@ -356,7 +356,7 @@ class CohdTrapi130(CohdTrapi):
                     self._association_direction = 0  # query both positive and negative associations
                 else:
                     # Will use pos/negatively correlated with predicates as determined by data
-                    self._keg_edge_predicate = None
+                    self._kg_edge_predicate = None
 
                     # Determine which association directions to query for
                     if positive_edge and not negative_edge:
