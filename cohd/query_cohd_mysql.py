@@ -1246,9 +1246,9 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
     if ln_ratio_sign == 0:
         ln_ratio_filter = ''
     elif ln_ratio_sign > 0:
-        ln_ratio_filter = 'AND ln_ratio > 0'
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) > 0'
     elif ln_ratio_sign < 0:
-        ln_ratio_filter = 'AND ln_ratio < 0'
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) < 0'
 
     if concept_id_2 is not None:
         # concept_id_2 is specified, only return the results for the pair (concept_id_1, concept_id_2)

@@ -34,7 +34,7 @@ class CohdTrapi130(CohdTrapi):
     default_positive_predicate = edge_types_positive[0]
 
     # Biolink predicates that request positive associations only
-    edge_types_negative = ['biolink:positively_correlated_with']
+    edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
     _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
