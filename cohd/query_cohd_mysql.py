@@ -1358,7 +1358,7 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     {domain_filter}
                     {concept_class_filter}
                     {ln_ratio_filter})) x
-            ORDER BY ln_ratio DESC;'''
+            ORDER BY ABS(ln_ratio) DESC;'''
         params = {
             'dataset_id': dataset_id,
             'concept_id_1': concept_id_1,
