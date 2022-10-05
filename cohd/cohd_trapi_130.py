@@ -28,7 +28,7 @@ class CohdTrapi130(CohdTrapi):
     # Biolink predicates that COHD TRAPI 1.2 supports (only the lowest level listed, not including ancestors)
     supported_edge_types = ['biolink:correlated_with', 'biolink:has_real_world_evidence_of_association_with']
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.0.0'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
     _SCHEMA_VERSION = '1.3'
 
     def __init__(self, request):
@@ -1198,7 +1198,7 @@ class CohdTrapi130(CohdTrapi):
             # Basic counts
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
-                "attribute_type_id": "biolink:supporting_study_result",
+                "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing the initial count of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ConceptCountAnalysisResult",
@@ -1242,7 +1242,7 @@ class CohdTrapi130(CohdTrapi):
             # Chi-square analysis
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
-                "attribute_type_id": "biolink:supporting_study_result",
+                "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a chi-squared analysis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ChiSquaredAnalysisResult",
@@ -1279,7 +1279,7 @@ class CohdTrapi130(CohdTrapi):
             # Observed-expected frequency ratio analysis
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
-                "attribute_type_id": "biolink:supporting_study_result",
+                "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
@@ -1322,7 +1322,7 @@ class CohdTrapi130(CohdTrapi):
             # Relative frequency analysis
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
-                "attribute_type_id": "biolink:supporting_study_result",
+                "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:RelativeFrequencyAnalysisResult",

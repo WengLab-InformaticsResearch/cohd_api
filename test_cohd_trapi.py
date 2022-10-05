@@ -426,7 +426,7 @@ def test_translator_query_q1_multiple_ids():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -482,7 +482,7 @@ def test_translator_query_q2_multiple_ids():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -539,7 +539,7 @@ def test_translator_query_q2_multiple_ids():
 #                     "e0": {
 #                         "subject": "subj",
 #                         "object": "obj",
-#                         "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+#                         "predicates": ["biolink:correlated_with"]
 #                     }
 #                 }
 #             }
@@ -598,7 +598,7 @@ def test_translator_query_q1_q2_multiple_ids():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -659,7 +659,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -700,7 +700,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -741,7 +741,7 @@ def test_translator_query_multiple_categories():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -798,7 +798,7 @@ def test_translator_query_qnode_subclasses():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -870,7 +870,7 @@ def test_translator_query_qnode_empty_constraint():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
@@ -918,7 +918,7 @@ def test_translator_workflows():
                     "e0": {
                         "subject": "subj",
                         "object": "obj",
-                        "predicates": ["biolink:has_real_world_evidence_of_association_with"]
+                        "predicates": ["biolink:correlated_with"]
                     }
                 }
             }
