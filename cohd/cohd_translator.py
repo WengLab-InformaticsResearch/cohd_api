@@ -67,59 +67,89 @@ def translator_meta_knowledge_graph():
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:supporting_data_source",
+            "attribute_type_id": "biolink:supporting_data_set",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:p_value",
-            "original_attribute_names": ["p-value", "p-value adjusted"],
+            "attribute_type_id": "biolink:has_supporting_study_result",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_evidence",
-            "original_attribute_names": ["ln_ratio",
-                                         "relative_frequency_subject",
-                                         "relative_frequency_object"],
+            "attribute_type_id": "biolink:concept_pair_count",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_confidence_level",
-            "original_attribute_names": ["ln_ratio_confidence_interval",
-                                         "relative_freq_subject_confidence_interval",
-                                         "relative_freq_object_confidence_interval"],
+            "attribute_type_id": "biolink:concept_count_subject",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_count",
-            "original_attribute_names": ["concept_pair_count",
-                                         "concept_count_subject",
-                                         "concept_count_object"],
+            "attribute_type_id": "biolink:concept_count_object",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "EDAM:operation_3438",
-            "original_attribute_names": ["expected_count"],
+            "attribute_type_id": "biolink:unadjusted_p_value",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:provided_by",
-            "original_attribute_names": ["dataset_id"],
+            "attribute_type_id": "biolink:bonferonni_adjusted_p_value",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:expected_count",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:ln_ratio",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:ln_ratio_confidence_interval",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_subject",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_subject_confidence_interval",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_object",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_object_confidence_interval",
             "constraint_use": False
         }
     ]
     edges = list()
     for subject in categories:
         for object in categories:
+            # Add positively and negatively correlated with edges
             edges.append({
                 'subject': subject,
                 'object': object,
-                'predicate': 'biolink:correlated_with',
+                'predicate': 'biolink:positively_correlated_with',
+                'attributes': common_edge_attributes
+            })
+            edges.append({
+                'subject': subject,
+                'object': object,
+                'predicate': 'biolink:negatively_correlated_with',
                 'attributes': common_edge_attributes
             })
 
