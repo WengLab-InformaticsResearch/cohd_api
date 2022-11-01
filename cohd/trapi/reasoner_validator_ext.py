@@ -7,14 +7,14 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
-from reasoner_validator.util import openapi_to_jsonschema
-from reasoner_validator import validate as validate_official
+from reasoner_validator.trapi import TRAPISchemaValidator, openapi_to_jsonschema
 
 
 # Reasoner-Validator can only validate on released versions, which is problematic when we need to validate on a TRAPI
 # version that is not officially released yet. Add a utility function to allow specifying a schema url for a specific
 # TRAPI version
 
+# TODO: Untested after reasoner-validator 3.0 updates, but seems like a straightforward change
 @lru_cache()
 def _load_schema_url(trapi_schema_url: str):
     """Load schema from GitHub."""
@@ -105,6 +105,7 @@ def validate_trapi_13x(instance, component):
     # return validate_trapi_schema_url(instance, component, url)
 
     # Validate against official TRAPI 1.3 release
-    return validate_official(instance, component, "1.3.0")
+    validator = TRAPISchemaValidator(trapi_version='1.3.0')
+    return validator.validate(instance, component)
 
 
