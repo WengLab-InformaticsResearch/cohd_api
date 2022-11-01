@@ -116,6 +116,46 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
         assert found, f"{obj_node['categories']} not a descendant of {q2_category}" + _print_trapi_log(json)
 
 
+def _test_translator_query_predicates(q1_curie, q2_category, predicates, max_results=10):
+    """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
+    q2_categories.
+    """
+    print('\ntest_cohd_trapi: testing TRAPI query between '
+          f'{q1_curie} and {q2_category} with {predicates} on {cr.server}..... ')
+    resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category,
+                                   predicates=predicates, method='obsExpRatio')
+    print(query)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    validate_trapi(json, "Response")
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) > 0, _print_trapi_log(json)
+
+    # Check that all results have predicates that are descendants of the specified predicates
+    descendants = list()
+    for p in predicates:
+        descendants.extend(bm_toolkit.get_descendants(p, formatted=True, reflexive=True))
+    descendants = list(set(descendants))
+
+    kg_edges = json['message']['knowledge_graph']['edges']
+    for result in json['message']['results']:
+        edge_id = result['edge_bindings']['e00'][0]['id']
+
+        assert edge_id in kg_edges, _print_trapi_log(json)
+
+        # Check that the predicate is a descendant of the requested predicates
+        edge = kg_edges[edge_id]
+        predicate = edge['predicate']
+        assert predicate in descendants, f"{edge_id}: {predicate} not a descendant of {predicates}" + \
+                                         _print_trapi_log(json)
+
+
 def _test_ontology_kp():
     """ Check if Ontology KP is responding within a desired time """
     issue = False
@@ -187,6 +227,29 @@ def test_translator_query_procedure():
     """
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
 
+
+def test_translator_query_positively_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:positively_correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:positively_correlated_with'])
+
+
+def test_translator_query_negatively_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:negatively_correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:negatively_correlated_with'])
+
+
+def test_translator_query_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:correlated_with'])
 
 def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
