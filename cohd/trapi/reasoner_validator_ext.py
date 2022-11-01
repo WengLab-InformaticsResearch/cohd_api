@@ -7,6 +7,7 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
+from reasoner_validator import TRAPIResponseValidator
 from reasoner_validator.trapi import TRAPISchemaValidator, openapi_to_jsonschema
 
 
@@ -109,3 +110,42 @@ def validate_trapi_13x(instance, component):
     return validator.validate(instance, component)
 
 
+def validate_trapi_response(trapi_version, bl_version, response):
+    """ Uses the reasoner_validator's more advanced TRAPIResponseValidator to perform thorough validation
+
+    Parameters
+    ----------
+    trapi_version: str - TRAPI version, e.g., '1.3.0'
+    bl_version: str - biolink version, e.g., '3.0.3'
+    response: TRAPI Response object (pass the whole response, but only the message is validated)
+
+    Returns
+    -------
+    Response validation messages
+    """
+    # Ignore the following codes
+    codes_ignore = [
+        'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
+        'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
+        'error.knowledge_graph.attribute.type_id.unknown',  # COHD bug already fixed, not in Prod yet
+        'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
+    ]
+
+    # Validation
+    validator = TRAPIResponseValidator(
+        trapi_version=trapi_version,
+        biolink_version=bl_version,
+        strict_validation=None
+    )
+    validator.check_compliance_of_trapi_response(message=response['message'])
+    vms = validator.get_messages()
+
+    # Ignore certain codes
+    vms_keep = dict()
+    for v_level, v_messages in vms.items():
+        vl_keep = list()
+        for vm in v_messages:
+            if vm['code'] not in codes_ignore:
+                vl_keep.append(vm)
+        vms_keep[v_level] = vl_keep
+    return vms_keep
