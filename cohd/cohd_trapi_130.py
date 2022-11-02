@@ -38,7 +38,7 @@ class CohdTrapi130(CohdTrapi):
     default_negative_predicate = edge_types_negative[0]
 
     _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
-    _SCHEMA_VERSION = '1.3'
+    _SCHEMA_VERSION = '1.3.0'
 
     def __init__(self, request):
         super().__init__(request)

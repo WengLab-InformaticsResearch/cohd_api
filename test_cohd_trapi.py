@@ -15,8 +15,18 @@ from datetime import datetime
 import warnings
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
+from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi, validate_trapi_response
 from cohd.translator.ontology_kp import OntologyKP
+
+# Choose which server to test
+# cr.server = 'https://cohd.io/api'
+# cr.server = 'https://cohd-api.ci.transltr.io/api'
+# cr.server = 'https://cohd-api.test.transltr.io/api'
+cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+
+# Specify what Biolink and TRAPI versions are expected by the server
+BIOLINK_VERSION = '3.0.3'
+TRAPI_VERSION = '1.3.0'
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -26,40 +36,22 @@ tuple for storing pairs of (key, type) for results schemas
 """
 _s = namedtuple('_s', ['key', 'type'])
 
-# Choose which server to test
-# cr.server = 'https://cohd.io/api'
-# cr.server = 'https://cohd-api.ci.transltr.io/api'
-# cr.server = 'https://cohd-api.test.transltr.io/api'
-cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
-
 # Proxy for main TRAPI version
 translator_query = cr.translator_query_130
 
-# No longer supporting TRAPI 1.0. Leaving this code block here so that we can re-use it later on when transitioning
-# between TRAPI 1.1 to 1.2
-# def test_translator_query_100():
-#     """ Check the /translator/query endpoint. Primarily checks that the major objects adhere to the schema
-#     """
-#     print(f'test_cohd_trapi: testing /1.0.0/query on {cr.server}..... ')
-#     resp, query = cr.translator_query_100(node_1_curie='DOID:9053', node_2_type='procedure', method='obsExpRatio',
-#                                           dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
-#                                           max_results=10, local_oxo=True, timeout=300)
-#
-#     # Expect HTTP 200 status response
-#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code'
-#
-#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-#     json = resp.json()
-#     reasoner_validator_10x.validate_Response(json)
-#
-#     # There should be 10 results
-#     assert len(json['message']['results']) == 10
-#
-#     print('...passed')
-
-
 _logging_level_from_str = {logging.getLevelName(level): level for level in
                            [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR]}
+
+
+def _validate_trapi_response(response):
+    vms = validate_trapi_response(TRAPI_VERSION, BIOLINK_VERSION, response)
+
+    # expect no validation errors
+    assert len(vms['errors']) == 0
+
+    # If there are validation warnings, display them, but don't fail
+    if len(vms['warnings']) > 0:
+        warnings.warn(str(vms['warnings']))
 
 
 def _print_trapi_log(trapi_response, print_level=logging.WARNING):
@@ -92,7 +84,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be 10 results
     assert len(json['message']['results']) == 10, _print_trapi_log(json)
@@ -114,6 +106,46 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
                 break
 
         assert found, f"{obj_node['categories']} not a descendant of {q2_category}" + _print_trapi_log(json)
+
+
+def _test_translator_query_predicates(q1_curie, q2_category, predicates, max_results=10):
+    """ Check the TRAPI endpoint. Query q1_curies against q2_categories. Check that the responses are all subclasses of
+    q2_categories.
+    """
+    print('\ntest_cohd_trapi: testing TRAPI query between '
+          f'{q1_curie} and {q2_category} with {predicates} on {cr.server}..... ')
+    resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category,
+                                   predicates=predicates, method='obsExpRatio')
+    print(query)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) > 0, _print_trapi_log(json)
+
+    # Check that all results have predicates that are descendants of the specified predicates
+    descendants = list()
+    for p in predicates:
+        descendants.extend(bm_toolkit.get_descendants(p, formatted=True, reflexive=True))
+    descendants = list(set(descendants))
+
+    kg_edges = json['message']['knowledge_graph']['edges']
+    for result in json['message']['results']:
+        edge_id = result['edge_bindings']['e00'][0]['id']
+
+        assert edge_id in kg_edges, _print_trapi_log(json)
+
+        # Check that the predicate is a descendant of the requested predicates
+        edge = kg_edges[edge_id]
+        predicate = edge['predicate']
+        assert predicate in descendants, f"{edge_id}: {predicate} not a descendant of {predicates}" + \
+                                         _print_trapi_log(json)
 
 
 def _test_ontology_kp():
@@ -188,6 +220,29 @@ def test_translator_query_procedure():
     _test_translator_query_subclasses(q1_curie='DOID:9053', q2_category='biolink:Procedure')
 
 
+def test_translator_query_positively_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:positively_correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:positively_correlated_with'])
+
+
+def test_translator_query_negatively_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:negatively_correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:negatively_correlated_with'])
+
+
+def test_translator_query_correlated_with():
+    """  Check the TRAPI endpoint to make sure it only returns positive correlations when queried with
+         biolink:correlated_with
+    """
+    _test_translator_query_predicates(q1_curie='MONDO:0004981', q2_category='biolink:DiseaseOrPhenotypicFeature',
+                                      predicates=['biolink:correlated_with'])
+
 def test_translator_query_unsupported_category():
     """ Check the TRAPI endpoint against an unsupported category (biolink:Gene). Expect COHD to return a TRAPI message
     with no results.
@@ -203,7 +258,7 @@ def test_translator_query_unsupported_category():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be 0 results or null
     results = json['message']['results']
@@ -265,7 +320,7 @@ def test_translator_query_no_predicate():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be 10 results
     assert len(json['message']['results']) == 10, _print_trapi_log(json)
@@ -314,7 +369,7 @@ def test_translator_query_related_to():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be 10 results
     assert len(json['message']['results']) == 10, _print_trapi_log(json)
@@ -447,7 +502,7 @@ def test_translator_query_q1_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3, f'Expected 3 or more results.\n{json}' + _print_trapi_log(json)
@@ -503,7 +558,7 @@ def test_translator_query_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be at least 3 results
     assert len(json['message']['results']) >= 3, _print_trapi_log(json)
@@ -560,7 +615,7 @@ def test_translator_query_q2_multiple_ids():
 #
 #     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
 #     json = resp.json()
-#     validate_trapi(json, "Response")
+#     _validate_trapi_response(json)
 #
 #     # There should be at least 12 results
 #     assert len(json['message']['results']) >= 12, _print_trapi_log(json)
@@ -619,7 +674,7 @@ def test_translator_query_q1_q2_multiple_ids():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be at least 12 results
     assert len(json['message']['results']) >= 8, _print_trapi_log(json)
@@ -680,7 +735,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_disease = resp_disease.json()
-    validate_trapi(json_disease, "Response")
+    _validate_trapi_response(json_disease)
 
     num_results_disease = len(json_disease['message']['results'])
 
@@ -721,7 +776,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_procedure = resp_procedure.json()
-    validate_trapi(json_procedure, "Response")
+    _validate_trapi_response(json_procedure)
 
     num_results_procedure = len(json_procedure['message']['results'])
 
@@ -762,7 +817,7 @@ def test_translator_query_multiple_categories():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json_combined = resp_combined.json()
-    validate_trapi(json_combined, "Response")
+    _validate_trapi_response(json_combined)
 
     num_results_combined = len(json_combined['message']['results'])
 
@@ -819,7 +874,7 @@ def test_translator_query_qnode_subclasses():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be more than 1 result
     results = json['message']['results']
@@ -891,7 +946,7 @@ def test_translator_query_qnode_empty_constraint():
 
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
 
     # There should be at least 1 result
     assert len(json['message']['results']) >= 1, _print_trapi_log(json)
@@ -941,7 +996,7 @@ def test_translator_workflows():
                                     f'Received {resp.status_code}: {resp.text}'
     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
     json = resp.json()
-    validate_trapi(json, "Response")
+    _validate_trapi_response(json)
     # There should be 1 result
     assert len(json['message']['results']) == 1, _print_trapi_log(json)
 
