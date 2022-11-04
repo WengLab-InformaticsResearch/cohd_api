@@ -127,7 +127,6 @@ def validate_trapi_response(trapi_version, bl_version, response):
     codes_ignore = [
         'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
         'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
-        'error.knowledge_graph.attribute.type_id.unknown',  # COHD bug already fixed, not in Prod yet
         'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
     ]
 
