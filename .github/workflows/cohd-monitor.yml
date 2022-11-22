@@ -34,8 +34,8 @@ jobs:
       # Test COHD TRAPI endpoints by running pytest on test_cohd_trapi.py
       run: |
         pytest -s test_cohd_trapi.py
-#    - name: Test covid.cohd.io
-#      # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
-#      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
-#      run: |
-#        pytest -s test_cohd_covid_io.py
+    - name: Test covid.cohd.io
+      # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
+      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
+      run: |
+        pytest -s test_cohd_covid_io.py
