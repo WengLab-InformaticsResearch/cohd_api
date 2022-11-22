@@ -25,11 +25,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest requests pandas matplotlib bmt==0.8.12 reasoner-validator flask flask-cors flask-caching
         pip show reasoner-validator
-    - name: Test cohd.io
+    - name: Test COHD REST API
       # Test cohd.io by running pytest on test_cohd_io.py
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
       run: |
         pytest -s test_cohd_io.py
+    - name: Test COHD TRAPI
+      # Test COHD TRAPI endpoints by running pytest on test_cohd_trapi.py
+      run: |
         pytest -s test_cohd_trapi.py
     - name: Test covid.cohd.io
       # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
