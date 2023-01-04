@@ -68,7 +68,7 @@ pipeline {
                     configFile(fileId: 'cohd_flask.conf', targetLocation: 'cohd_flask.conf'),
                     configFile(fileId: 'secrets.sh', targetLocation: 'secrets.sh')
                 ]){
-                    scripts {
+                    script {
                         sh '''
                         aws --region ${AWS_REGION} eks update-kubeconfig --name ${KUBERNETES_BLUE_CLUSTER_NAME}
                         source secrets.sh
