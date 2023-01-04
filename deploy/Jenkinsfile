@@ -45,7 +45,6 @@ pipeline {
                 }
             }
         }
-        
         stage('Build Docker') {
            when { expression { return env.BUILD == 'true' }}
             steps {
@@ -58,24 +57,33 @@ pipeline {
             }
         }
         stage('Deploy to AWS EKS Blue') {
+            agent {
+                label 'translator && ci && deploy'
+            }
             steps {
-                sshagent (credentials: ['labshare-svc']) {
-                   sh 'git clone git@github.com:Sphinx-Automation/translator-ops.git'
-                }
-                dir('translator-ops/ops/cdskp/cohd_api/') {
-                    configFileProvider([
-                        configFile(fileId: 'values-ci.yaml', targetLocation: 'values-ncats.yaml'),
-                        configFile(fileId: 'database.cnf', targetLocation: 'configs/database.cnf'),
-                        configFile(fileId: 'cohd_flask.conf', targetLocation: 'configs/cohd_flask.conf')
-                    ]){
-                        withAWS(credentials:'aws-ifx-deploy') {
-                            sh '''
-                            aws --region ${AWS_REGION} eks update-kubeconfig --name ${KUBERNETES_BLUE_CLUSTER_NAME}
-                            /bin/bash deploy.sh
-                            '''
-                        }
+                configFileProvider([
+                    configFile(fileId: 'values-ci.yaml', targetLocation: 'values-ncats.yaml'),
+                    configFile(fileId: 'database.cnf', targetLocation: 'database.cnf'),
+                    configFile(fileId: 'cohd_flask.conf', targetLocation: 'cohd_flask.conf'),
+                    configFile(fileId: 'secrets.sh', targetLocation: 'secrets.sh')
+                ]){
+                    withAWS(credentials:'aws-ifx-deploy') {
+                        sh '''
+                        aws --region ${AWS_REGION} eks update-kubeconfig --name ${KUBERNETES_BLUE_CLUSTER_NAME}
+                        source secrets.sh
+                        cd translator-ops/ops/cdskp/cohd_api/
+                        /bin/bash deploy.sh
+                        '''
                     }
-                }  
+                } 
+            }
+        }
+        stage('Clean up workspace in deploy node') {
+            agent {
+                label 'translator && ci && deploy'
+            }
+            steps {
+                cleanWs()
             }
         }
     }
