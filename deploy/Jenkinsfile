@@ -50,9 +50,10 @@ pipeline {
             steps {
                 script {
                     docker.build(env.DOCKER_REPO_NAME, "--no-cache .")
-                    docker.withRegistry('https://853771734544.dkr.ecr.us-east-1.amazonaws.com', 'ecr:us-east-1:aws-ifx-deploy') {
-                        docker.image(env.DOCKER_REPO_NAME).push("${BUILD_VERSION}")
-                    }
+                    sh '''
+                    aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin  853771734544.dkr.ecr.us-east-1.amazonaws.com
+                    '''
+                    docker.image(env.DOCKER_REPO_NAME).push("${BUILD_VERSION}")
                 }
             }
         }
