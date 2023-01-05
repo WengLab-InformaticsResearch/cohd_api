@@ -76,15 +76,8 @@ pipeline {
                         /bin/bash deploy.sh
                         '''
                     }
-                } 
-            }
-        }
-        stage('Clean up workspace in deploy node') {
-            agent {
-                label 'translator && ci && deploy'
-            }
-            steps {
-                cleanWs()
+                }
+                cleanWs() 
             }
         }
     }
