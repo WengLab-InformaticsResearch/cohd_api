@@ -71,7 +71,7 @@ pipeline {
                     script {
                         sh '''
                         aws --region ${AWS_REGION} eks update-kubeconfig --name ${KUBERNETES_BLUE_CLUSTER_NAME}
-                        /bin/bash secrets.sh
+                        /bin/bash prepare.sh
                         cd translator-ops/ops/cdskp/cohd_api/
                         /bin/bash deploy.sh
                         '''
