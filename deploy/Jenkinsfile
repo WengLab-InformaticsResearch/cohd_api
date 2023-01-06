@@ -82,8 +82,8 @@ pipeline {
     }
     post {
         agent {
-                label 'translator && ci && deploy'
-            }
+            label 'translator && ci && deploy'
+        }
         always {
             echo "Clean up the workspace."
             cleanWs() 
