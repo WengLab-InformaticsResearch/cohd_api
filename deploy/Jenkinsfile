@@ -15,7 +15,7 @@ pipeline {
         pollSCM('H/5 * * * *')
     }
     environment {
-        DOCKER_REPO_NAME = "853771734544.dkr.ecr.us-east-1.amazonaws.com/translator-cdskp-cohd-api"
+        IMAGE_NAME = "853771734544.dkr.ecr.us-east-1.amazonaws.com/translator-cdskp-cohd-api"
         KUBERNETES_BLUE_CLUSTER_NAME = "translator-eks-ci-blue-cluster"
     }
     stages {
@@ -49,11 +49,11 @@ pipeline {
            when { expression { return env.BUILD == 'true' }}
             steps {
                 script {
-                    docker.build(env.DOCKER_REPO_NAME, "--no-cache .")
+                    docker.build(env.IMAGE_NAME, "--no-cache .")
                     sh '''
                     aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin  853771734544.dkr.ecr.us-east-1.amazonaws.com
                     '''
-                    docker.image(env.DOCKER_REPO_NAME).push("${BUILD_VERSION}")
+                    docker.image(env.IMAGE_NAME).push("${BUILD_VERSION}")
                 }
             }
         }
@@ -72,8 +72,6 @@ pipeline {
                         sh '''
                         aws --region ${AWS_REGION} eks update-kubeconfig --name ${KUBERNETES_BLUE_CLUSTER_NAME}
                         /bin/bash prepare.sh
-                        cd translator-ops/ops/cdskp/cohd_api/
-                        /bin/bash deploy.sh
                         '''
                     }
                 }
