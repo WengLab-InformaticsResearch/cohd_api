@@ -10,8 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  monitor:
+
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python 3
@@ -24,25 +26,28 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest requests pandas matplotlib bmt==0.8.12 reasoner-validator flask flask-cors flask-caching
         pip show reasoner-validator
-    - name: Test all COHD instances alive
+
       # Run /health checks on all COHD instances (dev, CI, Test, Prod)
-      if: success() || (failure() && steps.dependencies.conclusion == 'success')
+    - name: Test all COHD instances alive
+      if: success() || (failure() && steps.dependencies.conclusion == 'success')  # Run even if other tests fail
+      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
       run: |
         pytest -s test_alive.py
-    - name: Test COHD REST API
+
       # Test cohd.io by running pytest on test_cohd_io.py
-      if: success() || (failure() && steps.dependencies.conclusion == 'success')
-      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
+    - name: Test COHD REST API
+      if: success() || (failure() && steps.dependencies.conclusion == 'success')  # Run even if other tests fail
       run: |
         pytest -s test_cohd_io.py
-    - name: Test COHD TRAPI
+
       # Test COHD TRAPI endpoints by running pytest on test_cohd_trapi.py
-      if: success() || (failure() && steps.dependencies.conclusion == 'success')
+    - name: Test COHD TRAPI
+      if: success() || (failure() && steps.dependencies.conclusion == 'success')  # Run even if other tests fail
       run: |
         pytest -s test_cohd_trapi.py
-    - name: Test covid.cohd.io
+
       # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
-      if: success() || (failure() && steps.dependencies.conclusion == 'success')
-      # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
+    - name: Test covid.cohd.io
+      if: success() || (failure() && steps.dependencies.conclusion == 'success')  # Run even if other tests fail
       run: |
         pytest -s test_cohd_covid_io.py
