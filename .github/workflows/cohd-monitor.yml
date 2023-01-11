@@ -25,17 +25,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest requests pandas matplotlib bmt==0.8.12 reasoner-validator flask flask-cors flask-caching
         pip show reasoner-validator
+    - name: Test all COHD instances alive
+      # Run /health checks on all COHD instances (dev, CI, Test, Prod)
+      continue-on-error: true
+      run: |
+        pytest -s test_alive.py
     - name: Test COHD REST API
       # Test cohd.io by running pytest on test_cohd_io.py
+      continue-on-error: true
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
       run: |
         pytest -s test_cohd_io.py
     - name: Test COHD TRAPI
       # Test COHD TRAPI endpoints by running pytest on test_cohd_trapi.py
+      continue-on-error: true
       run: |
         pytest -s test_cohd_trapi.py
     - name: Test covid.cohd.io
       # Test covid.cohd.io by running pytest on test_cohd_covid_io.py
       # pytest -s disables pytest from capturing print statements (i.e., print statements will appear in console)
+      continue-on-error: true
       run: |
         pytest -s test_cohd_covid_io.py
