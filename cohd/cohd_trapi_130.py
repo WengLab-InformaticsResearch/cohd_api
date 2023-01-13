@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.1'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.2.0'
     _SCHEMA_VERSION = '1.3.0'
 
     def __init__(self, request):
