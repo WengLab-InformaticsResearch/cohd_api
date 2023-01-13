@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.2.0'
     _SCHEMA_VERSION = '1.3.0'
 
     def __init__(self, request):
@@ -213,8 +213,8 @@ class CohdTrapi130(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        # Log that TRAPI 1.2 was called because there's no clear indication otherwise
-        logging.debug('Query issued against TRAPI 1.2')
+        # Log that TRAPI 1.3 was called because there's no clear indication otherwise
+        logging.debug('Query issued against TRAPI 1.3')
 
         try:
             self._json_data = self._request.get_json()
@@ -400,7 +400,17 @@ class CohdTrapi130(CohdTrapi):
             concept_1_qnode = subject_qnode
             self._concept_2_qnode_key = object_qnode_key
             concept_2_qnode = object_qnode
-            node_ids = node_ids.union(subject_qnode['ids'])
+
+            # Check the length of the IDs list is below the batch size limit
+            ids = subject_qnode['ids']
+            if len(ids) > CohdTrapi.batch_size_limit:
+                # Warn the client and truncate the ids list
+                description = f"More IDs ({len(ids)}) in QNode '{subject_qnode_key}' than batch_size_limit allows "\
+                              f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
+                self.log(description, code=None, level=logging.WARNING)
+                ids = ids[:CohdTrapi.bach_size_limit]
+                subject_qnode['ids'] = ids
+            node_ids = node_ids.union(ids)
         if 'ids' in object_qnode:
             if 'ids' not in subject_qnode:
                 # Swap the subj/obj mapping to concept1/2 if only the obj node has IDs
@@ -409,7 +419,17 @@ class CohdTrapi130(CohdTrapi):
                 concept_1_qnode = object_qnode
                 self._concept_2_qnode_key = subject_qnode_key
                 concept_2_qnode = subject_qnode
-            node_ids = node_ids.union(object_qnode['ids'])
+
+            # Check the length of the IDs list is below the batch size limit
+            ids = object_qnode['ids']
+            if len(ids) > CohdTrapi.batch_size_limit:
+                # Warn the client and truncate the ids list
+                description = f"More IDs ({len(ids)}) in QNode '{object_qnode_key}' than batch_size_limit allows " \
+                              f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
+                self.log(description, code=None, level=logging.WARNING)
+                ids = ids[:CohdTrapi.bach_size_limit]
+                object_qnode['ids'] = ids
+            node_ids = node_ids.union(ids)
         node_ids = list(node_ids)
 
         # COHD queries require at least 1 node with a specified ID
@@ -545,12 +565,22 @@ class CohdTrapi130(CohdTrapi):
         # Get subclasses for all CURIEs using ontology KP
         descendant_ids = list()
         ancestor_dict = dict()
+
         descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
         if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list
             descendants, ancestor_dict = descendant_results
             descendant_ids = list(set(descendants.keys()) - set(ids))
             if len(descendant_ids) > 0:
+                if (len(ids) + len(descendant_ids)) > CohdTrapi.batch_size_limit:
+                    # Only add up to the batch_size_limit
+                    n_to_add = CohdTrapi.batch_size_limit - len(ids)
+                    descendant_ids_ignored = descendant_ids[n_to_add:]
+                    descendant_ids = descendant_ids[:n_to_add]
+                    description = f"More descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'"\
+                                  f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
+                    self.log(description, level=logging.WARNING)
+
                 ids.extend(descendant_ids)
                 ids = SriNodeNormalizer.remove_equivalents(ids)
                 self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
@@ -653,6 +683,15 @@ class CohdTrapi130(CohdTrapi):
                 descendants, ancestor_dict = descendant_results
                 descendant_ids = list(set(descendants.keys()) - set(ids))
                 if len(descendant_ids) > 0:
+                    if (len(ids) + len(descendant_ids)) > CohdTrapi.batch_size_limit:
+                        # Only add up to the batch_size_limit
+                        n_to_add = CohdTrapi.batch_size_limit - len(ids)
+                        descendant_ids_ignored = descendant_ids[n_to_add:]
+                        descendant_ids = descendant_ids[:n_to_add]
+                        description = f"More descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'" \
+                                      f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
+                        self.log(description, level=logging.WARNING)
+
                     ids.extend(descendant_ids)
                     ids = SriNodeNormalizer.remove_equivalents(ids)
                     self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",

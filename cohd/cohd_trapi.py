@@ -63,6 +63,7 @@ class CohdTrapi(ABC):
     default_max_results = 500
     default_log_level = logging.INFO
     default_time_limit = 20  # seconds
+    batch_size_limit = 100  # max length of any IDs list
     limit_max_results = 500
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']

@@ -165,7 +165,7 @@ class OntologyKP:
                 }
             }
 
-            print(m)
+            logging.debug(m)
 
             url = urljoin(OntologyKP.base_url, OntologyKP.endpoint_query)
             response = requests.post(url=url, json=m, timeout=timeout)

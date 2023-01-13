@@ -19,7 +19,7 @@ from reasoner_validator.trapi import TRAPISchemaValidator, openapi_to_jsonschema
 @lru_cache()
 def _load_schema_url(trapi_schema_url: str):
     """Load schema from GitHub."""
-    response = requests.get(trapi_schema_url)
+    response = requests.get(trapi_schema_url, timeout=10)
     spec = yaml.load(response.text, Loader=Loader)
     components = spec["components"]["schemas"]
     for component, schema in components.items():
@@ -136,7 +136,7 @@ def validate_trapi_response(trapi_version, bl_version, response):
         biolink_version=bl_version,
         strict_validation=None
     )
-    validator.check_compliance_of_trapi_response(message=response['message'])
+    validator.check_compliance_of_trapi_response(response)
     vms = validator.get_messages()
 
     # Ignore certain codes

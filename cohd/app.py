@@ -21,13 +21,22 @@ logging.config.dictConfig({
     'formatters': {'default': {
         'format': '[%(asctime)s] %(levelname)s in %(module)s thread%(thread)d: %(message)s',
     }},
-    'handlers': {'wsgi': {
-        'class': 'logging.StreamHandler',
-        'stream': 'ext://flask.logging.wsgi_errors_stream',
-        'formatter': 'default'
-    }},
+    'handlers': {
+        'wsgi': {
+            'class': 'logging.StreamHandler',
+            'stream': 'ext://flask.logging.wsgi_errors_stream',
+            'formatter': 'default'
+            },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'default',
+            'filename': 'cohd.log',
+            'maxBytes': 10485760,
+            'backupCount': 50
+        }
+    },
     'root': {
         'level': 'INFO',
-        'handlers': ['wsgi']
+        'handlers': ['wsgi', 'file']
     }
 })
