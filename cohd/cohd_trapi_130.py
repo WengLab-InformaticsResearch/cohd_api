@@ -400,7 +400,17 @@ class CohdTrapi130(CohdTrapi):
             concept_1_qnode = subject_qnode
             self._concept_2_qnode_key = object_qnode_key
             concept_2_qnode = object_qnode
-            node_ids = node_ids.union(subject_qnode['ids'])
+
+            # Check the length of the IDs list is below the batch size limit
+            ids = subject_qnode['ids']
+            if len(ids) > CohdTrapi.batch_size_limit:
+                # Warn the client and truncate the ids list
+                description = f'More IDs ({len(ids)}) in QNode {subject_qnode_key} than batch_size_limit allows '\
+                              f'({CohdTrapi.batch_size_limit}). IDs list will be truncated.'
+                self.log(description, code=None, level=logging.WARNING)
+                ids = ids[:CohdTrapi.bach_size_limit]
+                subject_qnode['ids'] = ids
+            node_ids = node_ids.union(ids)
         if 'ids' in object_qnode:
             if 'ids' not in subject_qnode:
                 # Swap the subj/obj mapping to concept1/2 if only the obj node has IDs
@@ -409,7 +419,17 @@ class CohdTrapi130(CohdTrapi):
                 concept_1_qnode = object_qnode
                 self._concept_2_qnode_key = subject_qnode_key
                 concept_2_qnode = subject_qnode
-            node_ids = node_ids.union(object_qnode['ids'])
+
+            # Check the length of the IDs list is below the batch size limit
+            ids = object_qnode['ids']
+            if len(ids) > CohdTrapi.batch_size_limit:
+                # Warn the client and truncate the ids list
+                description = f'More IDs ({len(ids)}) in QNode {object_qnode_key} than batch_size_limit allows ' \
+                              f'({CohdTrapi.batch_size_limit}). IDs list will be truncated.'
+                self.log(description, code=None, level=logging.WARNING)
+                ids = ids[:CohdTrapi.bach_size_limit]
+                object_qnode['ids'] = ids
+            node_ids = node_ids.union(ids)
         node_ids = list(node_ids)
 
         # COHD queries require at least 1 node with a specified ID

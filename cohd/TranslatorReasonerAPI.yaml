@@ -45,7 +45,7 @@ info:
     asyncquery: false
     operations:
       - lookup
-    batch_size_limit: 10
+    batch_size_limit: 100
     rate_limit: 10
     externalDocs:
       description: >-
