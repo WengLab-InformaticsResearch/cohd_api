@@ -1,6 +1,7 @@
 import requests
 from urllib.parse import urljoin
 import logging
+import json
 from ..app import app
 
 
@@ -42,7 +43,13 @@ class SriNameResolution:
             'offset': offset,
             'limit': limit
         }
-        response = requests.post(url, params=params, timeout=SriNameResolution._TIMEOUT)
+        try:
+            response = requests.post(url, params=params, timeout=SriNameResolution._TIMEOUT)
+        except requests.exceptions.Timeout:
+            logging.error(f'SRI Name Resolution timed out after {SriNameResolution._TIMEOUT} sec\n'
+                          f'Posted params:\n{json.dumps(params)}'
+                          )
+            return None
         if response.status_code == 200:
             return response.json()
         else:

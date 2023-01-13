@@ -57,7 +57,13 @@ class SriNodeNormalizer:
 
         url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
         data = {'curies': curies}
-        response = requests.post(url=url, json=data, timeout=SriNodeNormalizer._TIMEOUT)
+        try:
+            response = requests.post(url=url, json=data, timeout=SriNodeNormalizer._TIMEOUT)
+        except requests.exceptions.Timeout:
+            logging.error(f'SRI Node Normalizer timed out after {SriNodeNormalizer._TIMEOUT} sec\n'
+                          f'Posted data:\n{json.dumps(data)}'
+                          )
+            return None
         if response.status_code == 200:
             return response.json()
         else:
