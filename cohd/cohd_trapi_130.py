@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.0'
+    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.1.1'
     _SCHEMA_VERSION = '1.3.0'
 
     def __init__(self, request):
@@ -213,8 +213,8 @@ class CohdTrapi130(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        # Log that TRAPI 1.2 was called because there's no clear indication otherwise
-        logging.debug('Query issued against TRAPI 1.2')
+        # Log that TRAPI 1.3 was called because there's no clear indication otherwise
+        logging.debug('Query issued against TRAPI 1.3')
 
         try:
             self._json_data = self._request.get_json()
@@ -545,6 +545,7 @@ class CohdTrapi130(CohdTrapi):
         # Get subclasses for all CURIEs using ontology KP
         descendant_ids = list()
         ancestor_dict = dict()
+
         descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
         if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list

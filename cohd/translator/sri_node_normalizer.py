@@ -23,21 +23,23 @@ class NormalizedNode:
 class SriNodeNormalizer:
     # base_url = 'https://nodenormalization-sri.renci.org/'
     # base_url = 'https://nodenormalization-sri-dev.renci.org/'
-    # base_url = 'https://nodenormalization-sri.renci.org/1.2/'
+    # base_url = 'https://nodenormalization-sri.renci.org/'
 
-    base_url_default = 'https://nodenorm.transltr.io/1.2'
+    base_url_default = 'https://nodenorm.transltr.io/'
     base_urls = {
         'dev': 'https://nodenormalization-sri.renci.org/',
-        'ITRB-CI': 'https://nodenorm.ci.transltr.io/1.2',
-        'ITRB-TEST': 'https://nodenorm.test.transltr.io/1.2',
-        'ITRB-PROD': 'https://nodenorm.transltr.io/1.2'
+        # CI and TEST have been non-functional for a long time...
+        # 'ITRB-CI': 'https://nodenorm.ci.transltr.io/',
+        # 'ITRB-TEST': 'https://nodenorm.test.transltr.io/',
+        'ITRB-PROD': 'https://nodenorm.transltr.io/'
     }
+    endpoint_get_normalized_nodes = 'get_normalized_nodes'
+    INFORES_ID = 'infores:sri-node-normalizer'
+    _TIMEOUT = 10  # Query timeout (seconds)
+
     deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
     base_url = base_urls.get(deployment_env, base_url_default)
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Norm @ {base_url}')
-
-    endpoint_get_normalized_nodes = 'get_normalized_nodes'
-    INFORES_ID = 'infores:sri-node-normalizer'
 
     @staticmethod
     def get_normalized_nodes_raw(curies: List[str]) -> Optional[Dict[str, Any]]:
@@ -55,7 +57,7 @@ class SriNodeNormalizer:
 
         url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
         data = {'curies': curies}
-        response = requests.post(url=url, json=data)
+        response = requests.post(url=url, json=data, timeout=SriNodeNormalizer._TIMEOUT)
         if response.status_code == 200:
             return response.json()
         else:
@@ -144,15 +146,21 @@ class SriNodeNormalizer:
             canonical_id = normalized_node.normalized_identifier.id
             if canonical_id in curies:
                 # Canonical ID is in the list. Keep the canonical ID and remove all other equivalent IDs
-                ids_to_remove = [eq_id.id for eq_id in normalized_node.equivalent_identifiers if eq_id.id != canonical_id]
-                curies = [c for c in curies if c not in ids_to_remove]
+                ids_to_remove = {eq_id.id for eq_id in normalized_node.equivalent_identifiers if eq_id.id != canonical_id}
+                new_curies = [c for c in curies if c not in ids_to_remove]
 
                 if curie == canonical_id:
                     # CURIE at current index was kept, increment index
                     index += 1
+                elif len(new_curies) == len(curies):
+                    # Unexpected: no CURIEs removed and the current CURIE is not the canonical CURIE
+                    # Log the error, and move onto next index to prevent infinite loop
+                    logging.error('Expected at least 1 CURIE to be removed, but none were')
+                    index += 1
+                curies = new_curies
             else:
                 # Canonical ID not in the list. Keep the current ID and remove all other equivalent IDs
-                ids_to_remove = [eq_id.id for eq_id in normalized_node.equivalent_identifiers if eq_id.id != curie]
+                ids_to_remove = {eq_id.id for eq_id in normalized_node.equivalent_identifiers if eq_id.id != curie}
                 curies = [c for c in curies if c not in ids_to_remove]
                 index += 1
 

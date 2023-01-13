@@ -34,7 +34,7 @@ _OMOP_VOCABULARIES = ['ABMS', 'AMT', 'APC', 'ATC', 'BDPM', 'CDT', 'CIEL', 'Cohor
                       'PPI', 'Procedure Type', 'Race', 'Read', 'Relationship', 'Revenue Code', 'RxNorm',
                       'RxNorm Extension', 'SMQ', 'SNOMED', 'Specialty', 'Specimen Type', 'SPL', 'UCUM', 'VA Class',
                       'VA Product', 'Visit', 'Visit Type', 'Vocabulary']
-
+_TIMEOUT = 20  # Timeout for calling OxO (seconds)
 
 def omop_vocab_to_oxo_prefix(vocab):
     """ Attempt to lookup the corresponding OxO prefix from the OMOP vocabulary ID
@@ -181,7 +181,7 @@ def oxo_search_cached(ids, input_source=None, mapping_targets=None, distance=2):
         "distance": distance
     }
 
-    r = requests.post(url=_URL_OXO_SEARCH, data=data)
+    r = requests.post(url=_URL_OXO_SEARCH, data=data, timeout=_TIMEOUT)
     if r.status_code == 200:
         json_return = r.json()
         return json_return
