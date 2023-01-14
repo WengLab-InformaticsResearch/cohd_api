@@ -1,4 +1,4 @@
-FROM tiangolo/uwsgi-nginx-flask:python3.11
+FROM tiangolo/uwsgi-nginx-flask:python3.8
 
 RUN apt-get update
 RUN apt-get -y install vim certbot
