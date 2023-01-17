@@ -37,8 +37,8 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.2.0'
-    _SCHEMA_VERSION = '1.3.0'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.1'
+    schema_version = '1.3.0'
 
     def __init__(self, request):
         super().__init__(request)
@@ -633,12 +633,10 @@ class CohdTrapi130(CohdTrapi):
             else:
                 # No OMOP mapping found. Just add the node to the KG.
                 unmapped_curies.append(curie)
-                if normalized_nodes is not None:
-                    nn = normalized_nodes.get(curie)
-                    if nn is not None:
-                        # Use node norm info when available
-                        self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
-                                                                            categories=nn.categories))
+                if normalized_nodes is not None and (nn:= normalized_nodes.get(curie)) is not None:
+                    # Use node norm info when available
+                    self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
+                                                                        categories=nn.categories))
                 else:
                     # No node norm info available, make an empty KG node
                     self._add_kg_node(curie, CohdTrapi130._make_kg_node())
@@ -1528,8 +1526,8 @@ class CohdTrapi130(CohdTrapi):
         self._response = {
             # From TRAPI Extended
             'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130._TOOL_VERSION,
-            'schema_version': CohdTrapi130._SCHEMA_VERSION,
+            'tool_version': CohdTrapi130.tool_version,
+            'schema_version': CohdTrapi130.schema_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1601,8 +1599,8 @@ class CohdTrapi130(CohdTrapi):
             },
             # From TRAPI Extended
             'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130._TOOL_VERSION,
-            'schema_version': CohdTrapi130._SCHEMA_VERSION,
+            'tool_version': CohdTrapi130.tool_version,
+            'schema_version': CohdTrapi130.schema_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
