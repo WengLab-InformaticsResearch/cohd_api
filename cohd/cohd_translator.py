@@ -295,3 +295,7 @@ def omop_to_biolink(request):
             normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
+
+
+def api_version():
+    return cohd_trapi_130.CohdTrapi130.tool_version, 200

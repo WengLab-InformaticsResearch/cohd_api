@@ -196,6 +196,12 @@ def api_translator_meta_knowledge_graph():
     return api_call('translator', 'meta_knowledge_graph')
 
 
+@app.route('/api/version', methods=['GET'])
+@app.route('/api/translator/version', methods=['GET'])
+def api_internal_version():
+    return api_call('translator', 'version')
+
+
 @app.route('/api/translator/omop_to_biolink', methods=['POST'])
 def api_translator_omop_to_biolink():
     return api_call('translator', 'omop_to_biolink')
@@ -303,6 +309,8 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.omop_to_biolink(request)
         elif meta == 'biolink_to_omop':
             result = cohd_translator.biolink_to_omop(request)
+        elif meta == 'version':
+            result = cohd_translator.api_version()
         else:
             result = 'meta not recognized', 400
     elif service == 'health':

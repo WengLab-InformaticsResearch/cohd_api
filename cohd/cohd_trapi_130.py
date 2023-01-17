@@ -37,8 +37,8 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    _TOOL_VERSION = f'{CohdTrapi._SERVICE_NAME} 6.2.0'
-    _SCHEMA_VERSION = '1.3.0'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.1'
+    schema_version = '1.3.0'
 
     def __init__(self, request):
         super().__init__(request)
@@ -1528,8 +1528,8 @@ class CohdTrapi130(CohdTrapi):
         self._response = {
             # From TRAPI Extended
             'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130._TOOL_VERSION,
-            'schema_version': CohdTrapi130._SCHEMA_VERSION,
+            'tool_version': CohdTrapi130.tool_version,
+            'schema_version': CohdTrapi130.schema_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1601,8 +1601,8 @@ class CohdTrapi130(CohdTrapi):
             },
             # From TRAPI Extended
             'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130._TOOL_VERSION,
-            'schema_version': CohdTrapi130._SCHEMA_VERSION,
+            'tool_version': CohdTrapi130.tool_version,
+            'schema_version': CohdTrapi130.schema_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
