@@ -633,12 +633,10 @@ class CohdTrapi130(CohdTrapi):
             else:
                 # No OMOP mapping found. Just add the node to the KG.
                 unmapped_curies.append(curie)
-                if normalized_nodes is not None:
-                    nn = normalized_nodes.get(curie)
-                    if nn is not None:
-                        # Use node norm info when available
-                        self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
-                                                                            categories=nn.categories))
+                if normalized_nodes is not None and (nn:= normalized_nodes.get(curie)) is not None:
+                    # Use node norm info when available
+                    self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
+                                                                        categories=nn.categories))
                 else:
                     # No node norm info available, make an empty KG node
                     self._add_kg_node(curie, CohdTrapi130._make_kg_node())
