@@ -1512,11 +1512,16 @@ class CohdTrapi130(CohdTrapi):
             'subject': descendant_node_id,
             'object': ancestor_node_id,
             'attributes': [{
-                'attribute_type_id': 'biolink:aggregator_knowledge_source',
+                'attribute_type_id': 'biolink:primary_knowledge_source',
                 'value': OntologyKP.INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
                 'value_url': OntologyKP.base_url
+            },{
+                'attribute_type_id': 'biolink:aggregator_knowledge_source',
+                'value': CohdTrapi._INFORES_ID,
+                'value_type_id': 'biolink:InformationResource',
+                'attribute_source': CohdTrapi._INFORES_ID
             }]
         }
 
