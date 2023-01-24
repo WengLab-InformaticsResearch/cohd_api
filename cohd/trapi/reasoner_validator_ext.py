@@ -128,6 +128,7 @@ def validate_trapi_response(trapi_version, bl_version, response):
         'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
         'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
         'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
+        'error.knowledge_graph.node.categories.not_array',  # We nullify some categories, which is allowed
     ]
 
     # Validation
