@@ -25,6 +25,7 @@ class TrapiStatusCode(Enum):
     UNSUPPORTED_QNODE_CATEGORY = 'UnsupportedQNodeCategory'
     UNSUPPORTED_CONSTRAINT = 'UnsupportedConstraint'
     UNSUPPORTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
+    UNSUPPORTED_QUAL_CONSTRAINT = 'UnsupportedQualifierConstraint'
 
 
 class CohdTrapi(ABC):

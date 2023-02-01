@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.1'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.2'
     schema_version = '1.3.0'
 
     def __init__(self, request):
@@ -511,14 +511,7 @@ class CohdTrapi130(CohdTrapi):
                 return self._valid_query, self._invalid_query_response
 
         # If client provided non-empty QNode constraints, respond with error code
-        if concept_1_qnode.get('constraints'):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        if concept_2_qnode.get('constraints'):
+        if concept_1_qnode.get('constraints') or concept_2_qnode.get('constraints'):
             self._valid_query = False
             description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
             self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
@@ -530,6 +523,13 @@ class CohdTrapi130(CohdTrapi):
             description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
             self.log(description, TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, logging.ERROR)
             response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        if self._query_edge.get("qualifier_constraints"):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge qualifier constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, description)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
