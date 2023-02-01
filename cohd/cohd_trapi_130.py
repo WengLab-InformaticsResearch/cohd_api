@@ -408,7 +408,7 @@ class CohdTrapi130(CohdTrapi):
                 description = f"More IDs ({len(ids)}) in QNode '{subject_qnode_key}' than batch_size_limit allows "\
                               f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
                 self.log(description, code=None, level=logging.WARNING)
-                ids = ids[:CohdTrapi.bach_size_limit]
+                ids = ids[:CohdTrapi.batch_size_limit]
                 subject_qnode['ids'] = ids
             node_ids = node_ids.union(ids)
         if 'ids' in object_qnode:
@@ -427,7 +427,7 @@ class CohdTrapi130(CohdTrapi):
                 description = f"More IDs ({len(ids)}) in QNode '{object_qnode_key}' than batch_size_limit allows " \
                               f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
                 self.log(description, code=None, level=logging.WARNING)
-                ids = ids[:CohdTrapi.bach_size_limit]
+                ids = ids[:CohdTrapi.batch_size_limit]
                 object_qnode['ids'] = ids
             node_ids = node_ids.union(ids)
         node_ids = list(node_ids)
