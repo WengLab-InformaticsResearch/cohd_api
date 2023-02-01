@@ -607,6 +607,9 @@ class CohdTrapi130(CohdTrapi):
 
         # Map as many IDs to OMOP as possible
         unmapped_curies = list()
+        # Fetch all OMOP concept definitions at once to save time
+        concept_1_omop_ids = [int(mapping.omop_id.split(':')[1]) for curie, mapping in node_mappings.items() if mapping is not None]
+        concept_1_omop_defs = query_cohd_mysql.omop_concept_definitions(concept_1_omop_ids)
         for curie in ids:
             if node_mappings[curie] is not None:
                 # Found an OMOP mapping. Use this CURIE
@@ -623,7 +626,16 @@ class CohdTrapi130(CohdTrapi):
                     qnode_categories = normalized_nodes[curie].categories
 
                 # Create a KG node now with the curie and mapping specified
-                inode = self._get_kg_node(concept_1_omop_id, query_node_curie=curie,
+                concept_name = ''
+                domain = ''
+                concept_class = ''
+                if concept_1_omop_defs and concept_1_omop_id in concept_1_omop_defs:
+                    concept_def = concept_1_omop_defs[concept_1_omop_id]
+                    concept_name = concept_def.get('concept_name', concept_name)
+                    domain = concept_def.get('domain_id', domain)
+                    concept_class = concept_def.get('concept_class_id', concept_class)
+                inode = self._get_kg_node(concept_1_omop_id, concept_name=concept_name, domain=domain,
+                                          concept_class=concept_class, query_node_curie=curie,
                                           query_node_categories=qnode_categories, mapping=concept_1_mapping)
                 self._add_internal_node_to_kg(inode)
 
@@ -718,6 +730,10 @@ class CohdTrapi130(CohdTrapi):
             self._concept_2_omop_ids = list()
             found = False
             unmapped_curies = list()
+            # Fetch all OMOP concept definitions at once to save time
+            concept_2_omop_ids = [int(mapping.omop_id.split(':')[1]) for curie, mapping in node_mappings.items() if
+                                  mapping is not None]
+            concept_2_omop_defs = query_cohd_mysql.omop_concept_definitions(concept_2_omop_ids)
             for curie in ids:
                 if node_mappings.get(curie) is not None:
                     # Found an OMOP mapping. Use this CURIE
@@ -734,7 +750,16 @@ class CohdTrapi130(CohdTrapi):
                         qnode_categories = normalized_nodes[curie].categories
 
                     # Create a KG node now with the curie and mapping specified
-                    inode = self._get_kg_node(concept_2_omop_id, query_node_curie=curie,
+                    concept_name = ''
+                    domain = ''
+                    concept_class = ''
+                    if concept_2_omop_defs and concept_2_omop_id in concept_2_omop_defs:
+                        concept_def = concept_2_omop_defs[concept_2_omop_id]
+                        concept_name = concept_def.get('concept_name', concept_name)
+                        domain = concept_def.get('domain_id', domain)
+                        concept_class = concept_def.get('concept_class_id', concept_class)
+                    inode = self._get_kg_node(concept_2_omop_id, concept_name=concept_name, domain=domain,
+                                              concept_class=concept_class, query_node_curie=curie,
                                               query_node_categories=qnode_categories, mapping=concept_2_mapping)
                     self._add_internal_node_to_kg(inode)
                 else:
@@ -1037,7 +1062,7 @@ class CohdTrapi130(CohdTrapi):
         self._results = [self._results[i] for i in list(reversed(argsort(scores)))]
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
-                     query_node_categories=None, mapping: OmopBiolinkMapping = None):
+                     query_node_categories=None, mapping: OmopBiolinkMapping=None):
         """ Gets the node from internal "graph" representing the OMOP concept. Creates the node if not yet created.
         Node is not added to the knowledge graph or results.
 
