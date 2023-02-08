@@ -1475,9 +1475,12 @@ def omop_concept_definitions(concept_ids):
     -------
     dict[concept_ids] = concept definition row
     """
+    concept_defs = dict()
+    if not concept_ids:
+        return concept_defs
+
     response = query_db(service='omop', method='concepts', args={'q': ','.join(str(c) for c in concept_ids)})
 
-    concept_defs = dict()
     concept_results = response.get_json()
     if concept_results is None or 'results' not in concept_results:
         return concept_defs
