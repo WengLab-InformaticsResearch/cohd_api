@@ -1,4 +1,4 @@
-const baseURL = new URL('https://cohd.io')
+const baseURL = new URL('https://cohd-api.transltr.io')
 
 const exampleInputs1 = [
     {inner: '<span class="information">Example OMOP concept IDs:</span>', value: ''},
