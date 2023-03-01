@@ -124,12 +124,16 @@ def validate_trapi_response(trapi_version, bl_version, response):
     Response validation messages
     """
     # Ignore the following codes
-    codes_ignore = [
-        'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
-        'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
-        'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
-        'error.knowledge_graph.node.categories.not_array',  # We nullify some categories, which is allowed
-    ]
+    codes_ignore = {
+        'warnings': [
+            'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
+        ],
+        'errors': [
+            'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
+            'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
+            'error.knowledge_graph.node.categories.not_array',  # We nullify some categories, which is allowed
+        ]
+    }
 
     # Validation
     validator = TRAPIResponseValidator(
@@ -141,11 +145,10 @@ def validate_trapi_response(trapi_version, bl_version, response):
     vms = validator.get_messages()
 
     # Ignore certain codes
-    vms_keep = dict()
-    for v_level, v_messages in vms.items():
-        vl_keep = list()
-        for vm in v_messages:
-            if vm['code'] not in codes_ignore:
-                vl_keep.append(vm)
-        vms_keep[v_level] = vl_keep
-    return vms_keep
+    for level, codes in codes_ignore.items():
+        v_messages = vms[level]
+        for code in codes:
+            # remove code from dictionary, no error if code not in dict
+            v_messages.pop(code, None)
+
+    return vms
