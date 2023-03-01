@@ -25,7 +25,7 @@ from cohd.translator.ontology_kp import OntologyKP
 cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
-BIOLINK_VERSION = '3.0.3'
+BIOLINK_VERSION = '3.1.2'
 TRAPI_VERSION = '1.3.0'
 
 # Static instance of the Biolink Model Toolkit
