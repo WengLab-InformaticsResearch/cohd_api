@@ -1212,6 +1212,9 @@ class CohdTrapi130(CohdTrapi):
         name: node name
         categories: node categories
         attributes: node attributes """
+        if categories is None:
+            categories = list()
+
         return {
             'name': name,
             'categories': categories,
