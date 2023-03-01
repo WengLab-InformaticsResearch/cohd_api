@@ -126,12 +126,12 @@ def validate_trapi_response(trapi_version, bl_version, response):
     # Ignore the following codes
     codes_ignore = {
         'warnings': [
-            'warning.knowledge_graph.edge.attribute.type_id.not_association_slot',  # Biolink error to be fixed soon
+            'warning.response.knowledge_graph.empty',  # For TRAPI error responses, COHD uses null KG, which is allowed
+            'warning.response.results.empty',  # For TRAPI error responses, COHD uses null results, which is allowed
         ],
         'errors': [
             'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
             'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
-            'error.knowledge_graph.node.categories.not_array',  # We nullify some categories, which is allowed
         ]
     }
 
