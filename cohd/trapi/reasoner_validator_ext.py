@@ -132,6 +132,7 @@ def validate_trapi_response(trapi_version, bl_version, response):
         'errors': [
             'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
             'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
+            'error.knowledge_graph.node.categories.not_array',  # null categories is allowed by TRAPI
         ]
     }
 
