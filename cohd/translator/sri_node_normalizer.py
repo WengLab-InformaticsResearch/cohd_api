@@ -137,7 +137,7 @@ class SriNodeNormalizer:
         normalized_nodes = SriNodeNormalizer.get_normalized_nodes(curies)
         if normalized_nodes is None:
             logging.warning('Unable to check for duplicates in QNode IDs because of error calling SRI Node Normalizer')
-            return curies
+            return None
 
         index = 0
         while index < len(curies):

@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.5'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.6'
     schema_version = '1.3.0'
 
     def __init__(self, request):
@@ -559,8 +559,7 @@ class CohdTrapi130(CohdTrapi):
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
-        ids = concept_1_qnode['ids'].copy()
-        ids = SriNodeNormalizer.remove_equivalents(ids)
+        ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
 
         # Get subclasses for all CURIEs using ontology KP
         descendant_ids = list()
@@ -582,7 +581,11 @@ class CohdTrapi130(CohdTrapi):
                     self.log(description, level=logging.WARNING)
 
                 ids.extend(descendant_ids)
-                ids = SriNodeNormalizer.remove_equivalents(ids)
+                ids_deduped = SriNodeNormalizer.remove_equivalents(ids)
+                if ids_deduped is not None:
+                    ids = ids_deduped
+                else:
+                    self.log(f'Issue encountered with SRI Node Norm when removing equivalents', level=logging.WARNING)
                 self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
@@ -590,7 +593,7 @@ class CohdTrapi130(CohdTrapi):
                          level=logging.INFO)
         else:
             # Add a warning that we didn't get descendants from Ontology KP
-            self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
+            self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
                      level=logging.WARNING)
 
         # Update the ancestor dictionary for concept 1
@@ -598,9 +601,11 @@ class CohdTrapi130(CohdTrapi):
 
         # Find BLM - OMOP mappings for all identified query nodes
         node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
-
-        # Keep track of all categories
-        if normalized_nodes is not None:
+        if normalized_nodes is None:
+            # Issue getting normalized nodes. Log a warning, but attempt to continue
+            self.log('Encountered an issue when querying Node Norm', level=logging.WARNING)
+        else:
+            # Keep track of all categories
             for nn in normalized_nodes.values():
                 if nn is not None:
                     self._id_categories = self._id_categories.union(nn.categories)
@@ -678,8 +683,7 @@ class CohdTrapi130(CohdTrapi):
         # Get the desired association concept or category
         ids = concept_2_qnode.get('ids')
         if ids is not None and ids:
-            ids = ids.copy()
-            ids = SriNodeNormalizer.remove_equivalents(ids)
+            ids = list(set(ids))  # remove duplicate CURIEs
 
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
@@ -703,7 +707,12 @@ class CohdTrapi130(CohdTrapi):
                         self.log(description, level=logging.WARNING)
 
                     ids.extend(descendant_ids)
-                    ids = SriNodeNormalizer.remove_equivalents(ids)
+                    ids_deduped = SriNodeNormalizer.remove_equivalents(ids)
+                    if ids_deduped is not None:
+                        ids = ids_deduped
+                    else:
+                        self.log(f'Issue encountered with SRI Node Norm when removing equivalents',
+                                 level=logging.WARNING)
                     self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:
@@ -711,7 +720,7 @@ class CohdTrapi130(CohdTrapi):
                              level=logging.INFO)
             else:
                 # Add a warning that we didn't get descendants from Ontology KP
-                self.log(f"Unable to retrieve descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
+                self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
                          level=logging.WARNING)
 
             # Update the ancestor dictionary for concept 2
@@ -719,9 +728,11 @@ class CohdTrapi130(CohdTrapi):
 
             # Find BLM - OMOP mappings for all identified query nodes
             node_mappings, normalized_nodes = BiolinkConceptMapper.map_to_omop(ids)
-
-            # Keep track of all categories
-            if normalized_nodes is not None:
+            if normalized_nodes is None:
+                # Issue getting normalized nodes. Log a warning, but attempt to continue
+                self.log('Encountered an issue when querying Node Norm', level=logging.WARNING)
+            else:
+                # Keep track of all categories
                 for nn in normalized_nodes.values():
                     if nn is not None:
                         self._id_categories = self._id_categories.union(nn.categories)
