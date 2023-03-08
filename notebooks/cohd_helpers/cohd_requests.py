@@ -943,6 +943,12 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
 translator_query_130 = translator_query_120
 
 
+def translator_version():
+    url = f'{server}/translator/version'
+    response = requests.get(url, timeout=5)
+    return response.text
+
+
 def translator_biolink_to_omop(curies):
     """ Map Biolink to OMOP
 
