@@ -172,6 +172,14 @@ def _test_ontology_kp():
 _ontology_kp_issue = _test_ontology_kp()
 
 
+def test_trapi_version():
+    """ Simply check what version is deployed
+    """
+    print(f'\ntest_cohd_io: testing /translator/version on {cr.server}..... ')
+    v = cr.translator_version()
+    print(v)
+
+
 def test_translator_query_named_thing():
     """ Check the TRAPI endpoint to make sure it returns results for biolink:NamedThing
     """
