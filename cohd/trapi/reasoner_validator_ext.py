@@ -130,9 +130,6 @@ def validate_trapi_response(trapi_version, bl_version, response):
             'warning.response.results.empty',  # For TRAPI error responses, COHD uses null results, which is allowed
         ],
         'errors': [
-            'error.knowledge_graph.node.category.abstract',  # Categories coming from Node Norm
-            'error.knowledge_graph.node.category.mixin',  # Categories coming from Node Norm
-            'error.knowledge_graph.node.categories.not_array',  # null categories is allowed by TRAPI
         ]
     }
 
