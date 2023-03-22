@@ -243,7 +243,7 @@ class BiolinkConceptMapper:
         }
 
         # Get list of deployed database schemas for environment (default to only if not in config file `cohd`)
-        databases = app.config.get('ADDITIONAL_DATABASES', ['cohd'])
+        databases = app.config.get('DATABASES', ['cohd'])
 
         # COHD MySQL database
         conn = sql_connection()
@@ -262,6 +262,7 @@ class BiolinkConceptMapper:
         # Build the SQL insert
         mapping_count = 0
         params = list()
+        newline = '\n'
 
         ########################## Conditions ##########################
         logging.info('Mapping condition concepts')
@@ -294,7 +295,7 @@ class BiolinkConceptMapper:
             COALESCE({", ".join([f"{d}.concept.standard_concept" for d in databases])}) AS standard_concept
         FROM
             ({" UNION ".join(f"SELECT DISTINCT concept_id FROM {d}.concept_counts" for d in databases)}) x
-        {" ".join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'condition'" for d in databases])}        
+        {newline.join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'condition'" for d in databases])}        
         WHERE {" OR ".join([f"{d}.concept.concept_id IS NOT NULL" for d in databases])}
         ORDER BY x.concept_id;
         """
@@ -367,7 +368,7 @@ class BiolinkConceptMapper:
             COALESCE({", ".join([f"{d}.concept.standard_concept" for d in databases])}) AS standard_concept
         FROM
             ({" UNION ".join(f"SELECT DISTINCT concept_id FROM {d}.concept_counts" for d in databases)}) x
-        {" ".join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'drug' AND {d}.concept.concept_class_id != 'ingredient' AND {d}.concept.vocabulary_id = 'RxNorm'" for d in databases])}        
+        {newline.join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'drug' AND {d}.concept.concept_class_id != 'ingredient' AND {d}.concept.vocabulary_id = 'RxNorm'" for d in databases])}        
         WHERE {" OR ".join([f"{d}.concept.concept_id IS NOT NULL" for d in databases])}
         ORDER BY x.concept_id;
         """
@@ -392,28 +393,28 @@ class BiolinkConceptMapper:
         ########################## Drug ingredients ##########################
         logging.info('Mapping drug ingredient concepts')
 
-        # # Get all active drug ingredients which have OMOP mappings to MESH
-        # sql = """
-        # SELECT x.concept_id,
-        #     IFNULL(ccc.concept_name, cc.concept_name) AS concept_name,
-        #     IFNULL(ccc.vocabulary_id, cc.vocabulary_id) AS vocabulary_id,
-        #     IFNULL(ccc_mesh.concept_code, cc_mesh.concept_code) AS mesh_code,
-        #     IFNULL(ccc_mesh.concept_name, cc_mesh.concept_name) AS mesh_name,
-        #     IFNULL(ccc_mesh.invalid_reason, cc_mesh.invalid_reason) AS invalid_reason
-        # FROM
-        #     (SELECT DISTINCT concept_id FROM cohd.concept_counts
-        #     UNION
-        #     SELECT DISTINCT concept_id FROM cohd_covid.concept_counts) x
-        # LEFT JOIN cohd.concept cc ON x.concept_id = cc.concept_id AND cc.domain_id = 'drug' AND cc.concept_class_id = 'ingredient'
-        # JOIN concept_relationship ccr ON cc.concept_id = ccr.concept_id_2
-        # JOIN concept cc_mesh ON ccr.concept_id_1 = cc_mesh.concept_id AND cc_mesh.vocabulary_id = 'MeSH'
-        # LEFT JOIN cohd_covid.concept ccc ON x.concept_id = ccc.concept_id AND ccc.domain_id = 'drug' AND ccc.concept_class_id = 'ingredient'
-        # JOIN concept_relationship cccr ON ccc.concept_id = cccr.concept_id_2
-        # JOIN concept ccc_mesh ON cccr.concept_id_1 = ccc_mesh.concept_id AND ccc_mesh.vocabulary_id = 'MeSH'
-        # WHERE (ccc.concept_id IS NOT NULL OR cc.concept_id IS NOT NULL) AND
-        #     (ccc_mesh.concept_code = cc_mesh.concept_code OR
-        #     ccc_mesh.concept_code IS NULL OR cc_mesh.concept_code IS NULL);
-        # """
+        # Get all active drug ingredients which have OMOP mappings to MESH
+        sql = """
+        SELECT x.concept_id,
+            IFNULL(ccc.concept_name, cc.concept_name) AS concept_name,
+            IFNULL(ccc.vocabulary_id, cc.vocabulary_id) AS vocabulary_id,
+            IFNULL(ccc_mesh.concept_code, cc_mesh.concept_code) AS mesh_code,
+            IFNULL(ccc_mesh.concept_name, cc_mesh.concept_name) AS mesh_name,
+            IFNULL(ccc_mesh.invalid_reason, cc_mesh.invalid_reason) AS invalid_reason
+        FROM
+            (SELECT DISTINCT concept_id FROM cohd.concept_counts
+            UNION
+            SELECT DISTINCT concept_id FROM cohd_covid.concept_counts) x
+        LEFT JOIN cohd.concept cc ON x.concept_id = cc.concept_id AND cc.domain_id = 'drug' AND cc.concept_class_id = 'ingredient'
+        JOIN concept_relationship ccr ON cc.concept_id = ccr.concept_id_2
+        JOIN concept cc_mesh ON ccr.concept_id_1 = cc_mesh.concept_id AND cc_mesh.vocabulary_id = 'MeSH'
+        LEFT JOIN cohd_covid.concept ccc ON x.concept_id = ccc.concept_id AND ccc.domain_id = 'drug' AND ccc.concept_class_id = 'ingredient'
+        JOIN concept_relationship cccr ON ccc.concept_id = cccr.concept_id_2
+        JOIN concept ccc_mesh ON cccr.concept_id_1 = ccc_mesh.concept_id AND ccc_mesh.vocabulary_id = 'MeSH'
+        WHERE (ccc.concept_id IS NOT NULL OR cc.concept_id IS NOT NULL) AND
+            (ccc_mesh.concept_code = cc_mesh.concept_code OR
+            ccc_mesh.concept_code IS NULL OR cc_mesh.concept_code IS NULL);
+        """
 
         # Get all active drug ingredients which have OMOP mappings to MESH from all databases (recreate the above SQL dynamically)
         # note: this is untested for more than 2 databases
@@ -421,24 +422,25 @@ class BiolinkConceptMapper:
         name_mesh = {d: f"{d}_concept_mesh" for d in databases}
         name_cr = {d: f"{d}_concept_relationship" for d in databases}
         # note: using concept_relationship and concept from cohd schema because cohd_covid schema doesn't have MeSH
-        sql_joins = " ".join([
+        sql_joins = newline.join([
             f"""LEFT JOIN {d}.concept {name_concept[d]} ON x.concept_id = {name_concept[d]}.concept_id AND {name_concept[d]}.domain_id = 'drug' AND {name_concept[d]}.concept_class_id = 'ingredient'
             JOIN cohd.concept_relationship {name_cr[d]} ON {name_concept[d]}.concept_id = {name_cr[d]}.concept_id_2
             JOIN cohd.concept {name_mesh[d]} ON {name_cr[d]}.concept_id_1 = {name_mesh[d]}.concept_id AND {name_mesh[d]}.vocabulary_id = 'MeSH'"""
             for d in databases])
+        sql_match_mesh_codes = f"""AND (({" AND ".join([f"{name_mesh[databases[0]]}.concept_code = {name_mesh[d]}.concept_code" for d in databases[1:]])}) 
+            OR {" OR ".join([f"{name_mesh[d]}.concept_code IS NULL" for d in databases])})""" if len(databases) > 1 else ""
         sql = f"""
         SELECT x.concept_id,
             COALESCE({", ".join([f"{name_concept[d]}.concept_name" for d in databases])}) AS concept_name,
             COALESCE({", ".join([f"{name_concept[d]}.vocabulary_id" for d in databases])}) AS vocabulary_id,
             COALESCE({", ".join([f"{name_mesh[d]}.concept_code" for d in databases])}) AS mesh_code,
-            COALESCE({", ".join([f"{name_mesh[d]}.concept_class_id" for d in databases])}) AS mesh_name,
-            COALESCE({", ".join([f"{name_mesh[d]}.standard_concept" for d in databases])}) AS invalid_reason
+            COALESCE({", ".join([f"{name_mesh[d]}.concept_name" for d in databases])}) AS mesh_name,
+            COALESCE({", ".join([f"{name_mesh[d]}.invalid_reason" for d in databases])}) AS invalid_reason
         FROM
             ({" UNION ".join(f"SELECT DISTINCT concept_id FROM {d}.concept_counts" for d in databases)}) x
         {sql_joins}        
-        WHERE ({" OR ".join([f"{name_concept[d]}.concept_id IS NOT NULL" for d in databases])}) AND
-            ({" AND ".join([f"{name_mesh[databases[0]]}.concept_code = {name_mesh[d]}.concept_code" for d in databases[1:]])} OR 
-            {" OR ".join([f"{name_mesh[d]}.concept_code IS NULL" for d in databases])})
+        WHERE ({" OR ".join([f"{name_concept[d]}.concept_id IS NOT NULL" for d in databases])})
+            {sql_match_mesh_codes}
         ORDER BY x.concept_id;
         """
 
@@ -534,7 +536,7 @@ class BiolinkConceptMapper:
             COALESCE({", ".join([f"{d}.concept.standard_concept" for d in databases])}) AS standard_concept
         FROM
             ({" UNION ".join(f"SELECT DISTINCT concept_id FROM {d}.concept_counts" for d in databases)}) x
-        {" ".join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'procedure' AND {d}.concept.vocabulary_id IN ('CPT4', 'HCPCS', 'ICD9CM', 'MedDRA', 'SNOMED')" for d in databases])}        
+        {newline.join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'procedure' AND {d}.concept.vocabulary_id IN ('CPT4', 'HCPCS', 'ICD9CM', 'MedDRA', 'SNOMED')" for d in databases])}        
         WHERE {" OR ".join([f"{d}.concept.concept_id IS NOT NULL" for d in databases])}
         ORDER BY x.concept_id;
         """
@@ -643,7 +645,7 @@ class BiolinkConceptMapper:
                 JOIN string_sim s ON m.biolink_id = s.biolink_id
                     AND m.distance = s.distance
                     AND m.string_similarity = s.string_similarity                
-                {" ".join([f"LEFT JOIN {d}.concept_counts ON m.omop_id = {d}.concept_counts.concept_id" for d in databases])}
+                {newline.join([f"LEFT JOIN {d}.concept_counts ON m.omop_id = {d}.concept_counts.concept_id" for d in databases])}
                 GROUP BY m.biolink_id, m.distance, m.string_similarity)
 
             UPDATE biolink.mappings m
@@ -685,7 +687,7 @@ class BiolinkConceptMapper:
             COALESCE({", ".join([f"{d}.concept.concept_name" for d in databases])}) AS concept_name            
         FROM
             ({" UNION ".join(f"SELECT DISTINCT concept_id FROM {d}.concept_counts" for d in databases)}) x
-        {" ".join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'drug' AND {d}.concept.concept_class_id = 'ingredient'" for d in databases])}        
+        {newline.join([f"LEFT JOIN {d}.concept ON x.concept_id = {d}.concept.concept_id AND {d}.concept.domain_id = 'drug' AND {d}.concept.concept_class_id = 'ingredient'" for d in databases])}        
         LEFT JOIN biolink.mappings m ON x.concept_id = m.omop_id
         WHERE ({" OR ".join([f"{d}.concept.concept_id IS NOT NULL" for d in databases])}) AND m.omop_id IS NULL
         ORDER BY x.concept_id;
@@ -855,7 +857,7 @@ class BiolinkConceptMapper:
                 FROM biolink.mappings m
                 JOIN string_sim s ON m.biolink_id = s.biolink_id
                     AND m.string_similarity = s.string_similarity
-                {" ".join([f"LEFT JOIN {d}.concept_counts ON m.omop_id = {d}.concept_counts.concept_id" for d in databases])}
+                {newline.join([f"LEFT JOIN {d}.concept_counts ON m.omop_id = {d}.concept_counts.concept_id" for d in databases])}
                 GROUP BY m.biolink_id, m.distance, m.string_similarity)
     
             UPDATE biolink.mappings m
