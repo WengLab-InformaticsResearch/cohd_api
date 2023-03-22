@@ -27,6 +27,7 @@ from . import cohd_translator
 from . import cohd_trapi
 from . import scheduled_tasks
 from . import biolink_mapper
+from .cohd_utilities import read_log
 
 
 ##########
@@ -224,6 +225,11 @@ def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
 
 
+@app.route('/api/dev/inspect', methods=['GET'])
+def api_internal_inspect():
+    return api_call('dev', 'inspect')
+
+
 @app.route('/health', methods=['GET'])
 @app.route('/api/health', methods=['GET'])
 def api_health():
@@ -340,6 +346,8 @@ def api_call(service=None, meta=None, query=None, version=None):
             elif meta == 'clear_cache':
                 cache.clear()
                 result = 'Cleared cache', 200
+            elif meta == 'inspect':
+                result = read_log(), 200
             else:
                 result = 'meta not recognized', 400
         else:

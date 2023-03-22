@@ -148,3 +148,12 @@ class DomainClass(NamedTuple):
     """
     domain_id: Optional[str]
     concept_class_id: Optional[str]
+
+
+def read_log():
+    log = ''
+    with open('cohd.log', 'r') as fh:
+        lines = fh.readlines()
+        log = '\n'.join(lines[-1000:])
+    return log
+
