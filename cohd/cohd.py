@@ -11,8 +11,10 @@ implemented in Flask
 (c) 2017 Tatonetti Lab
 """
 
-from flask import request, redirect
+import traceback
 
+from flask import request, redirect
+from werkzeug.exceptions import InternalServerError
 from .google_analytics import GoogleAnalytics
 
 # Flask app and cache
@@ -226,6 +228,16 @@ def api_internal_clear_cache():
 @app.route('/api/health', methods=['GET'])
 def api_health():
     return api_call('health')
+
+
+@app.errorhandler(InternalServerError)
+def handle_internal_server_error(e):
+    # Since we don't have direct access to ITRB logs, have general 500 errors return the traceback
+    exc = e.original_exception
+    return "500 Internal Server Error\n" \
+           "The server encountered an internal error and was unable to complete your request. Either the server is " \
+           "overloaded or there is an error in the application.\n\n" + \
+           f"Exception:\n{exc}\n\n{traceback.format_exc()}", 500
 
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
