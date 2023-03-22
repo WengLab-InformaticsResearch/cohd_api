@@ -3,6 +3,8 @@ import requests
 import json
 from requests.compat import urljoin
 from typing import Union, Any, Optional, Dict, List
+from math import ceil
+
 from ..app import app
 
 class NormalizedNodeIdentifier:
@@ -36,13 +38,14 @@ class SriNodeNormalizer:
     endpoint_get_normalized_nodes = 'get_normalized_nodes'
     INFORES_ID = 'infores:sri-node-normalizer'
     _TIMEOUT = 10  # Query timeout (seconds)
+    _CURIE_LIMIT = 1000  # Max number of CURIEs to send Node Norm in a single call
 
     deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
     base_url = base_urls.get(deployment_env, base_url_default)
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Norm @ {base_url}')
 
     @staticmethod
-    def get_normalized_nodes_raw(curies: List[str]) -> Optional[Dict[str, Any]]:
+    def get_normalized_nodes_raw(curies: List[str], timeout: int = _TIMEOUT) -> Optional[Dict[str, Any]]:
         """ Straightforward call to get_normalized_nodes. Returns json from response.
         Parameters
         ----------
@@ -55,26 +58,36 @@ class SriNodeNormalizer:
         if not curies:
             return None
 
+        # Node Norm is sometimes unstable with large number of CURIEs. If we have many curies, split into even chunks
+        combined_response = dict()
+        n_curies = len(curies)
+        chunk_size = ceil(n_curies/ceil(n_curies/SriNodeNormalizer._CURIE_LIMIT))
+        curies_chunked = [curies[i:(i+chunk_size)] for i in range(0, n_curies, chunk_size)]
         url = urljoin(SriNodeNormalizer.base_url, SriNodeNormalizer.endpoint_get_normalized_nodes)
-        data = {'curies': curies}
-        try:
-            response = requests.post(url=url, json=data, timeout=SriNodeNormalizer._TIMEOUT)
-        except requests.exceptions.Timeout:
-            logging.error(f'SRI Node Normalizer timed out after {SriNodeNormalizer._TIMEOUT} sec\n'
-                          f'Posted data:\n{json.dumps(data)}'
-                          )
-            return None
-        if response.status_code == 200:
-            return response.json()
-        else:
-            logging.error('Received a non-200 response code from SRI Node Normalizer: '
-                          f'{(response.status_code, response.text)}\n'
-                          f'Posted data:\n{json.dumps(data)}'
-                          )
-            return None
+
+        for curies_chunk in curies_chunked:
+            data = {'curies': curies_chunk}
+            try:
+                response = requests.post(url=url, json=data, timeout=timeout)
+            except requests.exceptions.Timeout:
+                # Fail if any individual call fails
+                logging.error(f'SRI Node Normalizer timed out after {timeout} sec\n'
+                              f'Posted data:\n{json.dumps(data)}'
+                              )
+                return None
+            if response.status_code == 200:
+                combined_response.update(response.json())
+            else:
+                # Fail if any individual call fails
+                logging.error('Received a non-200 response code from SRI Node Normalizer: '
+                              f'{(response.status_code, response.text)}\n'
+                              f'Posted data:\n{json.dumps(data)}'
+                              )
+                return None
+        return combined_response
 
     @staticmethod
-    def get_normalized_nodes(curies: List[str]) -> Optional[Dict[str, NormalizedNode]]:
+    def get_normalized_nodes(curies: List[str], timeout: int = _TIMEOUT) -> Optional[Dict[str, NormalizedNode]]:
         """ Wraps a NodeNorm call to return a dictionary of NormalizedNode objects per response item
 
         Parameters
@@ -86,7 +99,7 @@ class SriNodeNormalizer:
         Dict of NormalizedNodes. Each input curie will be a key in the response. If no normalized node is
         found, the entry will be None.
         """
-        response = SriNodeNormalizer.get_normalized_nodes_raw(curies)
+        response = SriNodeNormalizer.get_normalized_nodes_raw(curies, timeout=timeout)
         if response is not None:
             return {k: NormalizedNode(v) if v is not None else None for (k, v) in response.items()}
         else:
