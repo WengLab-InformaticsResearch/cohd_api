@@ -876,6 +876,7 @@ class BiolinkConceptMapper:
                 New string mappings: {string_match_count}
                 Updated to new mappings.
                 """
+        logging.info(status_message)
         return status_message, 200
 
 
