@@ -1571,8 +1571,9 @@ class CohdTrapi140(CohdTrapi):
         self._response = {
             # From TRAPI Extended
             'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130.tool_version,
-            'schema_version': CohdTrapi130.schema_version,
+            'tool_version': CohdTrapi140.tool_version,
+            'schema_version': CohdTrapi140.schema_version,
+            'biolink_version': CohdTrapi140.biolink_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1634,21 +1635,16 @@ class CohdTrapi140(CohdTrapi):
         -------
         Response message with JSON data in Reasoner Std API format
         """
-        response = {
-            'status': status.value,
-            'description': description,
-            'message': {
-                'results': None,
-                'query_graph': self._query_graph,
-                'knowledge_graph': None
-            },
-            # From TRAPI Extended
-            'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130.tool_version,
-            'schema_version': CohdTrapi130.schema_version,
-            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'query_options': self._query_options,
-        }
+        self._initialize_trapi_response()
+        self._response.update({
+                'status': status.value,
+                'description': description,
+                'message': {
+                    'results': None,
+                    'query_graph': self._query_graph,
+                    'knowledge_graph': None
+                }
+            })
         if self._logs is not None and self._logs:
-            response['logs'] = self._logs
-        return jsonify(response)
+            self._response['logs'] = self._logs
+        return jsonify(self._response)
