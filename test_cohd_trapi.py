@@ -76,7 +76,7 @@ def _test_translator_query_subclasses(q1_curie, q2_category, max_results=10):
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category, method='obsExpRatio',
                                    dataset_id=3, confidence_interval=0.99, min_cooccurrence=50, threshold=0.5,
                                    max_results=max_results, local_oxo=True, timeout=300)
-    print(query)
+    print(j.dumps(query))
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -116,7 +116,7 @@ def _test_translator_query_predicates(q1_curie, q2_category, predicates, max_res
           f'{q1_curie} and {q2_category} with {predicates} on {cr.server}..... ')
     resp, query = translator_query(node_1_curies=q1_curie, node_2_categories=q2_category,
                                    predicates=predicates, method='obsExpRatio')
-    print(query)
+    print(j.dumps(query))
 
     # Expect HTTP 200 status response
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -258,7 +258,7 @@ def test_translator_query_unsupported_category():
     print(f'\ntest_cohd_trapi::test_translator_query_unsupported_category: testing TRAPI query with an unsupported '
           f'category on {cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Gene')
-    print(query)
+    print(j.dumps(query))
 
     # Should have 200 status response code
     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
@@ -279,7 +279,7 @@ def test_translator_query_bad_category():
     print(f'\ntest_cohd_trapi::test_translator_query_bad_category: testing TRAPI query with a non-biolink category on '
           f'{cr.server}..... ')
     resp, query = translator_query(node_1_curies='DOID:9053', node_2_categories='biolink:Fake')
-    print(query)
+    print(j.dumps(query))
 
     # Should have 200 status response code
     assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
@@ -319,7 +319,7 @@ def test_translator_query_no_predicate():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -368,7 +368,7 @@ def test_translator_query_related_to():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -417,7 +417,7 @@ def test_translator_query_unsupported_predicate():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 400 status response
@@ -459,7 +459,7 @@ def test_translator_query_bad_predicate():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -501,7 +501,7 @@ def test_translator_query_q1_multiple_ids():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -557,7 +557,7 @@ def test_translator_query_q2_multiple_ids():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -614,7 +614,7 @@ def test_translator_query_q2_multiple_ids():
 #     '''
 #     query = j.loads(query)
 #     query['query_options']['query_id'] = str(uuid.uuid4())
-#     print(query)
+#     print(j.dumps(query))
 #     resp = requests.post(url, json=query, timeout=300)
 #
 #     # Expect HTTP 200 status response
@@ -673,7 +673,7 @@ def test_translator_query_q1_q2_multiple_ids():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -873,7 +873,7 @@ def test_translator_query_qnode_subclasses():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
@@ -945,7 +945,7 @@ def test_translator_query_qnode_empty_constraint():
     '''
     query = j.loads(query)
     query['query_options']['query_id'] = str(uuid.uuid4())
-    print(query)
+    print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
