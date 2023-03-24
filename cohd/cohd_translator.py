@@ -6,8 +6,8 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 from flask import jsonify
 from semantic_version import Version
 
-from cohd_trapi_13 import CohdTrapi130
-from cohd_trapi_14 import CohdTrapi140
+from .cohd_trapi_13 import CohdTrapi130
+from .cohd_trapi_14 import CohdTrapi140
 from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
@@ -160,7 +160,7 @@ def translator_meta_knowledge_graph():
     })
 
 
-def translator_query(request, version='1.3.0'):
+def translator_query(request, version='1.4.0'):
     """ Implementation of query endpoint for TRAPI
 
     Calls the requested version of the TRAPI message
@@ -176,7 +176,7 @@ def translator_query(request, version='1.3.0'):
     requested version
     """
     if version is None:
-        version = '1.3.0'
+        version = '1.4.0'
 
     try:
         version = Version(version)
@@ -186,7 +186,7 @@ def translator_query(request, version='1.3.0'):
     if Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
         trapi = CohdTrapi130(request)
         return trapi.operate()
-    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
+    elif Version('1.4.0-alpha') <= version < Version('1.5.0-alpha'):
         trapi = CohdTrapi140(request)
         return trapi.operate()
     else:

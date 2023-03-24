@@ -336,14 +336,14 @@ class CohdTrapi140(CohdTrapi):
                 # Check if any of the predicates are an ancestor of the supported edge predicates
                 predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
                 for pd in predicate_descendants:
-                    if pd in CohdTrapi130.supported_edge_types:
+                    if pd in CohdTrapi140.supported_edge_types:
                         edge_supported = True
                         break
 
                 # Check directionality of predicate
-                if edge_predicate in CohdTrapi130.edge_types_positive:
+                if edge_predicate in CohdTrapi140.edge_types_positive:
                     positive_edge = True
-                elif edge_predicate in CohdTrapi130.edge_types_negative:
+                elif edge_predicate in CohdTrapi140.edge_types_negative:
                     negative_edge = True
                 else:
                     positive_edge = True
@@ -443,13 +443,13 @@ class CohdTrapi140(CohdTrapi):
         # Get qnode categories and check the formatting
         self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
         if self._concept_1_qnode_categories is not None:
-            self._concept_1_qnode_categories = CohdTrapi130._process_qnode_category(self._concept_1_qnode_categories)
+            self._concept_1_qnode_categories = CohdTrapi140._process_qnode_category(self._concept_1_qnode_categories)
             self._qnode_categories = self._qnode_categories.union(self._concept_1_qnode_categories)
 
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             found_supported_cat = False
-            for supported_cat in CohdTrapi130.supported_categories:
+            for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_1_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
@@ -474,14 +474,14 @@ class CohdTrapi140(CohdTrapi):
 
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
-            self._concept_2_qnode_categories = CohdTrapi130._process_qnode_category(self._concept_2_qnode_categories)
+            self._concept_2_qnode_categories = CohdTrapi140._process_qnode_category(self._concept_2_qnode_categories)
             self._qnode_categories = self._qnode_categories.union(self._concept_2_qnode_categories)
             concept_2_qnode['categories'] = self._concept_2_qnode_categories
 
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             self._domain_class_pairs = set()
-            for supported_cat in CohdTrapi130.supported_categories:
+            for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_2_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
@@ -653,11 +653,11 @@ class CohdTrapi140(CohdTrapi):
                 unmapped_curies.append(curie)
                 if normalized_nodes is not None and (nn:= normalized_nodes.get(curie)) is not None:
                     # Use node norm info when available
-                    self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
+                    self._add_kg_node(curie, CohdTrapi140._make_kg_node(name=nn.normalized_identifier.label,
                                                                         categories=nn.categories))
                 else:
                     # No node norm info available, make an empty KG node
-                    self._add_kg_node(curie, CohdTrapi130._make_kg_node())
+                    self._add_kg_node(curie, CohdTrapi140._make_kg_node())
 
             # For descendant nodes, add subclass_of edge
             if curie in descendant_ids and curie in ancestor_dict:
@@ -781,11 +781,11 @@ class CohdTrapi140(CohdTrapi):
                         nn = normalized_nodes.get(curie)
                         if nn is not None:
                             # Use node norm info when available
-                            self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
+                            self._add_kg_node(curie, CohdTrapi140._make_kg_node(name=nn.normalized_identifier.label,
                                                                                 categories=nn.categories))
                     else:
                         # No node norm info available, make an empty KG node
-                        self._add_kg_node(curie, CohdTrapi130._make_kg_node())
+                        self._add_kg_node(curie, CohdTrapi140._make_kg_node())
 
                 # For descendant nodes, add subclass_of edge
                 if curie in descendant_ids and curie in ancestor_dict:
@@ -1076,7 +1076,7 @@ class CohdTrapi140(CohdTrapi):
         if not self._results:
             return
 
-        scores = [result['score'] for result in self._results]
+        scores = [result['analyses'][0]['score'] for result in self._results]
         self._results = [self._results[i] for i in list(reversed(argsort(scores)))]
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
