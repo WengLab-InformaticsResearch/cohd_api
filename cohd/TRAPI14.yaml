@@ -18,7 +18,7 @@ info:
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
   version: 6.3.0
-  title: COHD TRAPI 1.4
+  title: COHD TRAPI
   contact:
     name: Casey Ta
     email: ct2865@cumc.columbia.edu
