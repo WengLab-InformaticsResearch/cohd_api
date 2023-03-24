@@ -1553,18 +1553,17 @@ class CohdTrapi140(CohdTrapi):
             'predicate': 'biolink:subclass_of',
             'subject': descendant_node_id,
             'object': ancestor_node_id,
-            'attributes': [{
-                'attribute_type_id': 'biolink:primary_knowledge_source',
-                'value': OntologyKP.INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': OntologyKP.base_url
-            },{
-                'attribute_type_id': 'biolink:aggregator_knowledge_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID
-            }]
+            'sources': [
+                {
+                    'resource': OntologyKP.INFORES_ID,
+                    'resource_role': 'primary_knowledge_source',
+                },
+                {
+                    'resource': CohdTrapi._INFORES_ID,
+                    'resource_role': 'aggregator_knowledge_source',
+                    'upstream_resources': [OntologyKP.INFORES_ID]
+                },
+            ]
         }
 
     def _initialize_trapi_response(self):
