@@ -15,18 +15,18 @@ from datetime import datetime
 import warnings
 
 from notebooks.cohd_helpers import cohd_requests as cr
-from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi, validate_trapi_response
+from cohd.trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi, validate_trapi_response
 from cohd.translator.ontology_kp import OntologyKP
 
 # Choose which server to test
-# cr.server = 'https://cohd.io/api'
+cr.server = 'https://cohd.io/api'
 # cr.server = 'https://cohd-api.ci.transltr.io/api'
 # cr.server = 'https://cohd-api.test.transltr.io/api'
-cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+# cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.1.2'
-TRAPI_VERSION = '1.3.0'
+TRAPI_VERSION = '1.4.0-beta'
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -137,7 +137,7 @@ def _test_translator_query_predicates(q1_curie, q2_category, predicates, max_res
 
     kg_edges = json['message']['knowledge_graph']['edges']
     for result in json['message']['results']:
-        edge_id = result['edge_bindings']['e00'][0]['id']
+        edge_id = result['analyses'][0]['edge_bindings']['e00'][0]['id']
 
         assert edge_id in kg_edges, _print_trapi_log(json)
 
