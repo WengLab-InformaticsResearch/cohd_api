@@ -1044,12 +1044,18 @@ class CohdTrapi140(CohdTrapi):
                     'id': kg_node_2_id
                 }]
             },
-            'edge_bindings': {
-                self._query_edge_key: [{
-                    'id': kg_edge_id
-                }]
-            },
-            'score': score
+            'analyses': [
+                {
+                    'reasoner_id': CohdTrapi._INFORES_ID,
+                    'edge_bindings': {
+                        self._query_edge_key: [{
+                            'id': kg_edge_id
+                        }]
+                    },
+                    'score': score,
+                    'scoring_method': 'Lower bound of biolink:ln_ratio_confidence_interval',
+                }
+            ]
         }
 
         # If QNodes have IDs and the bound KGNode ID is different (e.g., descendant CURIE), then specify the query_id
