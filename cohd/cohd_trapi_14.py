@@ -1287,27 +1287,22 @@ class CohdTrapi140(CohdTrapi):
         # Mint a new identifier
         ke_id = self._get_new_kg_edge_id()
 
+        # Add source retrieval
+        sources = [
+            {
+                'resource': CohdTrapi._INFORES_ID,
+                'resource_role': 'primary_knowledge_source',
+            },
+            {
+                'resource': 'infores:columbia-cdw-ehr-data',
+                'resource_role': 'supporting_data_source',
+            },
+        ]
+
         # Add properties from COHD results to the edge attributes
         attributes = [
             # Information Resource - Source Retrieval Provenance
             # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
-            {
-                'attribute_type_id': 'biolink:primary_knowledge_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://cohd.io/api/query',
-                'description': 'The COHD KP defines associations between biomedical concepts based on statistical '
-                               'analysis of clinical/EHR data.'
-            },
-            {
-                'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
-                'original_attribute_name': 'dataset_id',
-                'value': f"COHD:dataset_{cohd_result['dataset_id']}",
-                'value_type_id': 'EDAM:data_1048',  # Database ID
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
-            },
             # Basic counts
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
@@ -1517,7 +1512,8 @@ class CohdTrapi140(CohdTrapi):
             'predicate': predicate,
             'subject': node_1['primary_curie'],
             'object': node_2['primary_curie'],
-            'attributes': attributes
+            'attributes': attributes,
+            'sources': sources
         }
 
         # Add the new edge
