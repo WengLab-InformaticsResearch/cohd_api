@@ -17,7 +17,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 6.3.0
+  version: 6.3.1
   title: COHD TRAPI
   contact:
     name: Casey Ta
@@ -41,7 +41,7 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-translator/
   x-trapi:
-    version: 1.4.0-dev
+    version: 1.4.0
     asyncquery: false
     operations:
       - lookup
