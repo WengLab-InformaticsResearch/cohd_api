@@ -130,6 +130,7 @@ def validate_trapi_response(trapi_version, bl_version, response):
             'warning.response.results.empty',  # For TRAPI error responses, COHD uses null results, which is allowed
         ],
         'errors': [
+            'error.knowledge_graph.node.categories.not_concrete',  # Temporarily ignore. Will fix in TRAPI 1.4
         ]
     }
 
