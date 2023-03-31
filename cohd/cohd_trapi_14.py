@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.0'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.1'
     schema_version = '1.4.0'
     biolink_version = '3.1.2'
 
@@ -1316,6 +1316,7 @@ class CohdTrapi140(CohdTrapi):
                 "description": "A study result describing the initial count of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ConceptCountAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:concept_pair_count',
@@ -1360,6 +1361,7 @@ class CohdTrapi140(CohdTrapi):
                 "description": "A study result describing a chi-squared analysis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ChiSquaredAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:unadjusted_p_value',
@@ -1368,7 +1370,7 @@ class CohdTrapi140(CohdTrapi):
                         'value_type_id': 'EDAM:data_1669',  # P-value
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'value_url': 'http://edamontology.org/data_1669',
-                        'description': 'Chi-square p-value, unadjusted. http://cohd.io/about.html'
+                        'description': 'Chi-square p-value, unadjusted.'
                     },
                     {
                         'attribute_type_id': 'biolink:bonferonni_adjusted_p_value',
@@ -1377,8 +1379,7 @@ class CohdTrapi140(CohdTrapi):
                         'value_type_id': 'EDAM:data_1669',  # P-value
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'value_url': 'http://edamontology.org/data_1669',
-                        'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
-                                       'http://cohd.io/about.html'
+                        'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts.'
                     },
                     {
                         'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
@@ -1397,6 +1398,7 @@ class CohdTrapi140(CohdTrapi):
                 "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:expected_count',
@@ -1405,7 +1407,7 @@ class CohdTrapi140(CohdTrapi):
                         'value_type_id': 'EDAM:operation_3438',
                         # Calculation (not sure if it's correct to use an operation)
                         'attribute_source': CohdTrapi._INFORES_ID,
-                        'description': 'Calculated expected count of concept pair. For ln_ratio. http://cohd.io/about.html'
+                        'description': 'Calculated expected count of concept pair.'
                     },
                     {
                         'attribute_type_id': 'biolink:ln_ratio',
@@ -1413,7 +1415,7 @@ class CohdTrapi140(CohdTrapi):
                         'value': cohd_result['ln_ratio'],
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
-                        'description': 'Observed-expected frequency ratio. http://cohd.io/about.html'
+                        'description': 'Observed-expected frequency ratio.'
                     },
                     {
                         'attribute_type_id': 'biolink:ln_ratio_confidence_interval',
@@ -1440,6 +1442,7 @@ class CohdTrapi140(CohdTrapi):
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
                 "value": "N/A",
                 "value_type_id": "biolink:RelativeFrequencyAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:relative_frequency_subject',
@@ -1448,7 +1451,7 @@ class CohdTrapi140(CohdTrapi):
                                              'relative_frequency_2'],
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
-                        'description': 'Relative frequency, relative to the subject node. http://cohd.io/about.html'
+                        'description': 'Relative frequency, relative to the subject node.'
                     },
                     {
                         'attribute_type_id': 'biolink:relative_frequency_subject_confidence_interval',
@@ -1466,7 +1469,7 @@ class CohdTrapi140(CohdTrapi):
                                              'relative_frequency_1'],
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
-                        'description': 'Relative frequency, relative to the object node. http://cohd.io/about.html'
+                        'description': 'Relative frequency, relative to the object node.'
                     },
                     {
                         'attribute_type_id': 'biolink:relative_frequency_object_confidence_interval',
