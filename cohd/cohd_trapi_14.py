@@ -1046,7 +1046,7 @@ class CohdTrapi140(CohdTrapi):
             },
             'analyses': [
                 {
-                    'reasoner_id': CohdTrapi._INFORES_ID,
+                    'resource_id': CohdTrapi._INFORES_ID,
                     'edge_bindings': {
                         self._query_edge_key: [{
                             'id': kg_edge_id
@@ -1564,7 +1564,7 @@ class CohdTrapi140(CohdTrapi):
                 {
                     'resource': CohdTrapi._INFORES_ID,
                     'resource_role': 'aggregator_knowledge_source',
-                    'upstream_resources': [OntologyKP.INFORES_ID]
+                    'upstream_resource_ids': [OntologyKP.INFORES_ID]
                 },
             ]
         }
@@ -1574,7 +1574,7 @@ class CohdTrapi140(CohdTrapi):
         """
         self._response = {
             # From TRAPI Extended
-            'reasoner_id': CohdTrapi._INFORES_ID,
+            'resource_id': CohdTrapi._INFORES_ID,
             'tool_version': CohdTrapi140.tool_version,
             'schema_version': CohdTrapi140.schema_version,
             'biolink_version': CohdTrapi140.biolink_version,
