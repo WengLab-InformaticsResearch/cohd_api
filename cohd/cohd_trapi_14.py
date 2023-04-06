@@ -1296,11 +1296,11 @@ class CohdTrapi140(CohdTrapi):
         # Add source retrieval
         sources = [
             {
-                'resource': CohdTrapi._INFORES_ID,
+                'resource_id': CohdTrapi._INFORES_ID,
                 'resource_role': 'primary_knowledge_source',
             },
             {
-                'resource': 'infores:columbia-cdw-ehr-data',
+                'resource_id': 'infores:columbia-cdw-ehr-data',
                 'resource_role': 'supporting_data_source',
             },
         ]
