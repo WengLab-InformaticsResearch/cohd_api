@@ -1558,11 +1558,11 @@ class CohdTrapi140(CohdTrapi):
             'object': ancestor_node_id,
             'sources': [
                 {
-                    'resource': OntologyKP.INFORES_ID,
+                    'resource_id': OntologyKP.INFORES_ID,
                     'resource_role': 'primary_knowledge_source',
                 },
                 {
-                    'resource': CohdTrapi._INFORES_ID,
+                    'resource_id': CohdTrapi._INFORES_ID,
                     'resource_role': 'aggregator_knowledge_source',
                     'upstream_resource_ids': [OntologyKP.INFORES_ID]
                 },
