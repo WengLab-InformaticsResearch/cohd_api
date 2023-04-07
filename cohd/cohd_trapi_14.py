@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.1'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.2'
     schema_version = '1.4.0'
     biolink_version = '3.1.2'
 
@@ -645,23 +645,16 @@ class CohdTrapi140(CohdTrapi):
                                           query_node_categories=qnode_categories, mapping=concept_1_mapping)
                 self._add_internal_node_to_kg(inode)
 
+                # For descendant nodes, add subclass_of edge
+                if curie in descendant_ids and curie in ancestor_dict:
+                    self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
+
                 # Debug logging
                 message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
                 self.log(message, level=logging.DEBUG)
             else:
                 # No OMOP mapping found. Just add the node to the KG.
                 unmapped_curies.append(curie)
-                if normalized_nodes is not None and (nn:= normalized_nodes.get(curie)) is not None:
-                    # Use node norm info when available
-                    self._add_kg_node(curie, CohdTrapi140._make_kg_node(name=nn.normalized_identifier.label,
-                                                                        categories=nn.categories))
-                else:
-                    # No node norm info available, make an empty KG node
-                    self._add_kg_node(curie, CohdTrapi140._make_kg_node())
-
-            # For descendant nodes, add subclass_of edge
-            if curie in descendant_ids and curie in ancestor_dict:
-                self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
 
         # Log mapped and unmapped CURIEs
         reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_1_omop_ids}
@@ -774,22 +767,13 @@ class CohdTrapi140(CohdTrapi):
                                               concept_class=concept_class, query_node_curie=curie,
                                               query_node_categories=qnode_categories, mapping=concept_2_mapping)
                     self._add_internal_node_to_kg(inode)
+
+                    # For descendant nodes, add subclass_of edge
+                    if curie in descendant_ids and curie in ancestor_dict:
+                        self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
                 else:
                     # No OMOP mapping found. Just add the node to the KG.
                     unmapped_curies.append(curie)
-                    if normalized_nodes is not None:
-                        nn = normalized_nodes.get(curie)
-                        if nn is not None:
-                            # Use node norm info when available
-                            self._add_kg_node(curie, CohdTrapi140._make_kg_node(name=nn.normalized_identifier.label,
-                                                                                categories=nn.categories))
-                    else:
-                        # No node norm info available, make an empty KG node
-                        self._add_kg_node(curie, CohdTrapi140._make_kg_node())
-
-                # For descendant nodes, add subclass_of edge
-                if curie in descendant_ids and curie in ancestor_dict:
-                    self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
 
             # Log mapped and unmapped CURIEs
             reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_2_omop_ids}
