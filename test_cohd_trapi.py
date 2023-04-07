@@ -26,7 +26,7 @@ cr.server = 'https://cohd.io/api'
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.1.2'
-TRAPI_VERSION = '1.4.0-beta'
+TRAPI_VERSION = '1.4.0-beta3'
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
