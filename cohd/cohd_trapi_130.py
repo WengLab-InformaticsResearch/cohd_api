@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.10'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.11'
     schema_version = '1.3.0'
 
     def __init__(self, request):
@@ -452,14 +452,13 @@ class CohdTrapi130(CohdTrapi):
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             found_supported_cat = False
+            unrecognized_cats = list()
             for supported_cat in CohdTrapi130.supported_categories:
                 for queried_cat in self._concept_1_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
-                        self._valid_query = False
-                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
-                                                        400)
-                        return self._valid_query, self._invalid_query_response
+                        unrecognized_cats.append(queried_cat)
+                        continue
 
                     # Check if the COHD supported categories are descendants of the queried categories
                     if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
@@ -475,6 +474,10 @@ class CohdTrapi130(CohdTrapi):
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
+            if unrecognized_cats:
+                self.log(f'The following categories were not recognized in Biolink {bm_version}: {unrecognized_cats}',
+                         level=logging.WARNING)
+
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
             self._concept_2_qnode_categories = CohdTrapi130._process_qnode_category(self._concept_2_qnode_categories)
@@ -484,14 +487,13 @@ class CohdTrapi130(CohdTrapi):
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             self._domain_class_pairs = set()
+            unrecognized_cats = list()
             for supported_cat in CohdTrapi130.supported_categories:
                 for queried_cat in self._concept_2_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
-                        self._valid_query = False
-                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
-                                                        400)
-                        return self._valid_query, self._invalid_query_response
+                        unrecognized_cats.append(queried_cat)
+                        continue
 
                     # Check if the COHD supported categories are descendants of the queried categories
                     if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
@@ -513,6 +515,10 @@ class CohdTrapi130(CohdTrapi):
                 response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
+
+            if unrecognized_cats:
+                self.log(f'The following categories were not recognized in Biolink {bm_version}: {unrecognized_cats}',
+                         level=logging.WARNING)
 
         # If client provided non-empty QNode constraints, respond with error code
         if concept_1_qnode.get('constraints') or concept_2_qnode.get('constraints'):
