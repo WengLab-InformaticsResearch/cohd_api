@@ -12,7 +12,7 @@ from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
 from .trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
-from .translator import bm_toolkit
+from .translator import bm_toolkit, bm_version
 from .translator.ontology_kp import OntologyKP
 
 
@@ -325,12 +325,12 @@ class CohdTrapi130(CohdTrapi):
             edge_supported = False
             positive_edge = False
             negative_edge = False
+            unrecognized_predicates = list()
             for edge_predicate in self._query_edge_predicates:
                 # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
-                    self._valid_query = False
-                    self._invalid_query_response = (f'{edge_predicate} was not recognized as a biolink predicate', 400)
-                    return self._valid_query, self._invalid_query_response
+                    unrecognized_predicates.append(edge_predicate)
+                    continue
 
                 # Check if any of the predicates are an ancestor of the supported edge predicates
                 predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
@@ -370,6 +370,10 @@ class CohdTrapi130(CohdTrapi):
                 self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
                                                 f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
                 return self._valid_query, self._invalid_query_response
+
+            if unrecognized_predicates:
+                self.log(f'The following predicates were not recognized in Biolink {bm_version}: {unrecognized_predicates}',
+                         level=logging.WARNING)
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
             self._kg_edge_predicate = CohdTrapi.default_predicate
