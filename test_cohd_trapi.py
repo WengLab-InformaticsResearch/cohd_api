@@ -282,8 +282,18 @@ def test_translator_query_bad_category():
     print(j.dumps(query))
 
     # Should have 200 status response code
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    # Don't validate TRAPI for this because biolink:Fake will invalidate the TRAPI
+    # _validate_trapi_response(json)
+
+    # There should be 0 results or null
+    results = json['message']['results']
+    print(results)
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
 
 def test_translator_query_no_predicate():
