@@ -12,7 +12,7 @@ from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
 from .trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
-from .translator import bm_toolkit
+from .translator import bm_toolkit, bm_version
 from .translator.ontology_kp import OntologyKP
 
 
@@ -37,9 +37,9 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.2'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.3'
     schema_version = '1.4.0'
-    biolink_version = '3.1.2'
+    biolink_version = bm_version
 
     def __init__(self, request):
         super().__init__(request)
@@ -326,12 +326,12 @@ class CohdTrapi140(CohdTrapi):
             edge_supported = False
             positive_edge = False
             negative_edge = False
+            unrecognized_predicates = list()
             for edge_predicate in self._query_edge_predicates:
                 # Check if this is a valid biolink predicate
                 if not bm_toolkit.is_predicate(edge_predicate):
-                    self._valid_query = False
-                    self._invalid_query_response = (f'{edge_predicate} was not recognized as a biolink predicate', 400)
-                    return self._valid_query, self._invalid_query_response
+                    unrecognized_predicates.append(edge_predicate)
+                    continue
 
                 # Check if any of the predicates are an ancestor of the supported edge predicates
                 predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
@@ -371,6 +371,10 @@ class CohdTrapi140(CohdTrapi):
                 self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
                                                 f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
                 return self._valid_query, self._invalid_query_response
+
+            if unrecognized_predicates:
+                self.log(f'The following predicates were not recognized in Biolink {bm_version}: {unrecognized_predicates}',
+                    level=logging.WARNING)
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
             self._kg_edge_predicate = CohdTrapi.default_predicate
@@ -449,14 +453,13 @@ class CohdTrapi140(CohdTrapi):
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             found_supported_cat = False
+            unrecognized_cats = list()
             for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_1_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
-                        self._valid_query = False
-                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
-                                                        400)
-                        return self._valid_query, self._invalid_query_response
+                        unrecognized_cats.append(queried_cat)
+                        continue
 
                     # Check if the COHD supported categories are descendants of the queried categories
                     if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
@@ -472,6 +475,10 @@ class CohdTrapi140(CohdTrapi):
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
+            if unrecognized_cats:
+                self.log(f'The following categories were not recognized in Biolink {bm_version}: {unrecognized_cats}',
+                         level=logging.WARNING)
+
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
             self._concept_2_qnode_categories = CohdTrapi140._process_qnode_category(self._concept_2_qnode_categories)
@@ -481,14 +488,13 @@ class CohdTrapi140(CohdTrapi):
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             self._domain_class_pairs = set()
+            unrecognized_cats = list()
             for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_2_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
-                        self._valid_query = False
-                        self._invalid_query_response = (f'{queried_cat} was not recognized as a biolink category',
-                                                        400)
-                        return self._valid_query, self._invalid_query_response
+                        unrecognized_cats.append(queried_cat)
+                        continue
 
                     # Check if the COHD supported categories are descendants of the queried categories
                     if supported_cat in bm_toolkit.get_descendants(queried_cat, reflexive=True, formatted=True):
@@ -510,6 +516,10 @@ class CohdTrapi140(CohdTrapi):
                 response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QNODE_CATEGORY, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
+
+            if unrecognized_cats:
+                self.log(f'The following categories were not recognized in Biolink {bm_version}: {unrecognized_cats}',
+                         level=logging.WARNING)
 
         # If client provided non-empty QNode constraints, respond with error code
         if concept_1_qnode.get('constraints') or concept_2_qnode.get('constraints'):
