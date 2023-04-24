@@ -4,7 +4,7 @@ name: COHD API Monitoring Workflow
 on:
   # Schedule this workflow to run twice a day (at 0300 and 1500 UTC)
   schedule:
-    - cron: '0 3/12 * * *'
+    - cron: '0 15 * * *'
   
   # Also allow manually triggering this workflow_dispatch:
   workflow_dispatch:
