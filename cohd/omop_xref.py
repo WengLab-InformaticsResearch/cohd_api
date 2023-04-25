@@ -187,7 +187,7 @@ def oxo_search_cached(ids, input_source=None, mapping_targets=None, distance=2):
         return json_return
     else:
         logging.warning('omop_xref.py::oxo_search - Non-200 response code from OxO:')
-        logging.warning(r)
+        logging.warning(r.text)
 
     return None
 
