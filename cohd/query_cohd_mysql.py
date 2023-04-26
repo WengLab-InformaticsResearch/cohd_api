@@ -23,6 +23,9 @@ DEFAULT_OXO_MAPPING_TARGETS = ["ICD9CM", "ICD10CM", "SNOMEDCT", "MeSH"]
 # Strict JSON doesn't allow NaN or Inf, replace with value:
 JSON_INFINITY_REPLACEMENT = 999
 
+# ARAX displays p-value of 0 as None. Replace with a minimum p-value
+MIN_P = 1e-12
+
 
 def sql_connection():
     # Connect to MySQL database
@@ -1205,7 +1208,7 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
 
 @cache.memoize(timeout=86400)
 def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
-                confidence=DEFAULT_CONFIDENCE):
+                ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE):
     """ Query for TRAPI. Performs the calculations for all association methods
 
     Parameters
@@ -1215,6 +1218,7 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
     dataset_id: (optional) String - COHD dataset ID
     domain_id: (optional) String - OMOP domain ID
     concept_class_id: (optional) String - OMOP concept class ID
+    ln_ratio_sign: (optional) Int - 1: positive ln_ratio only; -1: negative ln_ratio only; 0: any ln_ratio
     confidence: (optional) Float - Confidence level
 
     Returns
@@ -1238,6 +1242,14 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
     cur.execute(sql, params)
     results = cur.fetchall()
     pair_count = int(results[0]['pair_count'])
+
+    # Filter ln ratio
+    if ln_ratio_sign == 0:
+        ln_ratio_filter = ''
+    elif ln_ratio_sign > 0:
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) > 0'
+    elif ln_ratio_sign < 0:
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) < 0'
 
     if concept_id_2 is not None:
         # concept_id_2 is specified, only return the results for the pair (concept_id_1, concept_id_2)
@@ -1263,7 +1275,9 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                 AND c1.dataset_id = %(dataset_id)s
                 AND c2.dataset_id = %(dataset_id)s
                 AND cp.concept_id_1 = %(concept_id_1)s
-                AND cp.concept_id_2 = %(concept_id_2)s;'''
+                AND cp.concept_id_2 = %(concept_id_2)s
+                {ln_ratio_filter}
+                ;'''
         params = {
             'dataset_id': dataset_id,
             'concept_id_1': concept_id_1 if order else concept_id_2,
@@ -1283,7 +1297,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
             rename_rf1 = 'relative_frequency_2'
             rename_rf2 = 'relative_frequency_1'
         sql = sql.format(rename_id_1=rename_id_1, rename_id_2=rename_id_2, rename_count_1=rename_count_1,
-                         rename_count_2=rename_count_2, rename_rf1=rename_rf1, rename_rf2=rename_rf2)
+                         rename_count_2=rename_count_2, rename_rf1=rename_rf1, rename_rf2=rename_rf2,
+                         ln_ratio_filter=ln_ratio_filter)
 
     else:
         # If concept_id_2 is not specified, get results for all pairs that include concept_id_1
@@ -1314,7 +1329,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     AND c2.dataset_id = %(dataset_id)s
                     AND cp.concept_id_1 = %(concept_id_1)s
                     {domain_filter}
-                    {concept_class_filter})
+                    {concept_class_filter}
+                    {ln_ratio_filter})
                 UNION
                 (SELECT
                     cp.dataset_id,
@@ -1341,8 +1357,9 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                     AND c2.dataset_id = %(dataset_id)s
                     AND cp.concept_id_2 = %(concept_id_1)s
                     {domain_filter}
-                    {concept_class_filter})) x
-            ORDER BY ln_ratio DESC;'''
+                    {concept_class_filter}
+                    {ln_ratio_filter})) x
+            ORDER BY ABS(ln_ratio) DESC;'''
         params = {
             'dataset_id': dataset_id,
             'concept_id_1': concept_id_1,
@@ -1364,7 +1381,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
             concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
             params['concept_class_id'] = concept_class_id
 
-        sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter)
+        sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter,
+                         ln_ratio_filter=ln_ratio_filter)
 
     cur.execute(sql, params)
     json_return = cur.fetchall()
@@ -1393,8 +1411,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
         o = [neg, c1 - cpc, c2 - cpc, cpc]
         e = [(pts - c1) * (pts - c2) / pts, c1 * (pts - c2) / pts, c2 * (pts - c1) / pts, c1 * c2 / pts]
         cs = chisquare(o, e, 2)
-        row['chi_square_p-value'] = cs.pvalue
-        row['chi_square_p-value_adjusted'] = min(cs.pvalue * pair_count, 1.0)  # Bonferonni adjustment
+        row['chi_square_p-value'] = max(cs.pvalue, MIN_P)
+        row['chi_square_p-value_adjusted'] = max(min(cs.pvalue * pair_count, 1.0), MIN_P)  # Bonferonni adjustment
 
     cur.close()
     conn.close()
@@ -1458,9 +1476,12 @@ def omop_concept_definitions(concept_ids):
     -------
     dict[concept_ids] = concept definition row
     """
+    concept_defs = dict()
+    if not concept_ids:
+        return concept_defs
+
     response = query_db(service='omop', method='concepts', args={'q': ','.join(str(c) for c in concept_ids)})
 
-    concept_defs = dict()
     concept_results = response.get_json()
     if concept_results is None or 'results' not in concept_results:
         return concept_defs

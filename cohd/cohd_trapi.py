@@ -23,6 +23,9 @@ class TrapiStatusCode(Enum):
     UNRESOLVABLE_CURIE = 'UnresolvableCurie'
     COULD_NOT_MAP_CURIE_TO_LOCAL_KG = 'CouldNotMapCurieToLocalKG'
     UNSUPPORTED_QNODE_CATEGORY = 'UnsupportedQNodeCategory'
+    UNSUPPORTED_CONSTRAINT = 'UnsupportedConstraint'
+    UNSUPPORTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
+    UNSUPPORTED_QUAL_CONSTRAINT = 'UnsupportedQualifierConstraint'
 
 
 class CohdTrapi(ABC):
@@ -60,20 +63,14 @@ class CohdTrapi(ABC):
     default_max_results_per_input = 500
     default_max_results = 500
     default_log_level = logging.INFO
-    default_time_limit = 60  # seconds
+    default_time_limit = 20  # seconds
+    batch_size_limit = 100  # max length of any IDs list
     limit_max_results = 500
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
-    # Deprecated. Only used in old versions of cohd_trapi_VERSION
-    # Set of edge types that are supported by the COHD Reasoner. This list is in preferred order, most preferred first
-    supported_edge_types = [
-        'biolink:correlated_with',  # Currently, COHD models all relations using biolink:correlated_with
-    ]
-
-    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all
-    # has_real_world_evidence_of_association_with
-    default_predicate = 'biolink:has_real_world_evidence_of_association_with'
+    # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
+    default_predicate = 'biolink:correlated_with'
     method_predicates = {
         'obsExpRatio': default_predicate,
         'relativeFrequency': default_predicate,

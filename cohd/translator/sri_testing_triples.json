@@ -1,0 +1,64 @@
+{
+    "url": "https://cohd-api.transltr.io/api",
+    "source_type": "original",
+    "infores": "cohd",
+    "exclude_tests": [],
+    "edges": [
+        {
+            "subject_category": "biolink:SmallMolecule",
+            "object_category": "biolink:SmallMolecule",
+            "predicate": "biolink:correlated_with",
+            "subject": "PUBCHEM.COMPOUND:2157",
+            "object": "PUBCHEM.COMPOUND:135565674"
+        },
+        {
+            "subject_category": "biolink:SmallMolecule",
+            "object_category": "biolink:Disease",
+            "predicate": "biolink:correlated_with",
+            "subject": "PUBCHEM.COMPOUND:2157",
+            "object": "MONDO:0004981"
+        },
+        {
+            "subject_category": "biolink:SmallMolecule",
+            "object_category": "biolink:Drug",
+            "predicate": "biolink:correlated_with",
+            "subject": "PUBCHEM.COMPOUND:208898",
+            "object": "RXCUI:370568"
+        },
+        {
+            "subject_category": "biolink:Disease",
+            "object_category": "biolink:SmallMolecule",
+            "predicate": "biolink:correlated_with",
+            "subject": "MONDO:0004981",
+            "object": "PUBCHEM.COMPOUND:208898"
+        },
+        {
+            "subject_category": "biolink:Disease",
+            "object_category": "biolink:PhenotypicFeature",
+            "predicate": "biolink:correlated_with",
+            "subject": "MONDO:0004981",
+            "object": "HP:0004754"
+        },
+        {
+            "subject_category": "biolink:Disease",
+            "object_category": "biolink:Drug",
+            "predicate": "biolink:correlated_with",
+            "subject": "MONDO:0004981",
+            "object": "RXCUI:1743562"
+        },
+        {
+            "subject_category": "biolink:Drug",
+            "object_category": "biolink:SmallMolecule",
+            "predicate": "biolink:correlated_with",
+            "subject": "RXCUI:854859",
+            "object": "PUBCHEM.COMPOUND:4932"
+        },
+        {
+            "subject_category": "biolink:Drug",
+            "object_category": "biolink:Drug",
+            "predicate": "biolink:correlated_with",
+            "subject": "RXCUI:1743562",
+            "object": "RXCUI:1046405"
+        }
+    ]
+}

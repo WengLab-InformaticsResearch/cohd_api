@@ -6,7 +6,7 @@ https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 from flask import jsonify
 from semantic_version import Version
 
-from . import cohd_trapi_120
+from . import cohd_trapi_120, cohd_trapi_130
 from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
@@ -23,7 +23,7 @@ def translator_meta_knowledge_graph():
     json response object
     """
     # Supported categories in most recent TRAPI implementation
-    categories = cohd_trapi_120.CohdTrapi120.supported_categories
+    categories = cohd_trapi_130.CohdTrapi130.supported_categories
 
     # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
     nodes = dict()
@@ -62,71 +62,94 @@ def translator_meta_knowledge_graph():
     common_edge_attributes = [
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:original_knowledge_source",
+            "attribute_type_id": "biolink:primary_knowledge_source",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:supporting_data_source",
+            "attribute_type_id": "biolink:supporting_data_set",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:p_value",
-            "original_attribute_names": ["p-value", "p-value adjusted"],
+            "attribute_type_id": "biolink:has_supporting_study_result",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_evidence",
-            "original_attribute_names": ["ln_ratio",
-                                         "relative_frequency_subject",
-                                         "relative_frequency_object"],
+            "attribute_type_id": "biolink:concept_pair_count",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_confidence_level",
-            "original_attribute_names": ["ln_ratio_confidence_interval",
-                                         "relative_freq_subject_confidence_interval",
-                                         "relative_freq_object_confidence_interval"],
+            "attribute_type_id": "biolink:concept_count_subject",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:has_count",
-            "original_attribute_names": ["concept_pair_count",
-                                         "concept_count_subject",
-                                         "concept_count_object"],
+            "attribute_type_id": "biolink:concept_count_object",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "EDAM:operation_3438",
-            "original_attribute_names": ["expected_count"],
+            "attribute_type_id": "biolink:unadjusted_p_value",
             "constraint_use": False
         },
         {
             "attribute_source": "infores:cohd",
-            "attribute_type_id": "biolink:provided_by",
-            "original_attribute_names": ["dataset_id"],
+            "attribute_type_id": "biolink:bonferonni_adjusted_p_value",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:expected_count",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:ln_ratio",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:ln_ratio_confidence_interval",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_subject",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_subject_confidence_interval",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_object",
+            "constraint_use": False
+        },
+        {
+            "attribute_source": "infores:cohd",
+            "attribute_type_id": "biolink:relative_frequency_object_confidence_interval",
             "constraint_use": False
         }
     ]
     edges = list()
     for subject in categories:
         for object in categories:
-            # Temporarily support both correlated_with and has_real_world_evidence_of_association_with
+            # Add positively and negatively correlated with edges
             edges.append({
                 'subject': subject,
                 'object': object,
-                'predicate': 'biolink:correlated_with',
+                'predicate': 'biolink:positively_correlated_with',
                 'attributes': common_edge_attributes
             })
             edges.append({
                 'subject': subject,
                 'object': object,
-                'predicate': 'biolink:has_real_world_evidence_of_association_with',
+                'predicate': 'biolink:negatively_correlated_with',
                 'attributes': common_edge_attributes
             })
 
@@ -136,7 +159,7 @@ def translator_meta_knowledge_graph():
     })
 
 
-def translator_query(request, version=None):
+def translator_query(request, version='1.3.0'):
     """ Implementation of query endpoint for TRAPI
 
     Calls the requested version of the TRAPI message
@@ -152,7 +175,7 @@ def translator_query(request, version=None):
     requested version
     """
     if version is None:
-        version = '1.2.0'
+        version = '1.3.0'
 
     try:
         version = Version(version)
@@ -161,6 +184,9 @@ def translator_query(request, version=None):
 
     if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
         trapi = cohd_trapi_120.CohdTrapi120(request)
+        return trapi.operate()
+    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
+        trapi = cohd_trapi_130.CohdTrapi130(request)
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501
@@ -269,3 +295,7 @@ def omop_to_biolink(request):
             normalized_mappings[omop_id] = normalized_mapping
 
     return jsonify(normalized_mappings)
+
+
+def api_version():
+    return cohd_trapi_130.CohdTrapi130.tool_version, 200

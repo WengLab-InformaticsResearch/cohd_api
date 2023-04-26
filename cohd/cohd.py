@@ -11,8 +11,10 @@ implemented in Flask
 (c) 2017 Tatonetti Lab
 """
 
-from flask import request, redirect
+import traceback
 
+from flask import request, redirect
+from werkzeug.exceptions import InternalServerError
 from .google_analytics import GoogleAnalytics
 
 # Flask app and cache
@@ -24,6 +26,7 @@ from . import cohd_translator
 from . import cohd_trapi
 from . import scheduled_tasks
 from . import biolink_mapper
+from .cohd_utilities import read_log
 
 
 ##########
@@ -175,6 +178,12 @@ def api_translator_meta_knowledge_graph():
     return api_call('translator', 'meta_knowledge_graph')
 
 
+@app.route('/api/version', methods=['GET'])
+@app.route('/api/translator/version', methods=['GET'])
+def api_internal_version():
+    return api_call('translator', 'version')
+
+
 @app.route('/api/translator/omop_to_biolink', methods=['POST'])
 def api_translator_omop_to_biolink():
     return api_call('translator', 'omop_to_biolink')
@@ -195,10 +204,25 @@ def api_internal_clear_cache():
     return api_call('dev', 'clear_cache')
 
 
+@app.route('/api/dev/inspect', methods=['GET'])
+def api_internal_inspect():
+    return api_call('dev', 'inspect')
+
+
 @app.route('/health', methods=['GET'])
 @app.route('/api/health', methods=['GET'])
 def api_health():
     return api_call('health')
+
+
+@app.errorhandler(InternalServerError)
+def handle_internal_server_error(e):
+    # Since we don't have direct access to ITRB logs, have general 500 errors return the traceback
+    exc = e.original_exception
+    return "500 Internal Server Error\n" \
+           "The server encountered an internal error and was unable to complete your request. Either the server is " \
+           "overloaded or there is an error in the application.\n\n" + \
+           f"Exception:\n{exc}\n\n{traceback.format_exc()}", 500
 
 
 # Retrieves the desired arg_names from args and stores them in the queries dictionary. Returns None if any of arg_names
@@ -220,8 +244,6 @@ def google_analytics(endpoint=None, service=None, meta=None):
         GoogleAnalytics.google_analytics(request, tid, endpoint, service, meta)
 
 
-@app.route('/api/query')
-@app.route('/api/v1/query')
 def api_call(service=None, meta=None, query=None, version=None):
     if service is None:
         service = request.args.get('service')
@@ -276,6 +298,8 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = cohd_translator.omop_to_biolink(request)
         elif meta == 'biolink_to_omop':
             result = cohd_translator.biolink_to_omop(request)
+        elif meta == 'version':
+            result = cohd_translator.api_version()
         else:
             result = 'meta not recognized', 400
     elif service == 'health':
@@ -293,6 +317,8 @@ def api_call(service=None, meta=None, query=None, version=None):
             elif meta == 'clear_cache':
                 cache.clear()
                 result = 'Cleared cache', 200
+            elif meta == 'inspect':
+                result = read_log(), 200
             else:
                 result = 'meta not recognized', 400
         else:

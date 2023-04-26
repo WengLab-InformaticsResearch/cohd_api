@@ -844,92 +844,7 @@ def translator_query_100(node_1_curie, node_2_curie=None, node_2_type=None, max_
     return response, query
 
 
-def translator_query_110(node_1_curies, node_2_curies=None, node_2_categories=None, max_results=500,
-                         confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
-                         min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=300):
-    """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
-
-    Parameters
-    ----------
-    node_1_curie - CURIE of node 1, e.g., "DOID:9053"
-    node_2_curie - [Optional] CURIE of node 2, e.g., "DOID:9053". One of node_2_curie or node_2_type is required.
-    node_2_type - [Optional] node 2 semantic type, e.g., "procedure". One of node_2_curie or node_2_type is required.
-    max_results - Maximum number of results. Default: 500
-    confidence_interval - [Optional] Confidence interval for associations
-    dataset_id - COHD dataset ID. See datasets function. Default: 3
-    local_oxo - True to use COHD's local implementation of OxO (faster, but not up to date). Default: True
-    method - Association metric. One of: 'obsExpRatio' (default), 'relativeFrequency', or 'chiSquare'
-    min_cooccurrence - [Optional] Criteria that the results have a minimum co-occurrence count
-    threshold - [Optional] Criteria threshold to apply to the association metric. chiSquare: p-value < threshold.
-                obsExpRatio: abs(ln_ratio) >= threshold. relativeFrequency: relative_frequency >= threshold.
-    ontology_targets - [Optional] Desired ontologies for results to be mapped to
-
-    Returns
-    -------
-    Translator Reasoner Standard API Message JSON
-    """
-    url = f'{server}/query'
-
-    # Node 1
-    if type(node_1_curies) is str:
-        node_1_curies = [node_1_curies]
-    node_1 = {
-        "ids": node_1_curies
-    }
-
-    # Node 2
-    node_2 = {}
-    if node_2_curies is not None:
-        if type(node_2_curies) is str:
-            node_2_curies = [node_2_curies]
-        node_2["ids"] = node_2_curies
-    if node_2_categories is not None:
-        if type(node_2_categories) is str:
-            node_2_categories = [node_2_categories]
-        node_2["categories"] = node_2_categories
-
-    # Query options
-    query_options = {
-        "max_results": max_results,
-        "method": method,
-        "dataset_id": dataset_id,
-        "local_oxo": local_oxo,
-        "biolink_only": biolink_only,
-        "ontology_targets": None
-    }
-    if confidence_interval is not None:
-        query_options["confidence_interval"] = confidence_interval
-    if min_cooccurrence is not None:
-        query_options["min_cooccurrence"] = min_cooccurrence
-    if threshold is not None:
-        query_options["threshold"] = threshold
-    if ontology_targets is not None:
-        query_options["ontology_targets"] = ontology_targets
-
-    query = {
-      "message": {
-        "query_graph": {
-          "nodes": {
-              "n00": node_1,
-              "n01": node_2
-          },
-          "edges": {
-            "e00": {
-              "predicates": ["biolink:has_real_world_evidence_of_association_with"],
-              "subject": "n00",
-              "object": "n01"
-            }
-          }
-        }
-      },
-      "query_options": query_options
-    }
-
-    response = requests.post(url, json=query, timeout=timeout)
-    return response, query
-
-
-def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=None, max_results=500,
+def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=None, predicates=None, max_results=500,
                          confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
                          min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=300,
                          query_id=True):
@@ -955,6 +870,9 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
     -------
     Translator Reasoner Standard API Message JSON
     """
+    if predicates is None:
+        predicates = ['biolink:correlated_with']
+
     url = f'{server}/query'
 
     # Node 1
@@ -1007,7 +925,7 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
           },
           "edges": {
             "e00": {
-              "predicates": ["biolink:has_real_world_evidence_of_association_with"],
+              "predicates": predicates,
               "subject": "n00",
               "object": "n01"
             }
@@ -1019,6 +937,16 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
 
     response = requests.post(url, json=query, timeout=timeout)
     return response, query
+
+
+# TRAPI 1.3 query on COHD is currently the same as TRAPI 1.2 query
+translator_query_130 = translator_query_120
+
+
+def translator_version():
+    url = f'{server}/translator/version'
+    response = requests.get(url, timeout=5)
+    return response.text
 
 
 def translator_biolink_to_omop(curies):

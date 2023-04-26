@@ -9,4 +9,4 @@ pymysql
 semantic_version
 apscheduler
 bmt
-reasoner-validator
+reasoner-validator>=3.1

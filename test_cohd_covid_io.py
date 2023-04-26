@@ -19,8 +19,8 @@ _s = namedtuple('_s', ['key', 'type'])
 cr.server = 'https://covid.cohd.io/api'
 
 # Proxy for main TRAPI version
-from cohd.trapi.reasoner_validator import validate_trapi_12x as validate_trapi
-translator_query = cr.translator_query_120
+from cohd.trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
+translator_query = cr.translator_query_130
 
 
 def check_results_schema(json, schema):
