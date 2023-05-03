@@ -3,6 +3,11 @@ Implementation of the NCATS Biodmedical Data Translator TRAPI Spec
 https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI/tree/master/API
 """
 
+import cProfile
+import sys
+import pstats
+from pstats import SortKey
+
 from flask import jsonify
 from semantic_version import Version
 
@@ -185,8 +190,17 @@ def translator_query(request, version='1.3.0'):
     if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
         trapi = cohd_trapi_120.CohdTrapi120(request)
         return trapi.operate()
-    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
+    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):        
         trapi = cohd_trapi_130.CohdTrapi130(request)
+        
+        # Profile the performance of the TRAPI operate call
+        cProfile.runctx('trapi.operate()', globals(), locals(), 'profile_temp')
+        p = pstats.Stats('profile_temp')
+        p.sort_stats(SortKey.CUMULATIVE).print_stats(100)
+
+        # Re-run TRAPI operate and return as usual
+        # Note: there are some suggestions for getting the retun value without re-running:
+        # https://stackoverflow.com/questions/1584425/return-value-while-using-cprofile
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501
