@@ -11,7 +11,7 @@ from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
-from .trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
+from .trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi
 from .translator import bm_toolkit, bm_version
 from .translator.ontology_kp import OntologyKP
 
@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.3'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.4'
     schema_version = '1.4.0'
     biolink_version = bm_version
 
