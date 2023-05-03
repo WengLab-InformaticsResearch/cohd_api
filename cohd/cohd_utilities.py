@@ -19,11 +19,34 @@ def poisson_ci(freq, confidence=0.99):
     # # Adjust the interval for each individual poisson to achieve overall confidence interval
     # return poisson.interval(confidence, freq)
 
+    # COHD defaults to confidence values of 0.99 and 0.999 (double poisson), so cache these values to save compute time
+    use_cache = (confidence == 0.99 or confidence == 0.999)
+    if use_cache:
+        cache = _poisson_ci_cache[confidence]
+        if freq in cache:
+            return cache[freq]
+
     # Same result as using poisson.interval, but much faster calculation
     alpha = 1 - confidence
     ci = poisson.ppf([alpha / 2, 1 - alpha / 2], freq)
     ci[0] = max(ci[0], 1)  # min possible count is 1
-    return tuple(ci)
+    ci = tuple(ci)
+
+    if use_cache:
+        # Only cache results for 99% CI
+        cache[freq] = ci
+    return ci
+
+
+# Pre-cache values for poisson_ci. Confidence values of 0.99 and 0.999 are commonly used. Caching up to a freq of 10000
+# covers 99% of co-occurrence counts in COHD and takes up < 1MB RAM for both confidence levels.
+_poisson_ci_cache = {
+    0.99: dict(),
+    0.999: dict()
+}
+for i in range(10000):
+    poisson_ci(i, confidence=0.99)
+    poisson_ci(i, confidence=0.999)
 
 
 def double_poisson_ci(freq, confidence=0.99):
