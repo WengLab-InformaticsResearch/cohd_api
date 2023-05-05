@@ -33,13 +33,14 @@ def poisson_ci(freq, confidence=0.99):
     ci = tuple(ci)
 
     if use_cache:
-        # Only cache results for 99% CI
+        # Only cache results for 99% and 99.9% CI
         cache[freq] = ci
     return ci
 
 
 # Pre-cache values for poisson_ci. Confidence values of 0.99 and 0.999 are commonly used. Caching up to a freq of 10000
 # covers 99% of co-occurrence counts in COHD and takes up < 1MB RAM for both confidence levels.
+# Note: also evaluated a hybrid implementation using both lists and dicts, but had exact same performance
 _poisson_ci_cache = {
     0.99: dict(),
     0.999: dict()
