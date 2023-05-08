@@ -6,7 +6,7 @@ import logging
 
 from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
-from .cohd_utilities import ln_ratio_ci, rel_freq_ci
+from .cohd_utilities import ln_ratio_ci, rel_freq_ci, log_odds
 from .app import cache
 
 # Configuration
@@ -1412,6 +1412,11 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
         cs = chisquare(o, e, 2)
         row['chi_square_p-value'] = max(cs.pvalue, MIN_P)
         row['chi_square_p-value_adjusted'] = max(min(cs.pvalue * pair_count, 1.0), MIN_P)  # Bonferonni adjustment
+
+        # Log-odds
+        lo, lo_ci = log_odds(c1, c2, cpc, pts, JSON_INFINITY_REPLACEMENT)
+        row['log_odds'] = lo
+        row['log_odds_ci'] = lo_ci
 
     cur.close()
     conn.close()
