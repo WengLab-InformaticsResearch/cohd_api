@@ -19,11 +19,35 @@ def poisson_ci(freq, confidence=0.99):
     # # Adjust the interval for each individual poisson to achieve overall confidence interval
     # return poisson.interval(confidence, freq)
 
+    # COHD defaults to confidence values of 0.99 and 0.999 (double poisson), so cache these values to save compute time
+    use_cache = (confidence == 0.99 or confidence == 0.999)
+    if use_cache:
+        cache = _poisson_ci_cache[confidence]
+        if freq in cache:
+            return cache[freq]
+
     # Same result as using poisson.interval, but much faster calculation
     alpha = 1 - confidence
     ci = poisson.ppf([alpha / 2, 1 - alpha / 2], freq)
     ci[0] = max(ci[0], 1)  # min possible count is 1
-    return tuple(ci)
+    ci = tuple(ci)
+
+    if use_cache:
+        # Only cache results for 99% and 99.9% CI
+        cache[freq] = ci
+    return ci
+
+
+# Pre-cache values for poisson_ci. Confidence values of 0.99 and 0.999 are commonly used. Caching up to a freq of 10000
+# covers 99% of co-occurrence counts in COHD and takes up < 1MB RAM for both confidence levels.
+# Note: also evaluated a hybrid implementation using both lists and dicts, but had exact same performance
+_poisson_ci_cache = {
+    0.99: dict(),
+    0.999: dict()
+}
+for i in range(10000):
+    poisson_ci(i, confidence=0.99)
+    poisson_ci(i, confidence=0.999)
 
 
 def double_poisson_ci(freq, confidence=0.99):
@@ -114,6 +138,58 @@ def ci_significance(ci1, ci2=None):
     # Check if the confidence intervals overlap
     return (ci1[0] > ci2[1]) or (ci2[0] > ci1[1])
 
+
+def log_odds(c1, c2, cp, n, replace_inf=np.inf):
+    """ Calculates the log-odds and 95% CI 
+
+    Params
+    ------
+    c1: count for concept 1
+    c2: count for concept 2
+    cp: concept-pair count
+    n: total population size
+    replace_inf: (Optional) If specified, replaces +Inf or -Inf with +replace_inf or -replace_inf (useful because JSON
+                 doesn't allow Infinity)
+
+    Returns
+    -------
+    (log-odds, [95% CI lower bound, 95% CI upper bound])
+    """
+    a = cp
+    b = c1 - cp
+    c = c2 - cp
+    d = n - c1 - c2 + cp
+    print(f'c1: {c1}, c2: {c2}, cp: {cp}, n: {n}, a: {a}, b: {b}, c: {c}, d: {d}')
+    if b == 0 or c == 0:
+        if a == 0:
+            return 0, [0, 0]
+        else:
+            return replace_inf, [replace_inf, replace_inf]
+    else:
+        log_odds = np.log((a*d)/(b*c))
+        print(log_odds)
+        ci = 1.96 * np.sqrt(1/a + 1/b + 1/c + 1/d)
+        print(ci)
+        # Strict JSON doesn't allow Inf values, replace as necessary
+        ci = [clip(log_odds - ci, replace_inf), clip(log_odds + ci, replace_inf)]        
+        return clip(log_odds, replace_inf), ci
+
+
+def clip(x, clip):
+    """ Clip values to [-clip, clip] 
+    
+    Params
+    ------
+    x: value to clip
+    clip: value to clip to 
+    
+    Returns
+    -------
+    clipped value 
+    """
+    # return min(max(x, -clip), clip)
+    return -clip if x < -clip else clip if x > clip else x
+    
 
 def omop_concept_uri(concept_id):
     """ Returns URI for concept_id using OHDSI WebAPI as a reference

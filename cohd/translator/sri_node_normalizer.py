@@ -72,8 +72,12 @@ class SriNodeNormalizer:
             except requests.exceptions.Timeout:
                 # Fail if any individual call fails
                 logging.error(f'SRI Node Normalizer timed out after {timeout} sec\n'
-                              f'Posted data:\n{json.dumps(data)}'
-                              )
+                              f'Posted data:\n{json.dumps(data)}')
+                return None
+            except requests.exceptions.RequestException:
+                # Fail if any individual call fails
+                logging.error(f'An error occurred when communicating with SRI Node Normalizer\n'
+                              f'Posted data:\n{json.dumps(data)}')
                 return None
             if response.status_code == 200:
                 combined_response.update(response.json())

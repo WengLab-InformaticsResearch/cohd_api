@@ -37,7 +37,7 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.11'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.12'
     schema_version = '1.3.0'
 
     def __init__(self, request):
@@ -1354,6 +1354,14 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Observed concept count of the object node'
                     },
                     {
+                        'attribute_type_id': 'biolink:population_count',
+                        'original_attribute_name': 'patient_count',
+                        'value': cohd_result['patient_count'],
+                        'value_type_id': 'EDAM:data_0006',  # Data
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Number of patients in the COHD dataset'
+                    },
+                    {
                         'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
                         'value': f"COHD:dataset_{cohd_result['dataset_id']}",
@@ -1488,6 +1496,49 @@ class CohdTrapi130(CohdTrapi):
                         'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{cohd_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    }
+                ]
+            },
+            # Log-odds analysis
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:has_supporting_study_result",
+                "description": "A study result describing a log-odds anaylsis on a single pair of concepts",
+                "value": "N/A",
+                "value_type_id": "biolink:LogOddsAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:log_odds_ratio',
+                        'original_attribute_name': 'log_odds',
+                        'value': cohd_result['log_odds'],
+                        'value_type_id': 'EDAM:data_1772',  # Score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed-expected frequency ratio.'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:log_odds_ratio_95_ci',
+                        'original_attribute_name': 'log_odds_ci',
+                        'value': cohd_result['log_odds_ci'],
+                        'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Log-odds 95% confidence interval'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:total_sample_size',
+                        'original_attribute_name': 'concept_pair_count',
+                        'value': cohd_result['concept_pair_count'],
+                        'value_type_id': 'EDAM:data_0006',  # Data
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed concept count between the pair of subject and object nodes'
                     },
                     {
                         'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
