@@ -139,6 +139,58 @@ def ci_significance(ci1, ci2=None):
     return (ci1[0] > ci2[1]) or (ci2[0] > ci1[1])
 
 
+def log_odds(c1, c2, cp, n, replace_inf=np.inf):
+    """ Calculates the log-odds and 95% CI 
+
+    Params
+    ------
+    c1: count for concept 1
+    c2: count for concept 2
+    cp: concept-pair count
+    n: total population size
+    replace_inf: (Optional) If specified, replaces +Inf or -Inf with +replace_inf or -replace_inf (useful because JSON
+                 doesn't allow Infinity)
+
+    Returns
+    -------
+    (log-odds, [95% CI lower bound, 95% CI upper bound])
+    """
+    a = cp
+    b = c1 - cp
+    c = c2 - cp
+    d = n - c1 - c2 + cp
+    print(f'c1: {c1}, c2: {c2}, cp: {cp}, n: {n}, a: {a}, b: {b}, c: {c}, d: {d}')
+    if b == 0 or c == 0:
+        if a == 0:
+            return 0, [0, 0]
+        else:
+            return replace_inf, [replace_inf, replace_inf]
+    else:
+        log_odds = np.log((a*d)/(b*c))
+        print(log_odds)
+        ci = 1.96 * np.sqrt(1/a + 1/b + 1/c + 1/d)
+        print(ci)
+        # Strict JSON doesn't allow Inf values, replace as necessary
+        ci = [clip(log_odds - ci, replace_inf), clip(log_odds + ci, replace_inf)]        
+        return clip(log_odds, replace_inf), ci
+
+
+def clip(x, clip):
+    """ Clip values to [-clip, clip] 
+    
+    Params
+    ------
+    x: value to clip
+    clip: value to clip to 
+    
+    Returns
+    -------
+    clipped value 
+    """
+    # return min(max(x, -clip), clip)
+    return -clip if x < -clip else clip if x > clip else x
+    
+
 def omop_concept_uri(concept_id):
     """ Returns URI for concept_id using OHDSI WebAPI as a reference
 
