@@ -10,3 +10,6 @@ semantic_version
 apscheduler
 bmt
 reasoner-validator>=3.1
+
+# temporary fix. rustsim 0.1.13 is now semsimian. current version of oaklib (0.5.5) expects rustsim available.
+rustsim<=0.1.12
