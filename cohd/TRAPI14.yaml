@@ -17,7 +17,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 6.3.1
+  version: 6.3.5
   title: COHD TRAPI
   contact:
     name: Casey Ta
@@ -55,6 +55,9 @@ info:
         production/x-trapi/
     test_data_location: "https://raw.githubusercontent.com/WengLab-InformaticsResearch/cohd_api/master/cohd/translator/sri_testing_triples.json"
 servers:
+  - url: 'https://cohd-api.ci.transltr.io/api'
+    description: COHD ITRB CI Server
+    x-maturity: staging
   - url: 'https://cohd.io/api'
     description: COHD Development Server
     x-maturity: development

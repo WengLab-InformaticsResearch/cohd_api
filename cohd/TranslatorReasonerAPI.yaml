@@ -17,7 +17,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 6.2.11
+  version: 6.2.12
   title: COHD TRAPI
   contact:
     name: Casey Ta
@@ -61,12 +61,6 @@ servers:
   - url: 'https://cohd-api.test.transltr.io/api'
     description: COHD ITRB Test Server
     x-maturity: testing
-  - url: 'https://cohd-api.ci.transltr.io/api'
-    description: COHD ITRB CI Server
-    x-maturity: staging
-  - url: 'https://dev.cohd.io/api'
-    description: COHD Development Server
-    x-maturity: development
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services
