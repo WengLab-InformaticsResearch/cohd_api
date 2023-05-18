@@ -19,8 +19,8 @@ from cohd.trapi.reasoner_validator_ext import validate_trapi_14x as validate_tra
 from cohd.translator.ontology_kp import OntologyKP
 
 # Choose which server to test
-cr.server = 'https://cohd.io/api'
-# cr.server = 'https://cohd-api.ci.transltr.io/api'
+# cr.server = 'https://cohd.io/api'
+cr.server = 'https://cohd-api.ci.transltr.io/api'  # Temporarily default to CI as Translator consrotia has only deployed TRAPI 1.4 to CI
 # cr.server = 'https://cohd-api.test.transltr.io/api'
 # cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
