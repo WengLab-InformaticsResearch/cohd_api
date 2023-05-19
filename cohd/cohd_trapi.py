@@ -55,17 +55,17 @@ class CohdTrapi(ABC):
     default_method = 'obsExpRatio'
     default_min_cooccurrence = 0
     default_confidence_interval = 0.99
-    default_ln_ratio_ci_thresohld = 1.0
+    default_ln_ratio_ci_thresohld = 0
     default_dataset_id = 3
     default_local_oxo = False
     default_mapping_distance = 3
     default_biolink_only = True
-    default_max_results_per_input = 50
-    default_max_results = 500
+    default_max_results_per_input = 50000
+    default_max_results = 100000
     default_log_level = logging.INFO
-    default_time_limit = 20  # seconds
+    default_time_limit = 300  # seconds
     batch_size_limit = 100  # max length of any IDs list
-    limit_max_results = 500
+    limit_max_results = 100000
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
 
