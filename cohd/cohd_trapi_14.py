@@ -1339,7 +1339,7 @@ class CohdTrapi140(CohdTrapi):
                         'description': 'Observed concept count of the object node'
                     },
                     {
-                        'attribute_type_id': 'biolink:population_count',
+                        'attribute_type_id': 'biolink:dataset_count',
                         'original_attribute_name': 'patient_count',
                         'value': cohd_result['patient_count'],
                         'value_type_id': 'EDAM:data_0006',  # Data
