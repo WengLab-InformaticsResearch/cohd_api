@@ -11,12 +11,12 @@ from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
-from .trapi.reasoner_validator_ext import validate_trapi_13x as validate_trapi
+from .trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi
 from .translator import bm_toolkit, bm_version
 from .translator.ontology_kp import OntologyKP
 
 
-class CohdTrapi130(CohdTrapi):
+class CohdTrapi140(CohdTrapi):
     """
     Pseudo-reasoner conforming to NCATS Biomedical Data Translator Reasoner API Spec 1.0
     """
@@ -37,8 +37,9 @@ class CohdTrapi130(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.2.12'
-    schema_version = '1.3.0'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.5'
+    schema_version = '1.4.0'
+    biolink_version = bm_version
 
     def __init__(self, request):
         super().__init__(request)
@@ -335,14 +336,14 @@ class CohdTrapi130(CohdTrapi):
                 # Check if any of the predicates are an ancestor of the supported edge predicates
                 predicate_descendants = bm_toolkit.get_descendants(edge_predicate, reflexive=True, formatted=True)
                 for pd in predicate_descendants:
-                    if pd in CohdTrapi130.supported_edge_types:
+                    if pd in CohdTrapi140.supported_edge_types:
                         edge_supported = True
                         break
 
                 # Check directionality of predicate
-                if edge_predicate in CohdTrapi130.edge_types_positive:
+                if edge_predicate in CohdTrapi140.edge_types_positive:
                     positive_edge = True
-                elif edge_predicate in CohdTrapi130.edge_types_negative:
+                elif edge_predicate in CohdTrapi140.edge_types_negative:
                     negative_edge = True
                 else:
                     positive_edge = True
@@ -373,7 +374,7 @@ class CohdTrapi130(CohdTrapi):
 
             if unrecognized_predicates:
                 self.log(f'The following predicates were not recognized in Biolink {bm_version}: {unrecognized_predicates}',
-                         level=logging.WARNING)
+                    level=logging.WARNING)
         else:
             # TRAPI does not require predicates. If no predicates specified, find all relations
             self._kg_edge_predicate = CohdTrapi.default_predicate
@@ -446,14 +447,14 @@ class CohdTrapi130(CohdTrapi):
         # Get qnode categories and check the formatting
         self._concept_1_qnode_categories = concept_1_qnode.get('categories', None)
         if self._concept_1_qnode_categories is not None:
-            self._concept_1_qnode_categories = CohdTrapi130._process_qnode_category(self._concept_1_qnode_categories)
+            self._concept_1_qnode_categories = CohdTrapi140._process_qnode_category(self._concept_1_qnode_categories)
             self._qnode_categories = self._qnode_categories.union(self._concept_1_qnode_categories)
 
             # Check if any of the categories supported by COHD are included in the categories list (or one of their
             # descendants)
             found_supported_cat = False
             unrecognized_cats = list()
-            for supported_cat in CohdTrapi130.supported_categories:
+            for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_1_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
@@ -480,7 +481,7 @@ class CohdTrapi130(CohdTrapi):
 
         self._concept_2_qnode_categories = concept_2_qnode.get('categories', None)
         if self._concept_2_qnode_categories is not None:
-            self._concept_2_qnode_categories = CohdTrapi130._process_qnode_category(self._concept_2_qnode_categories)
+            self._concept_2_qnode_categories = CohdTrapi140._process_qnode_category(self._concept_2_qnode_categories)
             self._qnode_categories = self._qnode_categories.union(self._concept_2_qnode_categories)
             concept_2_qnode['categories'] = self._concept_2_qnode_categories
 
@@ -488,7 +489,7 @@ class CohdTrapi130(CohdTrapi):
             # descendants)
             self._domain_class_pairs = set()
             unrecognized_cats = list()
-            for supported_cat in CohdTrapi130.supported_categories:
+            for supported_cat in CohdTrapi140.supported_categories:
                 for queried_cat in self._concept_2_qnode_categories:
                     # Check if this is a valid biolink category
                     if not bm_toolkit.is_category(queried_cat):
@@ -654,23 +655,16 @@ class CohdTrapi130(CohdTrapi):
                                           query_node_categories=qnode_categories, mapping=concept_1_mapping)
                 self._add_internal_node_to_kg(inode)
 
+                # For descendant nodes, add subclass_of edge
+                if curie in descendant_ids and curie in ancestor_dict:
+                    self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
+
                 # Debug logging
                 message = f"Mapped node '{self._concept_1_qnode_key}' ID {curie} to OMOP:{concept_1_omop_id}"
                 self.log(message, level=logging.DEBUG)
             else:
                 # No OMOP mapping found. Just add the node to the KG.
                 unmapped_curies.append(curie)
-                if normalized_nodes is not None and (nn:= normalized_nodes.get(curie)) is not None:
-                    # Use node norm info when available
-                    self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
-                                                                        categories=nn.categories))
-                else:
-                    # No node norm info available, make an empty KG node
-                    self._add_kg_node(curie, CohdTrapi130._make_kg_node())
-
-            # For descendant nodes, add subclass_of edge
-            if curie in descendant_ids and curie in ancestor_dict:
-                self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
 
         # Log mapped and unmapped CURIEs
         reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_1_omop_ids}
@@ -783,22 +777,13 @@ class CohdTrapi130(CohdTrapi):
                                               concept_class=concept_class, query_node_curie=curie,
                                               query_node_categories=qnode_categories, mapping=concept_2_mapping)
                     self._add_internal_node_to_kg(inode)
+
+                    # For descendant nodes, add subclass_of edge
+                    if curie in descendant_ids and curie in ancestor_dict:
+                        self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
                 else:
                     # No OMOP mapping found. Just add the node to the KG.
                     unmapped_curies.append(curie)
-                    if normalized_nodes is not None:
-                        nn = normalized_nodes.get(curie)
-                        if nn is not None:
-                            # Use node norm info when available
-                            self._add_kg_node(curie, CohdTrapi130._make_kg_node(name=nn.normalized_identifier.label,
-                                                                                categories=nn.categories))
-                    else:
-                        # No node norm info available, make an empty KG node
-                        self._add_kg_node(curie, CohdTrapi130._make_kg_node())
-
-                # For descendant nodes, add subclass_of edge
-                if curie in descendant_ids and curie in ancestor_dict:
-                    self._add_kg_edge_subclass_of(curie, ancestor_dict[curie])
 
             # Log mapped and unmapped CURIEs
             reverse_map = {v:f'OMOP:{k}' for k,v in self._kg_omop_curie_map.items() if k in self._concept_2_omop_ids}
@@ -860,23 +845,23 @@ class CohdTrapi130(CohdTrapi):
 
         if self._dataset_auto:
             # Automatically select the dataset based on which data types being queried
-            # Use the non-hierarchical 5-year dataset when drugs are not involved
+            # Use the non-hierarchical full COVID dataset when drugs are not involved
             self._dataset_id = 1
 
             # Check if any QNode IDs are chemicals
             chemical_descendants = bm_toolkit.get_descendants('biolink:ChemicalEntity', reflexive=True, formatted=True)
             for id_category in self._id_categories:
                 if id_category in chemical_descendants:
-                    # Use the hierarchical 5-year dataset when IDs that are chemicals are queried
-                    self._dataset_id = 3
+                    # Use the hierarchical full COVID dataset when IDs that are chemicals are queried
+                    self._dataset_id = 4
                     break
 
             # Check if any of the QNode categories include chemicals
             for qnode_category in self._qnode_categories:
                 cat_descendants = set(bm_toolkit.get_descendants(qnode_category, reflexive=True, formatted=True))
                 if len(cat_descendants.intersection(chemical_descendants)) > 0:
-                    # Use the hierarchical 5-year dataset whenever categories may include chemicals
-                    self._dataset_id = 3
+                    # Use the hierarchical full COVID dataset whenever categories may include chemicals
+                    self._dataset_id = 4
                     break
 
         if self._valid_query:
@@ -1053,12 +1038,18 @@ class CohdTrapi130(CohdTrapi):
                     'id': kg_node_2_id
                 }]
             },
-            'edge_bindings': {
-                self._query_edge_key: [{
-                    'id': kg_edge_id
-                }]
-            },
-            'score': score
+            'analyses': [
+                {
+                    'resource_id': CohdTrapi._INFORES_ID,
+                    'edge_bindings': {
+                        self._query_edge_key: [{
+                            'id': kg_edge_id
+                        }]
+                    },
+                    'score': score,
+                    'scoring_method': 'Lower bound of biolink:ln_ratio_confidence_interval',
+                }
+            ]
         }
 
         # If QNodes have IDs and the bound KGNode ID is different (e.g., descendant CURIE), then specify the query_id
@@ -1079,7 +1070,7 @@ class CohdTrapi130(CohdTrapi):
         if not self._results:
             return
 
-        scores = [result['score'] for result in self._results]
+        scores = [result['analyses'][0]['score'] for result in self._results]
         self._results = [self._results[i] for i in list(reversed(argsort(scores)))]
 
     def _get_kg_node(self, concept_id, concept_name=None, domain=None, concept_class=None, query_node_curie=None,
@@ -1296,28 +1287,105 @@ class CohdTrapi130(CohdTrapi):
         # Mint a new identifier
         ke_id = self._get_new_kg_edge_id()
 
+<<<<<<< HEAD:cohd/cohd_trapi_120.py
         # Add properties from COHD results to the edge attributes
         attributes = [
             # Information Resource - Source Retrieval Provenance
             # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
             {
-                'attribute_type_id': 'biolink:primary_knowledge_source',
+                'attribute_type_id': 'biolink:original_knowledge_source',
                 'value': CohdTrapi._INFORES_ID,
                 'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
-                'description': 'The COHD KP defines associations between biomedical concepts based on statistical '
-                               'analysis of clinical/EHR data.'
+                'value_url': 'https://covid.cohd.io/api/query'
             },
             {
-                'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
-                'original_attribute_name': 'dataset_id',
-                'value': f"COHD:dataset_{cohd_result['dataset_id']}",
-                'value_type_id': 'EDAM:data_1048',  # Database ID
+                'attribute_type_id': 'biolink:supporting_data_source',
+                'value': CohdTrapi._INFORES_ID,
+                'value_type_id': 'biolink:InformationResource',
                 'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
-                'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                'value_url': 'https://covid.cohd.io/api/'
             },
+            # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
+            {
+                'attribute_type_id': 'biolink:p_value',
+                'original_attribute_name': 'p-value',
+                'value': cohd_result['chi_square_p-value'],
+                'value_type_id': 'EDAM:data_1669',  # P-value
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'value_url': 'http://edamontology.org/data_1669',
+                'description': 'Chi-square p-value, unadjusted. https://covid.cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:p_value',
+                'original_attribute_name': 'p-value adjusted',
+                'value': cohd_result['chi_square_p-value_adjusted'],
+                'value_type_id': 'EDAM:data_1669',  # P-value
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'value_url': 'http://edamontology.org/data_1669',
+                'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
+                               'https://covid.cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'ln_ratio',
+                'value': cohd_result['ln_ratio'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': 'Observed-expected frequency ratio. https://covid.cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_confidence_level',
+                'original_attribute_name': 'ln_ratio_confidence_interval',
+                'value': cohd_result['ln_ratio_ci'],
+                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'relative_frequency_subject',
+                'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_2'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': 'Relative frequency, relative to the subject node. https://covid.cohd.io/about.html'
+            },
+            {
+                'attribute_type_id': 'biolink:has_confidence_level',
+                'original_attribute_name': 'relative_freq_subject_confidence_interval',
+                'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_2_ci'],
+                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
+            },
+            {
+                'attribute_type_id': 'biolink:has_evidence',
+                'original_attribute_name': 'relative_frequency_object',
+                'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
+                                     'relative_frequency_1'],
+                'value_type_id': 'EDAM:data_1772',  # Score
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': 'Relative frequency, relative to the object node. https://covid.cohd.io/about.html'
+=======
+        # Add source retrieval
+        sources = [
+            {
+                'resource_id': CohdTrapi._INFORES_ID,
+                'resource_role': 'primary_knowledge_source',
+>>>>>>> origin/master:cohd/cohd_trapi_14.py
+            },
+            {
+                'resource_id': 'infores:columbia-cdw-ehr-data',
+                'resource_role': 'supporting_data_source',
+            },
+        ]
+
+        # Add properties from COHD results to the edge attributes
+        attributes = [
+            # Information Resource - Source Retrieval Provenance
+            # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
             # Basic counts
             {
                 "attribute_source": CohdTrapi._INFORES_ID,
@@ -1354,7 +1422,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': 'Observed concept count of the object node'
                     },
                     {
-                        'attribute_type_id': 'biolink:population_count',
+                        'attribute_type_id': 'biolink:dataset_count',
                         'original_attribute_name': 'patient_count',
                         'value': cohd_result['patient_count'],
                         'value_type_id': 'EDAM:data_0006',  # Data
@@ -1454,6 +1522,14 @@ class CohdTrapi130(CohdTrapi):
             },
             # Relative frequency analysis
             {
+<<<<<<< HEAD:cohd/cohd_trapi_120.py
+                'attribute_type_id': 'EDAM:operation_3438',
+                'original_attribute_name': 'expected_count',
+                'value': cohd_result['expected_count'],
+                'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
+                'attribute_source': CohdTrapi._INFORES_ID,
+                'description': 'Calculated expected count of concept pair. For ln_ratio. https://covid.cohd.io/about.html'
+=======
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
@@ -1506,6 +1582,7 @@ class CohdTrapi130(CohdTrapi):
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
                     }
                 ]
+>>>>>>> origin/master:cohd/cohd_trapi_14.py
             },
             # Log-odds analysis
             {
@@ -1581,7 +1658,8 @@ class CohdTrapi130(CohdTrapi):
             'predicate': predicate,
             'subject': node_1['primary_curie'],
             'object': node_2['primary_curie'],
-            'attributes': attributes
+            'attributes': attributes,
+            'sources': sources
         }
 
         # Add the new edge
@@ -1615,18 +1693,17 @@ class CohdTrapi130(CohdTrapi):
             'predicate': 'biolink:subclass_of',
             'subject': descendant_node_id,
             'object': ancestor_node_id,
-            'attributes': [{
-                'attribute_type_id': 'biolink:primary_knowledge_source',
-                'value': OntologyKP.INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': OntologyKP.base_url
-            },{
-                'attribute_type_id': 'biolink:aggregator_knowledge_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID
-            }]
+            'sources': [
+                {
+                    'resource_id': OntologyKP.INFORES_ID,
+                    'resource_role': 'primary_knowledge_source',
+                },
+                {
+                    'resource_id': CohdTrapi._INFORES_ID,
+                    'resource_role': 'aggregator_knowledge_source',
+                    'upstream_resource_ids': [OntologyKP.INFORES_ID]
+                },
+            ]
         }
 
     def _initialize_trapi_response(self):
@@ -1634,9 +1711,10 @@ class CohdTrapi130(CohdTrapi):
         """
         self._response = {
             # From TRAPI Extended
-            'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130.tool_version,
-            'schema_version': CohdTrapi130.schema_version,
+            'resource_id': CohdTrapi._INFORES_ID,
+            'tool_version': CohdTrapi140.tool_version,
+            'schema_version': CohdTrapi140.schema_version,
+            'biolink_version': CohdTrapi140.biolink_version,
             'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'query_options': self._query_options,
         }
@@ -1698,21 +1776,16 @@ class CohdTrapi130(CohdTrapi):
         -------
         Response message with JSON data in Reasoner Std API format
         """
-        response = {
-            'status': status.value,
-            'description': description,
-            'message': {
-                'results': None,
-                'query_graph': self._query_graph,
-                'knowledge_graph': None
-            },
-            # From TRAPI Extended
-            'reasoner_id': CohdTrapi._INFORES_ID,
-            'tool_version': CohdTrapi130.tool_version,
-            'schema_version': CohdTrapi130.schema_version,
-            'datetime': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'query_options': self._query_options,
-        }
+        self._initialize_trapi_response()
+        self._response.update({
+                'status': status.value,
+                'description': description,
+                'message': {
+                    'results': None,
+                    'query_graph': self._query_graph,
+                    'knowledge_graph': None
+                }
+            })
         if self._logs is not None and self._logs:
-            response['logs'] = self._logs
-        return jsonify(response)
+            self._response['logs'] = self._logs
+        return jsonify(self._response)

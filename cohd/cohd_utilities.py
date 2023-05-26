@@ -159,7 +159,8 @@ def log_odds(c1, c2, cp, n, replace_inf=np.inf):
     b = c1 - cp
     c = c2 - cp
     d = n - c1 - c2 + cp
-    if b == 0 or c == 0:
+    # Check b/c <= 0 since Poisson perturbation can cause b or c to be negative
+    if b <= 0 or c <= 0:
         if a == 0:
             return 0, [0, 0]
         else:
