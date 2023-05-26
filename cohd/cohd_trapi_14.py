@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.5'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.0'
     schema_version = '1.4.0'
     biolink_version = bm_version
 
@@ -1287,94 +1287,11 @@ class CohdTrapi140(CohdTrapi):
         # Mint a new identifier
         ke_id = self._get_new_kg_edge_id()
 
-<<<<<<< HEAD:cohd/cohd_trapi_120.py
-        # Add properties from COHD results to the edge attributes
-        attributes = [
-            # Information Resource - Source Retrieval Provenance
-            # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
-            {
-                'attribute_type_id': 'biolink:original_knowledge_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'https://covid.cohd.io/api/query'
-            },
-            {
-                'attribute_type_id': 'biolink:supporting_data_source',
-                'value': CohdTrapi._INFORES_ID,
-                'value_type_id': 'biolink:InformationResource',
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'https://covid.cohd.io/api/'
-            },
-            # TODO: need specific attribute IDs or value type IDs (waiting on SRI for guidance)
-            {
-                'attribute_type_id': 'biolink:p_value',
-                'original_attribute_name': 'p-value',
-                'value': cohd_result['chi_square_p-value'],
-                'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://edamontology.org/data_1669',
-                'description': 'Chi-square p-value, unadjusted. https://covid.cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:p_value',
-                'original_attribute_name': 'p-value adjusted',
-                'value': cohd_result['chi_square_p-value_adjusted'],
-                'value_type_id': 'EDAM:data_1669',  # P-value
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'value_url': 'http://edamontology.org/data_1669',
-                'description': 'Chi-square p-value, Bonferonni adjusted by number of pairs of concepts. '
-                               'https://covid.cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'ln_ratio',
-                'value': cohd_result['ln_ratio'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Observed-expected frequency ratio. https://covid.cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'ln_ratio_confidence_interval',
-                'value': cohd_result['ln_ratio_ci'],
-                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Observed-expected frequency ratio {self._confidence_interval}% confidence interval'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'relative_frequency_subject',
-                'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_2'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the subject node. https://covid.cohd.io/about.html'
-            },
-            {
-                'attribute_type_id': 'biolink:has_confidence_level',
-                'original_attribute_name': 'relative_freq_subject_confidence_interval',
-                'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_2_ci'],
-                'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
-            },
-            {
-                'attribute_type_id': 'biolink:has_evidence',
-                'original_attribute_name': 'relative_frequency_object',
-                'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
-                                     'relative_frequency_1'],
-                'value_type_id': 'EDAM:data_1772',  # Score
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Relative frequency, relative to the object node. https://covid.cohd.io/about.html'
-=======
         # Add source retrieval
         sources = [
             {
                 'resource_id': CohdTrapi._INFORES_ID,
                 'resource_role': 'primary_knowledge_source',
->>>>>>> origin/master:cohd/cohd_trapi_14.py
             },
             {
                 'resource_id': 'infores:columbia-cdw-ehr-data',
@@ -1522,14 +1439,6 @@ class CohdTrapi140(CohdTrapi):
             },
             # Relative frequency analysis
             {
-<<<<<<< HEAD:cohd/cohd_trapi_120.py
-                'attribute_type_id': 'EDAM:operation_3438',
-                'original_attribute_name': 'expected_count',
-                'value': cohd_result['expected_count'],
-                'value_type_id': 'EDAM:operation_3438',  # Calculation (not sure if it's correct to use an operation)
-                'attribute_source': CohdTrapi._INFORES_ID,
-                'description': 'Calculated expected count of concept pair. For ln_ratio. https://covid.cohd.io/about.html'
-=======
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
@@ -1582,7 +1491,6 @@ class CohdTrapi140(CohdTrapi):
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
                     }
                 ]
->>>>>>> origin/master:cohd/cohd_trapi_14.py
             },
             # Log-odds analysis
             {
