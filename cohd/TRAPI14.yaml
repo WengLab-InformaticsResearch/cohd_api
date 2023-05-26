@@ -32,7 +32,7 @@ info:
     component: KP
     team:
       - Clinical Data Provider
-    biolink-version: 3.3.4
+    biolink-version: 3.4.2
     infores: infores:cohd
     externalDocs:
       description: >-
@@ -257,7 +257,7 @@ components:
         workflow:
           description: List of workflow steps to be executed.
           oneOf:
-            - $ref: http://standards.ncats.io/workflow/1.3.2/schema
+            - $ref: http://standards.ncats.io/workflow/1.3.4/schema
           nullable: true
         submitter:
           type: string
@@ -305,7 +305,7 @@ components:
         workflow:
           description: List of workflow steps to be executed.
           oneOf:
-            - $ref: http://standards.ncats.io/workflow/1.3.2/schema
+            - $ref: http://standards.ncats.io/workflow/1.3.4/schema
           nullable: true
         submitter:
           type: string
@@ -431,7 +431,7 @@ components:
         workflow:
           description: List of workflow steps that were executed.
           oneOf:
-            - $ref: http://standards.ncats.io/workflow/1.3.2/schema
+            - $ref: http://standards.ncats.io/workflow/1.3.4/schema
           nullable: true
         schema_version:
           type: string
@@ -544,8 +544,7 @@ components:
         A Result object specifies the nodes and edges in the knowledge graph
         that satisfy the structure or conditions of a user-submitted query
         graph. It must contain a NodeBindings object (list of query graph node
-        to knowledge graph node mappings) and an EdgeBindings object (list of
-        query graph edge to knowledge graph edge mappings).
+        to knowledge graph node mappings) and a list of Analysis objects.
       properties:
         node_bindings:
           type: object
@@ -623,9 +622,9 @@ components:
         supporting the analysis (e.g. method or data that supported
         generation of the score).
       properties:
-        reasoner_id:
+        resource_id:
           $ref: '#/components/schemas/CURIE'
-          description: The id of the service generating and using this Anlysis
+          description: The id of the resource generating this Analysis
         score:
           type: number
           format: float
@@ -673,7 +672,7 @@ components:
           nullable: true
       additionalProperties: true
       required:
-        - reasoner_id
+        - resource_id
         - edge_bindings
     EdgeBinding:
       type: object
@@ -1280,8 +1279,6 @@ components:
           nullable: true
           type: array
         association:
-          type: object
-          $ref: '#/components/schemas/BiolinkEntity'
           description: >-
             The Biolink association type (entity) that this edge represents.
             Associations are classes in Biolink
@@ -1292,7 +1289,8 @@ components:
             is filled out, then the testing harness can
             help validate that the qualifiers are being used
             correctly.
-          example: biolink:ChemicalToGeneAssociation
+          example: 'biolink:ChemicalToGeneAssociation'
+          $ref: '#/components/schemas/BiolinkEntity'
       required:
         - subject
         - predicate
@@ -1453,7 +1451,7 @@ components:
         served as a source from which knowledge expressed in an Edge, or
         data used to generate this knowledge, was retrieved.
       properties:
-        resource:
+        resource_id:
           $ref: '#/components/schemas/CURIE'
           description: >-
             The CURIE for an Information Resource that served as a source
@@ -1468,7 +1466,7 @@ components:
             source for an Edge. Note that a given Edge should have one
             and only one 'primary' source, and may have any number of
             'aggregator' or 'supporting data' sources.
-        upstream_resources:
+        upstream_resource_ids:
           type: array
           items:
             $ref: '#/components/schemas/CURIE'
@@ -1498,7 +1496,7 @@ components:
             [https://db.idrblab.net/ttd/data/drug/details/d0az3c, 
             https://db.idrblab.net/ttd/data/target/details/t57700]
       required:
-        - resource
+        - resource_id
         - resource_role
       additionalProperties: true
     ResourceRoleEnum:
