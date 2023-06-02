@@ -11,7 +11,8 @@ from pstats import SortKey
 from flask import jsonify
 from semantic_version import Version
 
-from . import cohd_trapi_120, cohd_trapi_130
+from .cohd_trapi_13 import CohdTrapi130
+from .cohd_trapi_14 import CohdTrapi140
 from .biolink_mapper import BiolinkConceptMapper, SriNodeNormalizer, map_omop_domain_to_blm_class
 from .query_cohd_mysql import omop_concept_definitions
 
@@ -28,7 +29,7 @@ def translator_meta_knowledge_graph():
     json response object
     """
     # Supported categories in most recent TRAPI implementation
-    categories = cohd_trapi_130.CohdTrapi130.supported_categories
+    categories = CohdTrapi140.supported_categories
 
     # Add the supported nodes using all id_prefixes for each category since we use SRI Node Normalizer
     nodes = dict()
@@ -164,7 +165,7 @@ def translator_meta_knowledge_graph():
     })
 
 
-def translator_query(request, version='1.3.0'):
+def translator_query(request, version='1.4.0'):
     """ Implementation of query endpoint for TRAPI
 
     Calls the requested version of the TRAPI message
@@ -180,18 +181,18 @@ def translator_query(request, version='1.3.0'):
     requested version
     """
     if version is None:
-        version = '1.3.0'
+        version = '1.4.0'
 
     try:
         version = Version(version)
     except ValueError:
         return f'TRAPI version {version} not supported. Please use semantic version specifier, e.g., 1.2.0', 400
 
-    if Version('1.2.0-alpha') <= version < Version('1.3.0-alpha'):
-        trapi = cohd_trapi_120.CohdTrapi120(request)
+    if Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):
+        trapi = CohdTrapi130(request)
         return trapi.operate()
-    elif Version('1.3.0-alpha') <= version < Version('1.4.0-alpha'):        
-        trapi = cohd_trapi_130.CohdTrapi130(request)
+    elif Version('1.4.0-alpha') <= version < Version('1.5.0-alpha'):       
+        trapi = CohdTrapi140(request)
         
         # Profile the performance of the TRAPI operate call
         cProfile.runctx('trapi.operate()', globals(), locals(), 'profile_temp')
@@ -200,7 +201,8 @@ def translator_query(request, version='1.3.0'):
 
         # Re-run TRAPI operate and return as usual
         # Note: there are some suggestions for getting the retun value without re-running:
-        # https://stackoverflow.com/questions/1584425/return-value-while-using-cprofile
+        # https://stackoverflow.com/questions/1584425/return-value-while-using-cprofile    
+        trapi = CohdTrapi140(request)
         return trapi.operate()
     else:
         return f'TRAPI version {version} not supported', 501
@@ -312,4 +314,4 @@ def omop_to_biolink(request):
 
 
 def api_version():
-    return cohd_trapi_130.CohdTrapi130.tool_version, 200
+    return CohdTrapi140.tool_version, 200

@@ -159,17 +159,15 @@ def log_odds(c1, c2, cp, n, replace_inf=np.inf):
     b = c1 - cp
     c = c2 - cp
     d = n - c1 - c2 + cp
-    print(f'c1: {c1}, c2: {c2}, cp: {cp}, n: {n}, a: {a}, b: {b}, c: {c}, d: {d}')
-    if b == 0 or c == 0:
+    # Check b/c <= 0 since Poisson perturbation can cause b or c to be negative
+    if b <= 0 or c <= 0:
         if a == 0:
             return 0, [0, 0]
         else:
             return replace_inf, [replace_inf, replace_inf]
     else:
         log_odds = np.log((a*d)/(b*c))
-        print(log_odds)
         ci = 1.96 * np.sqrt(1/a + 1/b + 1/c + 1/d)
-        print(ci)
         # Strict JSON doesn't allow Inf values, replace as necessary
         ci = [clip(log_odds - ci, replace_inf), clip(log_odds + ci, replace_inf)]        
         return clip(log_odds, replace_inf), ci
