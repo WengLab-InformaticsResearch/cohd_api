@@ -47,7 +47,7 @@ def _validate_trapi_response(response):
     vms = validate_trapi_response(TRAPI_VERSION, BIOLINK_VERSION, response)
 
     # expect no validation errors
-    assert len(vms['errors']) == 0
+    assert len(vms['errors']) == 0 and len(vms['critical']) == 0, print(vms)
 
     # If there are validation warnings, display them, but don't fail
     if len(vms['warnings']) > 0:
