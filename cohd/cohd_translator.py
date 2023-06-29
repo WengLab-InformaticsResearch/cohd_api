@@ -165,6 +165,11 @@ def translator_meta_knowledge_graph():
     })
 
 
+def fn(request):
+    trapi = CohdTrapi140(request)
+    trapi.operate()
+
+
 def translator_query(request, version='1.4.0'):
     """ Implementation of query endpoint for TRAPI
 
@@ -192,10 +197,11 @@ def translator_query(request, version='1.4.0'):
         trapi = CohdTrapi130(request)
         return trapi.operate()
     elif Version('1.4.0-alpha') <= version < Version('1.5.0-alpha'):       
-        trapi = CohdTrapi140(request)
+        # trapi = CohdTrapi140(request)
         
         # Profile the performance of the TRAPI operate call
-        cProfile.runctx('trapi.operate()', globals(), locals(), 'profile_temp')
+        # cProfile.runctx('trapi.operate()', globals(), locals(), 'profile_temp')
+        cProfile.runctx('fn(request)', globals(), locals(), 'profile_temp')
         p = pstats.Stats('profile_temp')
         p.sort_stats(SortKey.CUMULATIVE).print_stats(100)
 
