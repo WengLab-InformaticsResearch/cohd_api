@@ -272,84 +272,84 @@ def test_omop_vocab_to_oxo_prefix():
            omop_xref.omop_vocab_to_oxo_prefix('MeSH') == 'MeSH'
 
 
-def test_oxo_search():
-    """ Tests omop_xref.oxo_search
-    Uses oxo_search to make multiple requests to OxO and checks that the results have the expected formats, expected
-    number of search results (i.e., one search result for each CURIE queried), and checks how the number of mappings
-    compare across different calls with different parameter settings (i.e., more mappings when larger distances are
-    used).
-
-    Returns
-    -------
-    No return value. Asserts will be triggered upon failure.
-    """
-    oxo_response_keys = ['_links', '_embedded', 'page']
-
-    # Check oxo_search with a known CURIE that should produce matches
-    json = omop_xref.oxo_search(['DOID:8398'], distance=2)
-    # Check the general response format
-    assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
-    # Searched for 1 CURIE, expect searchResults with length 1
-    assert len(json['_embedded']['searchResults']) == 1
-    # Check that the query produced a response, but don't verify the mappings themselves
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
-    # Keep track of the number of results for comparison against following queries
-    comparison_length = len(json['_embedded']['searchResults'][0]['mappingResponseList'])
-
-    # Sleep for 2 seconds so we don't overload OxO
-    sleep(2)
-
-    # Check oxo_search with a known CURIE with a shorter distance and check that there are fewer results
-    json = omop_xref.oxo_search(['DOID:8398'], distance=1)
-    # Check the general response format
-    assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
-    # Searched for 1 CURIE, expect searchResults with length 1
-    assert len(json['_embedded']['searchResults']) == 1
-    # Check that the query produced a response, but don't verify the mappings themselves
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
-    # Keep track of the number of results for comparison against following queries
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) <= comparison_length
-
-    # Sleep for 2 seconds so we don't overload OxO
-    sleep(2)
-
-    # Check oxo_search with a known CURIE with a longer distance and check that there are fewer results
-    json = omop_xref.oxo_search(['DOID:8398'], distance=3)
-    # Check the general response format
-    assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
-    # Searched for 1 CURIE, expect searchResults with length 1
-    assert len(json['_embedded']['searchResults']) == 1
-    # Check that the query produced a response, but don't verify the mappings themselves
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
-    # Keep track of the number of results for comparison against following queries
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= comparison_length
-
-    # Sleep for 2 seconds so we don't overload OxO
-    sleep(2)
-
-    # Check oxo_search with a known CURIE with a restricted mapping targets and check that there are fewer results
-    json = omop_xref.oxo_search(['DOID:8398'], mapping_targets=['ICD10CM'], distance=2)
-    # Check the general response format
-    assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
-    # Searched for 1 CURIE, expect searchResults with length 1
-    assert len(json['_embedded']['searchResults']) == 1
-    # Check that the query produced a response, but don't verify the mappings themselves
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
-    # Keep track of the number of results for comparison against following queries
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) <= comparison_length
-
-    # Sleep for 2 seconds so we don't overload OxO
-    sleep(2)
-
-    # Check oxo_search with one valid CURIE and one fake CURIE
-    json = omop_xref.oxo_search(['DOID:8398', 'DOID:83980000'], distance=1)
-    # Check the general response format
-    assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
-    # Searched for 2 CURIEs, expect searchResults with length 2
-    assert len(json['_embedded']['searchResults']) == 2
-    # Check that the first query produced mappings and the second query produced no mappings
-    assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) > 0 and \
-           len(json['_embedded']['searchResults'][1]['mappingResponseList']) == 0
+# def test_oxo_search():
+#     """ Tests omop_xref.oxo_search
+#     Uses oxo_search to make multiple requests to OxO and checks that the results have the expected formats, expected
+#     number of search results (i.e., one search result for each CURIE queried), and checks how the number of mappings
+#     compare across different calls with different parameter settings (i.e., more mappings when larger distances are
+#     used).
+#
+#     Returns
+#     -------
+#     No return value. Asserts will be triggered upon failure.
+#     """
+#     oxo_response_keys = ['_links', '_embedded', 'page']
+#
+#     # Check oxo_search with a known CURIE that should produce matches
+#     json = omop_xref.oxo_search(['DOID:8398'], distance=2)
+#     # Check the general response format
+#     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
+#     # Searched for 1 CURIE, expect searchResults with length 1
+#     assert len(json['_embedded']['searchResults']) == 1
+#     # Check that the query produced a response, but don't verify the mappings themselves
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
+#     # Keep track of the number of results for comparison against following queries
+#     comparison_length = len(json['_embedded']['searchResults'][0]['mappingResponseList'])
+#
+#     # Sleep for 2 seconds so we don't overload OxO
+#     sleep(2)
+#
+#     # Check oxo_search with a known CURIE with a shorter distance and check that there are fewer results
+#     json = omop_xref.oxo_search(['DOID:8398'], distance=1)
+#     # Check the general response format
+#     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
+#     # Searched for 1 CURIE, expect searchResults with length 1
+#     assert len(json['_embedded']['searchResults']) == 1
+#     # Check that the query produced a response, but don't verify the mappings themselves
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
+#     # Keep track of the number of results for comparison against following queries
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) <= comparison_length
+#
+#     # Sleep for 2 seconds so we don't overload OxO
+#     sleep(2)
+#
+#     # Check oxo_search with a known CURIE with a longer distance and check that there are fewer results
+#     json = omop_xref.oxo_search(['DOID:8398'], distance=3)
+#     # Check the general response format
+#     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
+#     # Searched for 1 CURIE, expect searchResults with length 1
+#     assert len(json['_embedded']['searchResults']) == 1
+#     # Check that the query produced a response, but don't verify the mappings themselves
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
+#     # Keep track of the number of results for comparison against following queries
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= comparison_length
+#
+#     # Sleep for 2 seconds so we don't overload OxO
+#     sleep(2)
+#
+#     # Check oxo_search with a known CURIE with a restricted mapping targets and check that there are fewer results
+#     json = omop_xref.oxo_search(['DOID:8398'], mapping_targets=['ICD10CM'], distance=2)
+#     # Check the general response format
+#     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
+#     # Searched for 1 CURIE, expect searchResults with length 1
+#     assert len(json['_embedded']['searchResults']) == 1
+#     # Check that the query produced a response, but don't verify the mappings themselves
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) >= 0
+#     # Keep track of the number of results for comparison against following queries
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) <= comparison_length
+#
+#     # Sleep for 2 seconds so we don't overload OxO
+#     sleep(2)
+#
+#     # Check oxo_search with one valid CURIE and one fake CURIE
+#     json = omop_xref.oxo_search(['DOID:8398', 'DOID:83980000'], distance=1)
+#     # Check the general response format
+#     assert json is not None and isinstance(json, dict) and all(k in json for k in oxo_response_keys)
+#     # Searched for 2 CURIEs, expect searchResults with length 2
+#     assert len(json['_embedded']['searchResults']) == 2
+#     # Check that the first query produced mappings and the second query produced no mappings
+#     assert len(json['_embedded']['searchResults'][0]['mappingResponseList']) > 0 and \
+#            len(json['_embedded']['searchResults'][1]['mappingResponseList']) == 0
 
 
 def test_xref_best_from():

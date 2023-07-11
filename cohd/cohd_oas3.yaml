@@ -41,7 +41,7 @@ info:
     [OMOP Common Data Model](https://github.com/OHDSI/CommonDataModel/wiki)  
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)  
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy, concept sets)      
-  version: 5.0.0
+  version: 5.1.0
   title: Columbia Open Health Data (COHD) API
   contact:
     name: Casey Ta
@@ -669,10 +669,15 @@ paths:
                           example: "SNOMED"
   /omop/xrefToOMOP:
     get:
+      deprecated: true
       tags:
         - OMOP
       summary: Cross-reference from an ontology to OMOP standard concepts using the Ontology Xref Service
       description: >-
+        This endpoint has been deprecated. COHD is now using Translator SRI services to map from OMOP to Biolink model. 
+        Also, the OxO API has been producing internal server errors in some circumstances for several months. This 
+        endpoint is currently still available but may not function correctly.  
+          
         Attempts to map a concept from an external ontology to an OMOP standard concept ID using the EMBL-EBI Ontology Xref Service (OxO): https://www.ebi.ac.uk/spot/oxo/index. This method attempts to use OxO to map from the original ontology to an intermediate ontology that is included in OMOP (ICD9CM, ICD10CM, SNOMEDCT, and MeSH), then uses the OMOP mappings to the standard concepts. Multiple mappings may be returned. Results are sorted by total_distance (OxO distance + OMOP distance) in ascending order.
       parameters:
         - name: curie
@@ -754,10 +759,15 @@ paths:
                           example: 2
   /omop/xrefFromOMOP:
     get:
+      deprecated: true
       tags:
         - OMOP
       summary: Cross-reference from an ontology to OMOP standard concepts using the Ontology Xref Service
       description: >-
+        This endpoint has been deprecated. COHD is now using Translator SRI services to map from OMOP to Biolink model. 
+        Also, the OxO API has been producing internal server errors in some circumstances for several months. This 
+        endpoint is currently still available but may not function correctly.  
+          
         Attempts to map a concept from an external ontology to an OMOP standard concept ID using the EMBL-EBI Ontology Xref Service (OxO): https://www.ebi.ac.uk/spot/oxo/index. This method maps from the OMOP standard concept to an intermediate vocabulary included is OxO (ICD9CM, ICD10CM, SNOMEDCT, and MeSH), then uses the OxO API to map to other ontologies. Multiple mappings may be returned. Results are sorted by total_distance (OxO distance + OMOP distance) in ascending order.
       parameters:
         - name: concept_id
