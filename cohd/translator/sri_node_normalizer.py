@@ -30,9 +30,8 @@ class SriNodeNormalizer:
     base_url_default = 'https://nodenorm.transltr.io/'
     base_urls = {
         'dev': 'https://nodenormalization-sri.renci.org/',
-        # CI and TEST have been non-functional for a long time...
-        # 'ITRB-CI': 'https://nodenorm.ci.transltr.io/',
-        # 'ITRB-TEST': 'https://nodenorm.test.transltr.io/',
+        'ITRB-CI': 'https://nodenorm.ci.transltr.io/',
+        'ITRB-TEST': 'https://nodenorm.test.transltr.io/',
         'ITRB-PROD': 'https://nodenorm.transltr.io/'
     }
     endpoint_get_normalized_nodes = 'get_normalized_nodes'

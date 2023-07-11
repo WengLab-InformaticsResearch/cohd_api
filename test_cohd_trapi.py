@@ -20,12 +20,12 @@ from cohd.translator.ontology_kp import OntologyKP
 
 # Choose which server to test
 # cr.server = 'https://cohd.io/api'
-cr.server = 'https://cohd-api.ci.transltr.io/api'  # Temporarily default to CI as Translator consrotia has only deployed TRAPI 1.4 to CI
-# cr.server = 'https://cohd-api.test.transltr.io/api'
+# cr.server = 'https://cohd-api.ci.transltr.io/api'
+cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
 # cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
-BIOLINK_VERSION = '3.1.2'
+BIOLINK_VERSION = '3.4.2'
 TRAPI_VERSION = '1.4.0-beta4'
 
 # Static instance of the Biolink Model Toolkit
@@ -47,7 +47,7 @@ def _validate_trapi_response(response):
     vms = validate_trapi_response(TRAPI_VERSION, BIOLINK_VERSION, response)
 
     # expect no validation errors
-    assert len(vms['errors']) == 0
+    assert len(vms['errors']) == 0 and len(vms['critical']) == 0, print(vms)
 
     # If there are validation warnings, display them, but don't fail
     if len(vms['warnings']) > 0:

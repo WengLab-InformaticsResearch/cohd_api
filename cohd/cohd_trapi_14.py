@@ -1300,6 +1300,20 @@ class CohdTrapi140(CohdTrapi):
         ]
 
         # Add properties from COHD results to the edge attributes
+        curie_subj = node_1['primary_curie']
+        curie_obj = node_2['primary_curie']
+        count_subj_value = cohd_result['concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count']
+        count_obj_value = cohd_result['concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count']
+        count_study_value = f"{curie_subj}: {count_subj_value}; {curie_obj}: {count_obj_value}; pair: {cohd_result['concept_pair_count']}"
+        chi_study_value = f"p-value: {cohd_result['chi_square_p-value']:.2e}; Bonferonni p-value: {cohd_result['chi_square_p-value_adjusted']:.2e}"
+        oefr_study_value = f"{cohd_result['ln_ratio']:.3f} [{cohd_result['ln_ratio_ci'][0]:.3f}, {cohd_result['ln_ratio_ci'][1]:.3f}]"
+        rel_freq_subj_value = cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else 'relative_frequency_2']
+        rel_freq_subj_ci_value = cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else 'relative_frequency_2_ci']
+        rel_freq_obj_value = cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else 'relative_frequency_1']
+        rel_freq_obj_ci_value = cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else 'relative_frequency_1_ci']
+        rel_freq_study_value = f"Relative to {curie_subj}: {rel_freq_subj_value:.3f} [{rel_freq_subj_ci_value[0]:.3f}, {rel_freq_subj_ci_value[1]:.3f}]; " \
+                               f"Relative to {curie_obj}: {rel_freq_obj_value:.3f} [{rel_freq_obj_ci_value[0]:.3f}, {rel_freq_obj_ci_value[1]:.3f}]"
+        log_odds_study_value = f"{cohd_result['log_odds']:.3f} [{cohd_result['log_odds_ci'][0]:.3f}, {cohd_result['log_odds_ci'][1]:.3f}]"
         attributes = [
             # Information Resource - Source Retrieval Provenance
             # Guidance: https://docs.google.com/document/d/177sOmjTueIK4XKJ0GjxsARg909CaU71tReIehAp5DDo/edit#
@@ -1308,7 +1322,7 @@ class CohdTrapi140(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing the initial count of concepts",
-                "value": "N/A",
+                "value": count_study_value,
                 "value_type_id": "biolink:ConceptCountAnalysisResult",
                 'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
@@ -1323,8 +1337,7 @@ class CohdTrapi140(CohdTrapi):
                     {
                         'attribute_type_id': 'biolink:concept_count_subject',
                         'original_attribute_name': 'concept_count_subject',
-                        'value': cohd_result[
-                            'concept_1_count' if self._concept_1_is_subject_qnode else 'concept_2_count'],
+                        'value': count_subj_value,
                         'value_type_id': 'EDAM:data_0006',  # Data
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': 'Observed concept count of the subject node'
@@ -1332,8 +1345,7 @@ class CohdTrapi140(CohdTrapi):
                     {
                         'attribute_type_id': 'biolink:concept_count_object',
                         'original_attribute_name': 'concept_count_object',
-                        'value': cohd_result[
-                            'concept_2_count' if self._concept_1_is_subject_qnode else 'concept_1_count'],
+                        'value': count_obj_value,
                         'value_type_id': 'EDAM:data_0006',  # Data
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': 'Observed concept count of the object node'
@@ -1361,7 +1373,7 @@ class CohdTrapi140(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a chi-squared analysis on a single pair of concepts",
-                "value": "N/A",
+                "value": chi_study_value,
                 "value_type_id": "biolink:ChiSquaredAnalysisResult",
                 'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
@@ -1398,7 +1410,7 @@ class CohdTrapi140(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
-                "value": "N/A",
+                "value": oefr_study_value,
                 "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
                 'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
@@ -1442,15 +1454,14 @@ class CohdTrapi140(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
-                "value": "N/A",
+                "value": rel_freq_study_value,
                 "value_type_id": "biolink:RelativeFrequencyAnalysisResult",
                 'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
                     {
                         'attribute_type_id': 'biolink:relative_frequency_subject',
                         'original_attribute_name': 'relative_frequency_subject',
-                        'value': cohd_result['relative_frequency_1' if self._concept_1_is_subject_qnode else
-                                             'relative_frequency_2'],
+                        'value': rel_freq_subj_value,
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': 'Relative frequency, relative to the subject node.'
@@ -1458,8 +1469,7 @@ class CohdTrapi140(CohdTrapi):
                     {
                         'attribute_type_id': 'biolink:relative_frequency_subject_confidence_interval',
                         'original_attribute_name': 'relative_freq_subject_confidence_interval',
-                        'value': cohd_result['relative_frequency_1_ci' if self._concept_1_is_subject_qnode else
-                                             'relative_frequency_2_ci'],
+                        'value': rel_freq_subj_ci_value,
                         'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Relative frequency (subject) {self._confidence_interval}% confidence interval'
@@ -1467,8 +1477,7 @@ class CohdTrapi140(CohdTrapi):
                     {
                         'attribute_type_id': 'biolink:relative_frequency_object',
                         'original_attribute_name': 'relative_frequency_object',
-                        'value': cohd_result['relative_frequency_2' if self._concept_1_is_subject_qnode else
-                                             'relative_frequency_1'],
+                        'value': rel_freq_obj_value,
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': 'Relative frequency, relative to the object node.'
@@ -1476,8 +1485,7 @@ class CohdTrapi140(CohdTrapi):
                     {
                         'attribute_type_id': 'biolink:relative_frequency_object_confidence_interval',
                         'original_attribute_name': 'relative_freq_object_confidence_interval',
-                        'value': cohd_result['relative_frequency_2_ci' if self._concept_1_is_subject_qnode else
-                                             'relative_frequency_1_ci'],
+                        'value': rel_freq_obj_ci_value,
                         'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Relative frequency (object) {self._confidence_interval}% confidence interval'
@@ -1497,7 +1505,7 @@ class CohdTrapi140(CohdTrapi):
                 "attribute_source": CohdTrapi._INFORES_ID,
                 "attribute_type_id": "biolink:has_supporting_study_result",
                 "description": "A study result describing a log-odds anaylsis on a single pair of concepts",
-                "value": "N/A",
+                "value": log_odds_study_value,
                 "value_type_id": "biolink:LogOddsAnalysisResult",
                 'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
                 "attributes": [
@@ -1507,7 +1515,7 @@ class CohdTrapi140(CohdTrapi):
                         'value': cohd_result['log_odds'],
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
-                        'description': 'Observed-expected frequency ratio.'
+                        'description': 'Natural logarithm of the odds-ratio'
                     },
                     {
                         'attribute_type_id': 'biolink:log_odds_ratio_95_ci',
@@ -1564,8 +1572,8 @@ class CohdTrapi140(CohdTrapi):
         # Set the knowledge graph edge properties
         kg_edge = {
             'predicate': predicate,
-            'subject': node_1['primary_curie'],
-            'object': node_2['primary_curie'],
+            'subject': curie_subj,
+            'object': curie_obj,
             'attributes': attributes,
             'sources': sources
         }

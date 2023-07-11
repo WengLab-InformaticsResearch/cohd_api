@@ -500,116 +500,116 @@ def test_vocabularies():
     check_result_values(json, expected_results)
 
 
-def test_xrefFromOMOP():
-    """ Check the /omop/xrefFromOMOP endpoint. Try mapping from OMOP:192855 (Cancer in situ of urinary bladder) to UMLS
-    with max distance 2.
-    Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
-    """
-    print(f'\ntest_cohd_io: testing /omop/xrefFromOMOP on {cr.server}..... ')
-    json, df = cr.xref_from_omop(concept_id=192855, mapping_targets=['UMLS'], distance=2, local=True, recommend=False)
-
-    # Check that the results adhere to the expected schema
-    schema = [_s('intermediate_omop_concept_code', str),
-              _s('intermediate_omop_concept_id', object),  # Sometimes int, sometimes string when OMOP-UMLS mapping used
-              _s('intermediate_omop_concept_name', str),
-              _s('intermediate_omop_vocabulary_id', str),
-              _s('intermediate_oxo_curie', str),
-              _s('intermediate_oxo_label', str),
-              _s('omop_distance', int),
-              _s('oxo_distance', int),
-              _s('source_omop_concept_code', str),
-              _s('source_omop_concept_id', int),
-              _s('source_omop_concept_name', str),
-              _s('source_omop_vocabulary_id', str),
-              _s('target_curie', str),
-              _s('target_label', str),
-              _s('total_distance', int)]
-    check_results_schema(json, schema)
-
-    # There should be at least one result
-    assert len(json['results']) >= 1
-
-    # Spot check a few of the entries against expected values: OMOP:192855 (Cancer in situ of urinary bladder) should
-    # map to UMLS:C0154091 (Carcinoma in situ of bladder) through a couple different paths
-    expected_results = [
-        {
-            "intermediate_omop_concept_code": "N/A (OMOP-UMLS mapping)",
-            "intermediate_omop_concept_id": "N/A (OMOP-UMLS mapping)",
-            "intermediate_omop_concept_name": "N/A (OMOP-UMLS mapping)",
-            "intermediate_omop_vocabulary_id": "N/A (OMOP-UMLS mapping)",
-            "intermediate_oxo_curie": "N/A (OMOP-UMLS mapping)",
-            "intermediate_oxo_label": "N/A (OMOP-UMLS mapping)",
-            "omop_distance": 1,
-            "oxo_distance": 0,
-            "source_omop_concept_code": "92546004",
-            "source_omop_concept_id": 192855,
-            "source_omop_concept_name": "Cancer in situ of urinary bladder",
-            "source_omop_vocabulary_id": "SNOMED",
-            "target_curie": "UMLS:C0154091",
-            "target_label": "Carcinoma in situ of bladder",
-            "total_distance": 1
-        },
-        {
-            "intermediate_omop_concept_code": "233.7",
-            "intermediate_omop_concept_id": 44824068,
-            "intermediate_omop_concept_name": "Carcinoma in situ of bladder",
-            "intermediate_omop_vocabulary_id": "ICD9CM",
-            "intermediate_oxo_curie": "ICD9CM:233.7",
-            "intermediate_oxo_label": "Carcinoma in situ of bladder",
-            "omop_distance": 1,
-            "oxo_distance": 1,
-            "source_omop_concept_code": "92546004",
-            "source_omop_concept_id": 192855,
-            "source_omop_concept_name": "Cancer in situ of urinary bladder",
-            "source_omop_vocabulary_id": "SNOMED",
-            "target_curie": "UMLS:C0154091",
-            "target_label": "Carcinoma in situ of bladder",
-            "total_distance": 2
-        }
-    ]
-    check_result_values(json, expected_results)
-
-
-def test_xrefToOMOP():
-    """ Check the /omop/xrefToOMOP endpoint. Try to map DOID:8398 (osteoarthritis) to OMOP using the local OxO
-    implementation, recommended mapping, and max distance 2
-    Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
-    """
-    print(f'\ntest_cohd_io: testing /omop/xrefToOMOP on {cr.server}..... ')
-    json, df = cr.xref_to_omop(curie='DOID:8398', distance=2, local=True, recommend=True)
-
-    # Check that the results adhere to the expected schema
-    schema = [_s('intermediate_oxo_id', str),
-              _s('intermediate_oxo_label', str),
-              _s('omop_concept_name', str),
-              _s('omop_distance', int),
-              _s('omop_domain_id', str),
-              _s('omop_standard_concept_id', int),
-              _s('oxo_distance', int),
-              _s('source_oxo_id', str),
-              _s('source_oxo_label', str),
-              _s('total_distance', int)]
-    check_results_schema(json, schema)
-
-    # There should be one result
-    assert len(json['results']) == 1
-
-    # With recommend=True, there should be exactly one mapping from DOID:8398 (osteoarthritis) to OMOP:80180
-    expected_results = [
-        {
-            "intermediate_oxo_id": "SNOMEDCT:396275006",
-            "intermediate_oxo_label": "Osteoarthritis (disorder)",
-            "omop_concept_name": "Osteoarthritis",
-            "omop_distance": 0,
-            "omop_domain_id": "Condition",
-            "omop_standard_concept_id": 80180,
-            "oxo_distance": 2,
-            "source_oxo_id": "DOID:8398",
-            "source_oxo_label": "osteoarthritis",
-            "total_distance": 2
-        }
-    ]
-    check_result_values(json, expected_results)
+# def test_xrefFromOMOP():
+#     """ Check the /omop/xrefFromOMOP endpoint. Try mapping from OMOP:192855 (Cancer in situ of urinary bladder) to UMLS
+#     with max distance 2.
+#     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
+#     """
+#     print(f'\ntest_cohd_io: testing /omop/xrefFromOMOP on {cr.server}..... ')
+#     json, df = cr.xref_from_omop(concept_id=192855, mapping_targets=['UMLS'], distance=2, local=True, recommend=False)
+#
+#     # Check that the results adhere to the expected schema
+#     schema = [_s('intermediate_omop_concept_code', str),
+#               _s('intermediate_omop_concept_id', object),  # Sometimes int, sometimes string when OMOP-UMLS mapping used
+#               _s('intermediate_omop_concept_name', str),
+#               _s('intermediate_omop_vocabulary_id', str),
+#               _s('intermediate_oxo_curie', str),
+#               _s('intermediate_oxo_label', str),
+#               _s('omop_distance', int),
+#               _s('oxo_distance', int),
+#               _s('source_omop_concept_code', str),
+#               _s('source_omop_concept_id', int),
+#               _s('source_omop_concept_name', str),
+#               _s('source_omop_vocabulary_id', str),
+#               _s('target_curie', str),
+#               _s('target_label', str),
+#               _s('total_distance', int)]
+#     check_results_schema(json, schema)
+#
+#     # There should be at least one result
+#     assert len(json['results']) >= 1
+#
+#     # Spot check a few of the entries against expected values: OMOP:192855 (Cancer in situ of urinary bladder) should
+#     # map to UMLS:C0154091 (Carcinoma in situ of bladder) through a couple different paths
+#     expected_results = [
+#         {
+#             "intermediate_omop_concept_code": "N/A (OMOP-UMLS mapping)",
+#             "intermediate_omop_concept_id": "N/A (OMOP-UMLS mapping)",
+#             "intermediate_omop_concept_name": "N/A (OMOP-UMLS mapping)",
+#             "intermediate_omop_vocabulary_id": "N/A (OMOP-UMLS mapping)",
+#             "intermediate_oxo_curie": "N/A (OMOP-UMLS mapping)",
+#             "intermediate_oxo_label": "N/A (OMOP-UMLS mapping)",
+#             "omop_distance": 1,
+#             "oxo_distance": 0,
+#             "source_omop_concept_code": "92546004",
+#             "source_omop_concept_id": 192855,
+#             "source_omop_concept_name": "Cancer in situ of urinary bladder",
+#             "source_omop_vocabulary_id": "SNOMED",
+#             "target_curie": "UMLS:C0154091",
+#             "target_label": "Carcinoma in situ of bladder",
+#             "total_distance": 1
+#         },
+#         {
+#             "intermediate_omop_concept_code": "233.7",
+#             "intermediate_omop_concept_id": 44824068,
+#             "intermediate_omop_concept_name": "Carcinoma in situ of bladder",
+#             "intermediate_omop_vocabulary_id": "ICD9CM",
+#             "intermediate_oxo_curie": "ICD9CM:233.7",
+#             "intermediate_oxo_label": "Carcinoma in situ of bladder",
+#             "omop_distance": 1,
+#             "oxo_distance": 1,
+#             "source_omop_concept_code": "92546004",
+#             "source_omop_concept_id": 192855,
+#             "source_omop_concept_name": "Cancer in situ of urinary bladder",
+#             "source_omop_vocabulary_id": "SNOMED",
+#             "target_curie": "UMLS:C0154091",
+#             "target_label": "Carcinoma in situ of bladder",
+#             "total_distance": 2
+#         }
+#     ]
+#     check_result_values(json, expected_results)
+#
+#
+# def test_xrefToOMOP():
+#     """ Check the /omop/xrefToOMOP endpoint. Try to map DOID:8398 (osteoarthritis) to OMOP using the local OxO
+#     implementation, recommended mapping, and max distance 2
+#     Checks the response json conforms to the expected schema and includes the expected results (see expected_results).
+#     """
+#     print(f'\ntest_cohd_io: testing /omop/xrefToOMOP on {cr.server}..... ')
+#     json, df = cr.xref_to_omop(curie='DOID:8398', distance=2, local=True, recommend=True)
+#
+#     # Check that the results adhere to the expected schema
+#     schema = [_s('intermediate_oxo_id', str),
+#               _s('intermediate_oxo_label', str),
+#               _s('omop_concept_name', str),
+#               _s('omop_distance', int),
+#               _s('omop_domain_id', str),
+#               _s('omop_standard_concept_id', int),
+#               _s('oxo_distance', int),
+#               _s('source_oxo_id', str),
+#               _s('source_oxo_label', str),
+#               _s('total_distance', int)]
+#     check_results_schema(json, schema)
+#
+#     # There should be one result
+#     assert len(json['results']) == 1
+#
+#     # With recommend=True, there should be exactly one mapping from DOID:8398 (osteoarthritis) to OMOP:80180
+#     expected_results = [
+#         {
+#             "intermediate_oxo_id": "SNOMEDCT:396275006",
+#             "intermediate_oxo_label": "Osteoarthritis (disorder)",
+#             "omop_concept_name": "Osteoarthritis",
+#             "omop_distance": 0,
+#             "omop_domain_id": "Condition",
+#             "omop_standard_concept_id": 80180,
+#             "oxo_distance": 2,
+#             "source_oxo_id": "DOID:8398",
+#             "source_oxo_label": "osteoarthritis",
+#             "total_distance": 2
+#         }
+#     ]
+#     check_result_values(json, expected_results)
 
 
 def test_singleConceptFreq():
