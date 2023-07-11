@@ -41,7 +41,7 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-translator/
   x-trapi:
-    version: 1.4.0
+    version: 1.4.2
     asyncquery: false
     operations:
       - lookup
@@ -55,6 +55,9 @@ info:
         production/x-trapi/
     test_data_location: "https://raw.githubusercontent.com/WengLab-InformaticsResearch/cohd_api/master/cohd/translator/sri_testing_triples.json"
 servers:
+  - url: 'https://cohd-api.test.transltr.io/api'
+    description: COHD ITRB Test Server
+    x-maturity: testing
   - url: 'https://cohd-api.ci.transltr.io/api'
     description: COHD ITRB CI Server
     x-maturity: staging
@@ -486,7 +489,8 @@ components:
             Graph Edges and Result Analyses. These are referenced elsewhere by
             the dictionary key.
           additionalProperties:
-            $ref: '#components/schemas/AuxiliaryGraph'
+            $ref: '#/components/schemas/AuxiliaryGraph'
+          nullable: true
       additionalProperties: false
     LogEntry:
       description: >-
@@ -1468,6 +1472,7 @@ components:
             'aggregator' or 'supporting data' sources.
         upstream_resource_ids:
           type: array
+          nullable: true
           items:
             $ref: '#/components/schemas/CURIE'
           description: >-
@@ -1482,6 +1487,7 @@ components:
           example: [infores:automat-mychem-info, infores:molepro]
         source_record_urls:
           type: array
+          nullable: true
           items:
             type: string
           description: >-
