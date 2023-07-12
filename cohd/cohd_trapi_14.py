@@ -38,7 +38,7 @@ class CohdTrapi140(CohdTrapi):
     default_negative_predicate = edge_types_negative[0]
 
     tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.6'
-    schema_version = '1.4.0'
+    schema_version = '1.4.2'
     biolink_version = bm_version
 
     def __init__(self, request):
