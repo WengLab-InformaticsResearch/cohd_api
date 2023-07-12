@@ -25,8 +25,8 @@ cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Te
 # cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
-BIOLINK_VERSION = '3.4.2'
-TRAPI_VERSION = '1.4.0-beta4'
+BIOLINK_VERSION = '3.5.0'
+TRAPI_VERSION = '1.4.2'
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
