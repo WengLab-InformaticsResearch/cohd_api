@@ -4,6 +4,7 @@ import json
 import difflib
 from collections import defaultdict
 import urllib3
+from datetime import datetime
 
 from .cohd_utilities import DomainClass
 from .app import app, cache
@@ -869,6 +870,14 @@ class BiolinkConceptMapper:
             """
             cur.execute(sql)
             conn.commit()
+
+        # Insert into update_log
+        sql = """
+        INSERT INTO biolink.update_log (timestamp, count) 
+        VALUES (%s, %s)
+        """
+        params = [datetime.now(), mapping_count + string_match_count]
+        cur.execute(sql, params)
 
         status_message = f"""Current number of mapped mappings: {current_count}
                 Current number of string mappings: {current_count_string}
