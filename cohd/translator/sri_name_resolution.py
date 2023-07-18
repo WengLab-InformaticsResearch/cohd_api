@@ -8,12 +8,12 @@ from ..app import app
 class SriNameResolution:
     # server_url = url= 'https://name-resolution-sri.renci.org/'
 
-    server_url_default = 'https://name-lookup.transltr.io'
+    server_url_default = 'http://name-resolution-sri-dev.apps.renci.org/'
     server_urls = {
-        'dev': 'https://name-resolution-sri.renci.org',
-        'ITRB-CI': 'https://name-lookup.ci.transltr.io',
-        'ITRB-TEST': 'https://name-lookup.test.transltr.io',
-        'ITRB-PROD': 'https://name-lookup.transltr.io'
+        'dev': 'http://name-resolution-sri-dev.apps.renci.org/',
+        # 'ITRB-CI': 'https://name-lookup.ci.transltr.io',
+        # 'ITRB-TEST': 'https://name-lookup.test.transltr.io',
+        # 'ITRB-PROD': 'https://name-lookup.transltr.io'
     }
     _TIMEOUT = 10  # Query timeout (seconds)
 
@@ -22,14 +22,17 @@ class SriNameResolution:
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Resolution @ {server_url}')
 
     @staticmethod
-    def name_lookup(text, offset=0, limit=10):
+    def name_lookup(text, offset=0, limit=10, biolink_type=None, only_prefixes=None):
         """ Lookup CURIEs by name using SRI Name Resolution service
 
         Parameters
         ----------
         text - name to search for
-        offset - ???
+        offset - The number of results to skip. Can be used to page through the results of a query.
         limit - max number of search results
+        biolink_type - The Biolink type to filter to (with or without the biolink: prefix), e.g. biolink:Disease or
+                       Disease
+        only_prefixes - Pipe-separated, case-sensitive list of prefixes to filter to, e.g. MONDO|EFO
 
         Returns
         -------
@@ -43,6 +46,11 @@ class SriNameResolution:
             'offset': offset,
             'limit': limit
         }
+        if biolink_type is not None:
+            params['biolink_type'] = biolink_type
+        if only_prefixes is not None:
+            params['only_prefixes'] = only_prefixes
+
         try:
             response = requests.post(url, params=params, timeout=SriNameResolution._TIMEOUT)
         except requests.exceptions.Timeout:
