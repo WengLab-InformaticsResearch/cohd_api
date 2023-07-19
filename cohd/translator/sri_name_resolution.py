@@ -22,7 +22,7 @@ class SriNameResolution:
     logging.info(f'Deployment environment "{deployment_env}" --> using Node Resolution @ {server_url}')
 
     @staticmethod
-    def name_lookup(text, offset=0, limit=10, biolink_type=None, only_prefixes=None):
+    def name_lookup(text, offset=0, limit=10, biolink_type=None, only_prefixes=None, timeout=_TIMEOUT):
         """ Lookup CURIEs by name using SRI Name Resolution service
 
         Parameters
@@ -52,9 +52,9 @@ class SriNameResolution:
             params['only_prefixes'] = only_prefixes
 
         try:
-            response = requests.post(url, params=params, timeout=SriNameResolution._TIMEOUT)
+            response = requests.post(url, params=params, timeout=timeout)
         except requests.exceptions.Timeout:
-            logging.error(f'SRI Name Resolution timed out after {SriNameResolution._TIMEOUT} sec\n'
+            logging.error(f'SRI Name Resolution timed out after {timeout} sec\n'
                           f'Posted params:\n{json.dumps(params)}'
                           )
             return None
