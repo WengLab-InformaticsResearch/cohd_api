@@ -878,6 +878,7 @@ class BiolinkConceptMapper:
         """
         params = [datetime.now(), mapping_count + string_match_count]
         cur.execute(sql, params)
+        conn.commit()
 
         status_message = f"""Current number of mapped mappings: {current_count}
                 Current number of string mappings: {current_count_string}
