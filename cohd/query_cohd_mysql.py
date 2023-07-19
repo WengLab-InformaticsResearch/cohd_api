@@ -1437,8 +1437,9 @@ def health():
     cur = conn.cursor()
 
     try:
-        sql = '''SELECT *
-            FROM cohd.dataset;'''
+        sql = '''SELECT dataset_id
+            FROM cohd.dataset
+            LIMIT 1;'''
         cur.execute(sql)
         datasets = cur.fetchall()
         healthy = len(datasets) > 0
