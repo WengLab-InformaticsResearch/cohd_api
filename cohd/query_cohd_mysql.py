@@ -6,7 +6,7 @@ import logging
 
 from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
-from .cohd_utilities import ln_ratio_ci, rel_freq_ci, log_odds
+from .cohd_utilities import ln_ratio_ci, rel_freq_ci, log_odds, clip
 from .app import cache
 
 # Configuration
@@ -1206,7 +1206,7 @@ def query_association(method, concept_id_1, concept_id_2=None, dataset_id=None, 
 
 
 @cache.memoize(timeout=86400)
-def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
+def query_trapi_old(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
                 ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE):
     """ Query for TRAPI. Performs the calculations for all association methods
 
@@ -1423,6 +1423,281 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
 
     json_return = {"results": json_return}
     return json_return
+
+
+def get_total_pair_counts(dataset_id: int) -> int:
+    """ Returns total number of pairs of concepts in the given dataset
+
+    Params
+    ------
+    dataset_id: (int) dataset id
+
+    Returns
+    -------
+    (int) total number of pairs of concepts
+    """
+    if not get_total_pair_counts.total_pair_counts:
+        # Get the total pair counts and store locally for faster future retrieval
+        get_total_pair_counts.total_pair_counts = dict()
+        conn = sql_connection()
+        cur = conn.cursor()
+        sql = '''SELECT dataset_id, SUM(count) AS pair_count
+            FROM domain_pair_concept_counts
+            GROUP BY dataset_id;'''
+        cur.execute(sql)
+        results = cur.fetchall()
+        for result in results:
+            get_total_pair_counts.total_pair_counts[result['dataset_id']] = int(result['pair_count'])
+
+    return get_total_pair_counts.total_pair_counts[dataset_id]
+get_total_pair_counts.total_pair_counts = None
+
+
+@cache.memoize(timeout=86400)
+def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
+                ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE):
+    """ Query for TRAPI. Performs the calculations for all association methods
+
+    Parameters
+    ----------
+    concept_id_1: String - OMOP concept ID
+    concept_id_2: (optional) String - OMOP concept ID
+    dataset_id: (optional) String - COHD dataset ID
+    domain_id: (optional) String - OMOP domain ID
+    concept_class_id: (optional) String - OMOP concept class ID
+    ln_ratio_sign: (optional) Int - 1: positive ln_ratio only; -1: negative ln_ratio only; 0: any ln_ratio
+    confidence: (optional) Float - Confidence level
+
+    Returns
+    -------
+    Dict results
+    """
+    assert concept_id_1 is not None and str(concept_id_1), \
+        'query_cohd_mysql.py::query_trapi() - Bad input. concept_id_1={concept_id_1}'.format(
+            concept_id_1=str(concept_id_1)
+        )
+
+    # Connect to MYSQL database
+    conn = sql_connection()
+    cur = conn.cursor()
+
+    # Get the total number of pairs for Bonferonni adjustment
+    pair_count = get_total_pair_counts(dataset_id)
+
+    # Filter ln ratio
+    if ln_ratio_sign == 0:
+        ln_ratio_filter = ''
+    elif ln_ratio_sign > 0:
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) > 0'
+    elif ln_ratio_sign < 0:
+        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) < 0'
+
+    if concept_id_2 is not None:
+        # concept_id_2 is specified, only return the results for the pair (concept_id_1, concept_id_2)
+        concept_id_2 = int(concept_id_2)
+        order = concept_id_1 < concept_id_2
+        sql = '''SELECT
+                cp.dataset_id,
+                cp.concept_id_1 AS {rename_id_1},
+                cp.concept_id_2 AS {rename_id_2},
+                c1.concept_count AS {rename_count_1},
+                c2.concept_count AS {rename_count_2},
+                cp.concept_count AS concept_pair_count,
+                c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                p_value,
+                ln_ratio,
+                ln_ratio_ci_low,
+                ln_ratio_ci_high,
+                cp.concept_count / (c1.concept_count + 0E0) AS {rename_rf1},
+                cp.pair_count_ci_lo / (c1.ci_hi + 0E0) AS {rename_rf1_ci_lo},
+                cp.pair_count_ci_hi / (c1.ci_lo + 0E0) AS {rename_rf1_ci_hi},
+                cp.concept_count / (c2.concept_count + 0E0) AS {rename_rf2},
+                cp.pair_count_ci_lo / (c2.ci_hi + 0E0) AS {rename_rf2_ci_lo},
+                cp.pair_count_ci_hi / (c2.ci_lo + 0E0) AS {rename_rf2_ci_hi},
+                log_odds,
+                log_odds_ci_lo,
+                log_odds_ci_hi,
+                pc.count AS patient_count
+            FROM cohd.concept_pair_counts cp
+            JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+            JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+            JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+            WHERE cp.dataset_id = %(dataset_id)s
+                AND c1.dataset_id = %(dataset_id)s
+                AND c2.dataset_id = %(dataset_id)s
+                AND cp.concept_id_1 = %(concept_id_1)s
+                AND cp.concept_id_2 = %(concept_id_2)s
+                {ln_ratio_filter}
+                ;'''
+        params = {
+            'dataset_id': dataset_id,
+            'concept_id_1': concept_id_1 if order else concept_id_2,
+            'concept_id_2': concept_id_2 if order else concept_id_1
+        }
+        rename_id_1 = 'concept_id_1'
+        rename_id_2 = 'concept_id_2'
+        rename_count_1 = 'concept_1_count'
+        rename_count_2 = 'concept_2_count'
+        rename_rf1 = 'relative_frequency_1'
+        rename_rf2 = 'relative_frequency_2'
+        rename_rf1_ci_lo = 'rf1_ci_lo'
+        rename_rf1_ci_hi = 'rf1_ci_hi'
+        rename_rf2_ci_lo = 'rf2_ci_lo'
+        rename_rf2_ci_hi = 'rf2_ci_hi'
+        
+        if not order:
+            rename_id_1 = 'concept_id_2'
+            rename_id_2 = 'concept_id_1'
+            rename_count_1 = 'concept_2_count'
+            rename_count_2 = 'concept_1_count'
+            rename_rf1 = 'relative_frequency_2'
+            rename_rf2 = 'relative_frequency_1'
+            rename_rf1_ci_lo = 'relative_frequency_2_ci_lo'
+            rename_rf1_ci_hi = 'relative_frequency_2_ci_hi'
+            rename_rf2_ci_lo = 'relative_frequency_1_ci_lo'
+            rename_rf2_ci_hi = 'relative_frequency_1_ci_hi'
+        sql = sql.format(rename_id_1=rename_id_1, rename_id_2=rename_id_2, rename_count_1=rename_count_1,
+                         rename_count_2=rename_count_2, rename_rf1=rename_rf1, rename_rf2=rename_rf2,
+                         ln_ratio_filter=ln_ratio_filter,
+                         rename_rf1_ci_lo=rename_rf1_ci_lo, rename_rf1_ci_hi=rename_rf1_ci_hi,
+                         rename_rf2_ci_lo=rename_rf2_ci_lo, rename_rf2_ci_hi=rename_rf2_ci_hi)
+
+    else:
+        # If concept_id_2 is not specified, get results for all pairs that include concept_id_1
+        sql = '''SELECT *
+            FROM
+                ((SELECT
+                    cp.dataset_id,
+                    cp.concept_id_1,
+                    cp.concept_id_2,
+                    c1.concept_count AS concept_1_count,
+                    c2.concept_count AS concept_2_count,
+                    cp.concept_count AS concept_pair_count,
+                    c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                    p_value,
+                    ln_ratio,
+                    ln_ratio_ci_lo,
+                    ln_ratio_ci_hi,
+                    cp.concept_count / (c1.concept_count + 0E0) AS relative_frequency_1,
+                    cp.pair_count_ci_lo / (c1.ci_hi + 0E0) AS rf1_ci_lo,
+                    cp.pair_count_ci_hi / (c1.ci_lo + 0E0) AS rf1_ci_hi,
+                    cp.concept_count / (c2.concept_count + 0E0) AS relative_frequency_2,
+                    cp.pair_count_ci_lo / (c2.ci_hi + 0E0) AS rf2_ci_lo,
+                    cp.pair_count_ci_hi / (c2.ci_lo + 0E0) AS rf2_ci_hi,                    
+                    log_odds,
+                    log_odds_ci_lo,
+                    log_odds_ci_hi,
+                    c.concept_name AS concept_2_name,
+                    c.domain_id AS concept_2_domain,
+                    c.concept_class_id AS concept_2_class_id,
+                    pc.count AS patient_count
+                FROM cohd.concept_pair_counts cp
+                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
+                WHERE cp.dataset_id = %(dataset_id)s
+                    AND c1.dataset_id = %(dataset_id)s
+                    AND c2.dataset_id = %(dataset_id)s
+                    AND cp.concept_id_1 = %(concept_id_1)s
+                    {domain_filter}
+                    {concept_class_filter}
+                    {ln_ratio_filter})
+                UNION
+                (SELECT
+                    cp.dataset_id,
+                    cp.concept_id_2 AS concept_id_1,
+                    cp.concept_id_1 AS concept_id_2,
+                    c2.concept_count AS concept_1_count,
+                    c1.concept_count AS concept_2_count,
+                    cp.concept_count AS concept_pair_count,
+                    c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
+                    p_value,
+                    ln_ratio,                    
+                    ln_ratio_ci_lo,
+                    ln_ratio_ci_hi,
+                    cp.concept_count / (c2.concept_count + 0E0) AS relative_frequency_1,
+                    cp.pair_count_ci_lo / (c2.ci_hi + 0E0) AS rf1_ci_lo,
+                    cp.pair_count_ci_hi / (c2.ci_lo + 0E0) AS rf1_ci_hi,    
+                    cp.concept_count / (c1.concept_count + 0E0) AS relative_frequency_2,
+                    cp.pair_count_ci_lo / (c1.ci_hi + 0E0) AS rf2_ci_lo,
+                    cp.pair_count_ci_hi / (c1.ci_lo + 0E0) AS rf2_ci_hi,
+                    log_odds,
+                    log_odds_ci_lo,
+                    log_odds_ci_hi,
+                    c.concept_name AS concept_2_name,
+                    c.domain_id AS concept_2_domain,
+                    c.concept_class_id AS concept_2_class_id,
+                    pc.count AS patient_count
+                FROM cohd.concept_pair_counts cp
+                JOIN cohd.concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                JOIN cohd.concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                JOIN cohd.patient_count pc ON cp.dataset_id = pc.dataset_id
+                JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
+                WHERE cp.dataset_id = %(dataset_id)s
+                    AND c1.dataset_id = %(dataset_id)s
+                    AND c2.dataset_id = %(dataset_id)s
+                    AND cp.concept_id_2 = %(concept_id_1)s
+                    {domain_filter}
+                    {concept_class_filter}
+                    {ln_ratio_filter})) x
+            ORDER BY ABS(ln_ratio) DESC;'''
+        params = {
+            'dataset_id': dataset_id,
+            'concept_id_1': concept_id_1,
+        }
+
+        if domain_id is not None and not domain_id == ['']:
+            # Restrict the associated concept by domain
+            domain_filter = 'AND c.domain_id = %(domain_id)s'
+            params['domain_id'] = domain_id
+        else:
+            # Unrestricted domain
+            domain_filter = ''
+
+        # Filter concepts by concept_class
+        if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
+                concept_class_id.isspace():
+            concept_class_filter = ''
+        else:
+            concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
+            params['concept_class_id'] = concept_class_id
+
+        sql = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter,
+                         ln_ratio_filter=ln_ratio_filter)
+
+    cur.execute(sql, params)
+    json_return = cur.fetchall()
+
+    # Perform calculations for results
+    for row in json_return:
+        cpc = row['concept_pair_count']
+        c1 = row['concept_1_count']
+        c2 = row['concept_2_count']
+
+        # Confidence interval for obsExpRatio
+        # The CI bounds may hit Inf, which causes issues with JSON serialization. Limit it to 999
+        row['ln_ratio_ci'] = (clip(row['ln_ratio_ci_lo'], JSON_INFINITY_REPLACEMENT), 
+                              clip(row['ln_ratio_ci_hi'], JSON_INFINITY_REPLACEMENT))
+
+        # Confidence intervals for relative frequencies
+        row['relative_frequency_1_ci'] = row['rf1_ci_lo'], min(row['rf1_ci_hi'], JSON_INFINITY_REPLACEMENT)
+        row['relative_frequency_2_ci'] = row['rf2_ci_lo'], min(row['rf2_ci_hi'], JSON_INFINITY_REPLACEMENT)
+
+        # Chi-square
+        p_value = row['p_value']
+        row['chi_square_p-value'] = max(p_value, MIN_P)
+        row['chi_square_p-value_adjusted'] = max(min(p_value * pair_count, 1.0), MIN_P)  # Bonferonni adjustment
+
+        # Log-odds
+        row['log_odds_ci'] = [clip(row['log_odds_ci_lo'], JSON_INFINITY_REPLACEMENT), 
+                              clip(row['log_odds_ci_hi'], JSON_INFINITY_REPLACEMENT)]
+
+    cur.close()
+    conn.close()
+
+    json_return = {"results": json_return}
+    return json_return    
 
 
 def health():
