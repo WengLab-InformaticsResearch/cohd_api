@@ -19,10 +19,10 @@ from cohd.trapi.reasoner_validator_ext import validate_trapi_14x as validate_tra
 from cohd.translator.ontology_kp import OntologyKP
 
 # Choose which server to test
-# cr.server = 'https://cohd.io/api'
+# cr.server = 'https://dev.cohd.io/api'
 # cr.server = 'https://cohd-api.ci.transltr.io/api'
-cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
-# cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+# cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
+cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.5.0'
@@ -896,14 +896,14 @@ def test_translator_query_qnode_subclasses():
 
     # There should be more than 1 result
     results = json['message']['results']
-    if _ontology_kp_issue and len(results) < 2:
+    if _ontology_kp_issue and (not results or len(results) < 2):
         # There was previously an issue observed with the OntologyKP, which may degrade results here.
         # Issue warning, but don't fail the test
         warnings.warn('test_translator_query_qnode_subclasses: Expected more than 1 result but only found '
                       f'{len(results)} results. However, OntologyKP may be having issues right now.')
         return
 
-    assert len(results) > 1, _print_trapi_log(json)
+    assert results and len(results) > 1, _print_trapi_log(json)
 
     # We are expecting COHD to provide descendant results for the "subj" QNode (MONDO:0005015)
     # Check that query_id is specified in the node bindings
