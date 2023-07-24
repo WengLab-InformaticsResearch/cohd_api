@@ -1506,8 +1506,8 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
                 c1.concept_count * c2.concept_count / (pc.count + 0E0) AS expected_count,
                 p_value,
                 ln_ratio,
-                ln_ratio_ci_low,
-                ln_ratio_ci_high,
+                ln_ratio_ci_lo,
+                ln_ratio_ci_hi,
                 cp.concept_count / (c1.concept_count + 0E0) AS {rename_rf1},
                 cp.pair_count_ci_lo / (c1.ci_hi + 0E0) AS {rename_rf1_ci_lo},
                 cp.pair_count_ci_hi / (c1.ci_lo + 0E0) AS {rename_rf1_ci_hi},
@@ -1552,10 +1552,10 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
             rename_count_2 = 'concept_1_count'
             rename_rf1 = 'relative_frequency_2'
             rename_rf2 = 'relative_frequency_1'
-            rename_rf1_ci_lo = 'relative_frequency_2_ci_lo'
-            rename_rf1_ci_hi = 'relative_frequency_2_ci_hi'
-            rename_rf2_ci_lo = 'relative_frequency_1_ci_lo'
-            rename_rf2_ci_hi = 'relative_frequency_1_ci_hi'
+            rename_rf1_ci_lo = 'rf2_ci_lo'
+            rename_rf1_ci_hi = 'rf2_ci_hi'
+            rename_rf2_ci_lo = 'rf1_ci_lo'
+            rename_rf2_ci_hi = 'rf1_ci_hi'
         sql = sql.format(rename_id_1=rename_id_1, rename_id_2=rename_id_2, rename_count_1=rename_count_1,
                          rename_count_2=rename_count_2, rename_rf1=rename_rf1, rename_rf2=rename_rf2,
                          ln_ratio_filter=ln_ratio_filter,
