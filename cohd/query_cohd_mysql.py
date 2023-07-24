@@ -1690,6 +1690,7 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
         row['chi_square_p-value_adjusted'] = max(min(p_value * pair_count, 1.0), MIN_P)  # Bonferonni adjustment
 
         # Log-odds
+        row['log_odds'] = clip(row['log_odds'], JSON_INFINITY_REPLACEMENT)
         row['log_odds_ci'] = [clip(row['log_odds_ci_lo'], JSON_INFINITY_REPLACEMENT), 
                               clip(row['log_odds_ci_hi'], JSON_INFINITY_REPLACEMENT)]
 
