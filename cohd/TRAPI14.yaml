@@ -41,7 +41,7 @@ info:
       url: https://github.com/NCATSTranslator/translator_extensions/blob/\
         production/x-translator/
   x-trapi:
-    version: 1.4.2
+    version: 1.4.0
     asyncquery: false
     operations:
       - lookup
