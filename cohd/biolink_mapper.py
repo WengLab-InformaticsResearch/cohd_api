@@ -150,6 +150,7 @@ class BiolinkConceptMapper:
         mapping_rows = cur.fetchall()
         BiolinkConceptMapper._map_omop = {r['omop_id']:r for r in mapping_rows}
         BiolinkConceptMapper._map_biolink = {r['biolink_id']:r for r in mapping_rows if r['preferred']}
+        logging.info('Biolink mappings prefetch completed')
 
     @staticmethod
     def map_to_omop(curies: List[str]) -> Optional[Tuple[Dict[str, Optional[OmopBiolinkMapping]], Dict[str, Optional[NormalizedNode]]]]:

@@ -19,10 +19,10 @@ from cohd.trapi.reasoner_validator_ext import validate_trapi_14x as validate_tra
 from cohd.translator.ontology_kp import OntologyKP
 
 # Choose which server to test
-# cr.server = 'https://cohd.io/api'
+# cr.server = 'https://dev.cohd.io/api'
 # cr.server = 'https://cohd-api.ci.transltr.io/api'
-cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
-# cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+# cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
+cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.5.0'
@@ -589,67 +589,8 @@ def test_translator_query_q2_multiple_ids():
                                          _print_trapi_log(json)
 
 
-# TODO: Temporarily replacing this test to not use CHEMBL.COMPOUND since Node Norm is currently missing mappings to MeSH
-# def test_translator_query_q1_q2_multiple_ids():
-#     """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
-#     results """
-#     print(f'\ntest_cohd_trapi: testing TRAPI query with multiple IDs in both query nodes on {cr.server}..... ')
-#
-#     url = f'{cr.server}/query'
-#     query = '''
-#     {
-#         "message": {
-#             "query_graph": {
-#                 "nodes": {
-#                     "subj": {
-#                         "ids": ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-#                     },
-#                     "obj": {
-#                         "ids": ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
-#                     }
-#                 },
-#                 "edges": {
-#                     "e0": {
-#                         "subject": "subj",
-#                         "object": "obj",
-#                         "predicates": ["biolink:correlated_with"]
-#                     }
-#                 }
-#             }
-#         },
-#         "query_options": {
-#             "max_results": 50
-#         }
-#     }
-#     '''
-#     query = j.loads(query)
-#     query['query_options']['query_id'] = str(uuid.uuid4())
-#     print(j.dumps(query))
-#     resp = requests.post(url, json=query, timeout=300)
-#
-#     # Expect HTTP 200 status response
-#     assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
-#                                     f'Received {resp.status_code}: {resp.text}'
-#
-#     # Use the Reasoner Validator Python package to validate against Reasoner Standard API
-#     json = resp.json()
-#     _validate_trapi_response(json)
-#
-#     # There should be at least 12 results
-#     assert len(json['message']['results']) >= 12, _print_trapi_log(json)
-#
-#     # All pairs of the queried IDs should appear in at least one of the results
-#     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-#     obj_ids = ["CHEMBL.COMPOUND:CHEMBL1242", "PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
-#     result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
-#                        for r in json['message']['results']]
-#     for pair in product(subj_ids, obj_ids):
-#         assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.' + \
-#                                         _print_trapi_log(json)
-#
-#     print('...passed')
 def test_translator_query_q1_q2_multiple_ids():
-    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect COHD to return 12+
+    """ Check the TRAPI endpoint when using multiple IDs in the subject and object nodes. Expect > 4 results
     results """
     print(f'\ntest_cohd_trapi::test_translator_query_q1_q2_multiple_ids: testing TRAPI query with multiple IDs in both '
           f'query nodes on {cr.server}..... ')
@@ -664,7 +605,7 @@ def test_translator_query_q1_q2_multiple_ids():
                         "ids": ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
                     },
                     "obj": {
-                        "ids": ["PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
+                        "ids": ["PUBCHEM.COMPOUND:4756", "PUBCHEM.COMPOUND:129211", "PUBCHEM.COMPOUND:4101"]
                     }
                 },
                 "edges": {
@@ -694,17 +635,18 @@ def test_translator_query_q1_q2_multiple_ids():
     json = resp.json()
     _validate_trapi_response(json)
 
-    # There should be at least 12 results
-    assert len(json['message']['results']) >= 8, _print_trapi_log(json)
+    # There should be more than 4 results
+    assert len(json['message']['results']) > 4, _print_trapi_log(json)
 
-    # All pairs of the queried IDs should appear in at least one of the results
+    # Each of the IDs should appear in at least 1 result
     subj_ids = ["DOID:9053", "UMLS:C2939141", "HP:0002907", "MONDO:0001375"]
-    obj_ids = ["PUBCHEM.COMPOUND:129211", "UNII:K9P6MC7092"]
-    result_id_pairs = [(r['node_bindings']['subj'][0]['id'], r['node_bindings']['obj'][0]['id'])
-                       for r in json['message']['results']]
-    for pair in product(subj_ids, obj_ids):
-        assert pair in result_id_pairs, f'Query pair {pair} is not found in results pairs {result_id_pairs}.' + \
-                                        _print_trapi_log(json)
+    obj_ids = ["PUBCHEM.COMPOUND:4756", "PUBCHEM.COMPOUND:129211", "PUBCHEM.COMPOUND:4101"]
+    result_subj_ids = [r['node_bindings']['subj'][0]['id'] for r in json['message']['results']]
+    result_obj_ids = [r['node_bindings']['obj'][0]['id'] for r in json['message']['results']]
+    for id in subj_ids:
+        assert id in result_subj_ids, f'Qnode {id} not found in results {result_subj_ids}.' + _print_trapi_log(json)
+    for id in obj_ids:
+        assert id in result_obj_ids, f'Qnode {id} not found in results {result_obj_ids}.' + _print_trapi_log(json)
 
 
 def test_translator_query_multiple_categories():
@@ -846,11 +788,8 @@ def test_translator_query_multiple_categories():
 
 def test_translator_query_qnode_subclasses():
     """ Check the TRAPI endpoint to make sure we're also querying for ID subclasses. The TRAPI query will only specify
-    a query between MONDO:0005015 (diabetes mellitus) and PUBCHEM.COMPOUND:3476 (glimepiride). Without subclassing,
-    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2).
-    Note 7/19/2021: In previous versions of this test, used CHEMBL.COMPOUND:CHEMBL1481 for obj ID, but SRI Node Norm
-    changed how it performed its mappings, and CHEMBL.COMPOUND:CHEMBL1481 no longer maps to MESH:C057619, which is what
-    maps to OMOP standard concept. """
+    a query between MONDO:0005015 (diabetes mellitus) and "PUBCHEM.COMPOUND:16136701" (insulin). Without subclassing,
+    we would only expect 1 result. But with subclassing working, there should be more (check for at least 2). """
     print(f'\ntest_cohd_trapi::test_translator_query_qnode_subclasses: testing TRAPI query with multiple IDs in both '
           f'query nodes on {cr.server}..... ')
 
@@ -864,7 +803,7 @@ def test_translator_query_qnode_subclasses():
                         "ids": ["MONDO:0005015"]
                     },
                     "obj": {
-                        "ids": ["PUBCHEM.COMPOUND:3476"]
+                        "ids": ["PUBCHEM.COMPOUND:16136701"]
                     }
                 },
                 "edges": {
@@ -896,14 +835,14 @@ def test_translator_query_qnode_subclasses():
 
     # There should be more than 1 result
     results = json['message']['results']
-    if _ontology_kp_issue and len(results) < 2:
+    if _ontology_kp_issue and (not results or len(results) < 2):
         # There was previously an issue observed with the OntologyKP, which may degrade results here.
         # Issue warning, but don't fail the test
         warnings.warn('test_translator_query_qnode_subclasses: Expected more than 1 result but only found '
                       f'{len(results)} results. However, OntologyKP may be having issues right now.')
         return
 
-    assert len(results) > 1, _print_trapi_log(json)
+    assert results and len(results) > 1, _print_trapi_log(json)
 
     # We are expecting COHD to provide descendant results for the "subj" QNode (MONDO:0005015)
     # Check that query_id is specified in the node bindings

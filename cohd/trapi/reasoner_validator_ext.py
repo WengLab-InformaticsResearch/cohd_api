@@ -7,7 +7,7 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
-from reasoner_validator import TRAPIResponseValidator
+from reasoner_validator.validator import TRAPIResponseValidator
 from reasoner_validator.trapi import TRAPISchemaValidator, openapi_to_jsonschema
 
 
