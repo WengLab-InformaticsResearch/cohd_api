@@ -14,9 +14,10 @@ def task_build_cache():
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=BiolinkConceptMapper.prefetch_mappings, trigger='cron', hour=6)
 
-# Schedule a task to build the cache every first Saturday of the month (in ITRB-CI and Dev only)
+# Schedule a task to build the cache every first Saturday of the month 
+# Perform in each ITRB environment and on the prod instance on TReK server 
 deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev').lower()
-if False:    
+if deployment_env in ('itrb-ci', 'itrb-test', 'itrb-prod', 'prod'):    
     scheduler.add_job(func=task_build_cache, trigger='cron', day='1st sat', hour=0)    
     logging.info(f'Background task scheduled to build Biolink mappings (env: {deployment_env})')
 else:
