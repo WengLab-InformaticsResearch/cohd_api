@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.8'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.9'
     schema_version = '1.4.2'
     biolink_version = bm_version
 
@@ -135,7 +135,10 @@ class CohdTrapi140(CohdTrapi):
         query_graph = query_message.get('query_graph')
         if query_graph is None or not query_graph:
             self._valid_query = False
-            self._invalid_query_response = ('Unsupported query: query_graph missing from query_message or empty', 400)
+            msg = 'Unsupported query: query_graph missing from query_message or empty'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check the structure of the query graph. Should have 2 nodes and 1 edge (one-hop query)
@@ -143,7 +146,10 @@ class CohdTrapi140(CohdTrapi):
         edges = query_graph.get('edges')
         if nodes is None or len(nodes) != 2 or edges is None or len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = ('Unsupported query. Only one-hop queries supported.', 400)
+            msg = 'Unsupported query. Only one-hop queries supported.'
+            self.log(msg, level=logging.WARNING)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check the workflow. Should be at most a single lookup operation
@@ -151,8 +157,10 @@ class CohdTrapi140(CohdTrapi):
         if workflow and type(workflow) is list:
             if len(workflow) > 1 or workflow[0]['id'] != 'lookup':
                 self._valid_query = False
-                self._invalid_query_response = ('Unsupported workflow. Only a single "lookup" operation is supported',
-                                                400)
+                msg = 'Unsupported workflow. Only a single "lookup" operation is supported'
+                self.log(msg, level=logging.WARNING)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
         # Everything looks good so far
@@ -214,8 +222,8 @@ class CohdTrapi140(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        # Log that TRAPI 1.3 was called because there's no clear indication otherwise
-        logging.debug('Query issued against TRAPI 1.3')
+        # Log that TRAPI 1.4 was called because there's no clear indication otherwise
+        logging.debug('Query issued against TRAPI 1.4')
 
         try:
             self._json_data = self._request.get_json()
@@ -260,8 +268,11 @@ class CohdTrapi140(CohdTrapi):
         else:
             if self._method not in CohdTrapi.supported_query_methods:
                 self._valid_query = False
-                self._invalid_query_response = ('Query method "{method}" not supported. Options are: {methods}'.format(
-                    method=self._method, methods=','.join(CohdTrapi.supported_query_methods)), 400)
+                msg = 'Query method "{method}" not supported. Options are: {methods}'.format(
+                    method=self._method, methods=','.join(CohdTrapi.supported_query_methods))
+                self.log(msg, level=logging.ERROR)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
         # Get the query_option for dataset ID
@@ -315,7 +326,10 @@ class CohdTrapi140(CohdTrapi):
         edges = self._query_graph['edges']
         if len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries', 400)
+            msg = f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries'
+            self.log(msg, level=logging.WARNING)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner and how it should be processed
@@ -368,8 +382,10 @@ class CohdTrapi140(CohdTrapi):
                         self._association_direction = 0
             else:
                 self._valid_query = False
-                self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
-                                                f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
+                msg = f'None of the predicates in {self._query_edge_predicates} are supported by {CohdTrapi._SERVICE_NAME}.'
+                self.log(msg, level=logging.ERROR)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
             if unrecognized_predicates:
@@ -386,13 +402,19 @@ class CohdTrapi140(CohdTrapi):
         subject_qnode = self._find_query_node(subject_qnode_key)
         if subject_qnode is None:
             self._valid_query = False
-            self._invalid_query_response = (f'QNode id "{subject_qnode_key}" not found in query graph', 400)
+            msg = f'QNode id "{subject_qnode_key}" not found in query graph'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
         object_qnode_key = self._query_edge['object']
         object_qnode = self._find_query_node(object_qnode_key)
         if object_qnode is None:
             self._valid_query = False
-            self._invalid_query_response = (f'QNode id "{object_qnode_key}" not found in query graph', 400)
+            msg = f'QNode id "{object_qnode_key}" not found in query graph'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # In COHD queries, concept_id_1 must be specified by ID. Figure out which QNode to use for concept_1
@@ -440,8 +462,10 @@ class CohdTrapi140(CohdTrapi):
         # COHD queries require at least 1 node with a specified ID
         if len(node_ids) == 0:
             self._valid_query = False
-            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID',
-                                            400)
+            msg = '{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Get qnode categories and check the formatting
@@ -1682,8 +1706,8 @@ class CohdTrapi140(CohdTrapi):
         return jsonify(self._response)
 
     def _trapi_mini_response(self,
-                             status: TrapiStatusCode,
-                             description: str):
+                             status: TrapiStatusCode = TrapiStatusCode.NO_RESULTS,
+                             description: str = ''):
         """ Creates a minimal TRAPI response without creating the knowledge graph or results.
         This is useful for situations where some issue occurred but the TRAPI convention expects an HTTP
         Status Code 200 and TRAPI Response object.
