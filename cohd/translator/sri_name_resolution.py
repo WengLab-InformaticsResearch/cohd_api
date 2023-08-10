@@ -11,9 +11,9 @@ class SriNameResolution:
     server_url_default = 'http://name-resolution-sri-dev.apps.renci.org/'
     server_urls = {
         'dev': 'http://name-resolution-sri-dev.apps.renci.org/',
-        # 'ITRB-CI': 'https://name-lookup.ci.transltr.io',
-        # 'ITRB-TEST': 'https://name-lookup.test.transltr.io',
-        # 'ITRB-PROD': 'https://name-lookup.transltr.io'
+        'ITRB-CI': 'https://name-lookup.ci.transltr.io',
+        'ITRB-TEST': 'https://name-lookup.test.transltr.io',
+        'ITRB-PROD': 'https://name-lookup.transltr.io'
     }
     _TIMEOUT = 10  # Query timeout (seconds)
 
