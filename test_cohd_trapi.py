@@ -430,9 +430,18 @@ def test_translator_query_unsupported_predicate():
     print(j.dumps(query))
     resp = requests.post(url, json=query, timeout=300)
 
-    # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+
+    # There should be 0 results or null
+    results = json['message']['results']
+    print(results)
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
 
 def test_translator_query_bad_predicate():
@@ -473,8 +482,17 @@ def test_translator_query_bad_predicate():
     resp = requests.post(url, json=query, timeout=300)
 
     # Expect HTTP 200 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+
+    # There should be 0 results or null
+    results = json['message']['results']
+    print(results)
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
 
 def test_translator_query_q1_multiple_ids():
@@ -960,16 +978,30 @@ def test_translator_workflows():
     # Test with bad workflows: unsupported operation (overlay)
     j_query['workflow'] = [{'id': 'overlay'}]
     resp = requests.post(url, json=j_query, timeout=300)
-    # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+    # There should be 0 results or null
+    results = json['message']['results']
+    print(results)
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
     # Test with bad workflows: multiple lookups
     j_query['workflow'] = [{'id': 'lookup'}, {'id': 'lookup'}]
     resp = requests.post(url, json=j_query, timeout=300)
-    # Expect HTTP 400 status response
-    assert resp.status_code == 400, 'Expected an HTTP 400 status response code' \
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
                                     f'Received {resp.status_code}: {resp.text}'
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+    # There should be 0 results or null
+    results = json['message']['results']
+    print(results)
+    assert results is None or len(results) == 0, 'Found results when expecting none' + _print_trapi_log(json)
 
 
 def test_translator_meta_knowledge_graph():
