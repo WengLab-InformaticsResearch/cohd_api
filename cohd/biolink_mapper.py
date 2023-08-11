@@ -705,9 +705,9 @@ class BiolinkConceptMapper:
         total_errors = 0
         max_total_errors = 10
         max_tries = 2
-        omop_labels = dict()
-        lookup_responses = dict()
-        potential_curies = list()
+        string_sim_criteria = 0.9
+        string_match_count = 0
+        params = list()
         for r in missing_ingredient_concepts:
             if total_errors >= max_total_errors:
                 logging.error(f'Biolink Mapper Max Total Errors')
@@ -718,19 +718,46 @@ class BiolinkConceptMapper:
             while tries <= max_tries:
                 try:
                     omop_id = r['concept_id']
-                    concept_name = r['concept_name']
-                    omop_labels[omop_id] = concept_name
+                    concept_name = r['concept_name'].lower()
 
                     # Lookup
-                    j = SriNameResolution.name_lookup(concept_name)
+                    j = SriNameResolution.name_lookup(concept_name, biolink_type='ChemicalEntity', timeout=20)
                     if j is None:
                         logging.error(f'Biolink Mapper SRI Lookup Error: {omop_id} - {concept_name}')
                         total_errors += 1
                     else:
                         if len(j) > 0:
-                            # Collect the responses
-                            lookup_responses[omop_id] = j
-                            potential_curies.extend(j.keys())
+                            # Check if any of the labels match well enough
+                            # CURIEs are in order of best match, according to SRI, use this order to find the 1st match
+                            found_match = None
+                            for node in j:
+                                label = node['label']
+                                string_similarity = difflib.SequenceMatcher(None, concept_name, label.lower()).ratio()
+                                if string_similarity > string_sim_criteria:
+                                    found_match = node
+                                    break
+
+                            # If none of the labels matched well, check the synonyms
+                            if not found_match:
+                                for node in j:
+                                    for syn in node['synonyms']:
+                                        string_similarity = difflib.SequenceMatcher(None, concept_name, syn.lower()).ratio()
+                                        if string_similarity > string_sim_criteria:
+                                            found_match = node
+                                            break
+
+                                    if found_match:
+                                        break
+
+                            if found_match:
+                                curie = found_match['curie']
+                                label = found_match['label']
+                                categories = json.dumps(found_match['types'])                                
+                                provenance = f'(OMOP:{omop_id})-[SRI Name Resolution]-({curie})'
+                                params.extend([omop_id, curie, label, categories, provenance, True, 99,
+                                               string_similarity])
+                                string_match_count += 1
+
                             break
                         else:
                             logging.info(f'Biolink Mapper - No Match: {omop_id} - {concept_name}')
@@ -739,47 +766,6 @@ class BiolinkConceptMapper:
                     total_errors += 1
 
                 tries += 1
-
-        # Call SRI Node Normalizer to get categories for all potential CURIEs
-        potential_curies = list(set(potential_curies))
-        normalized_nodes = SriNodeNormalizer.get_normalized_nodes(potential_curies, 60)
-
-        # For each search result, find the first result that is a biolink:ChemicalEntity and high string similarity
-        string_sim_criteria = 0.9
-        string_match_count = 0
-        params = list()
-        chemical_descendants = bm_toolkit.get_descendants('biolink:ChemicalEntity', reflexive=True, formatted=True)
-        for omop_id, lookup_response in lookup_responses.items():
-            omop_label = omop_labels[omop_id].lower()
-            # CURIEs are in order of best match, according to SRI, so use this order to find the first match
-            found_match = False
-            for curie, labels in lookup_response.items():
-                # Check if the categories of the CURIE include biolink:ChemicalEntity
-                normalized_node = normalized_nodes.get(curie)
-                if normalized_node is None:
-                    continue
-                is_chemical_descendant = False
-                categories = normalized_node.categories
-                for category in categories:
-                    if category in chemical_descendants:
-                        is_chemical_descendant = True
-                        break
-                if not is_chemical_descendant:
-                    continue
-
-                # Check if any of the labels match well enough
-                for label in labels:
-                    string_similarity = difflib.SequenceMatcher(None, omop_label, label.lower()).ratio()
-                    if string_similarity > string_sim_criteria:
-                        found_match = True
-                        categories = json.dumps(categories)
-                        provenance = f'(OMOP:{omop_id})-[SRI Name Resolution]-({curie})'
-                        params.extend([omop_id, curie, label, categories, provenance, True, 99, string_similarity])
-                        string_match_count += 1
-                        break
-
-                if found_match:
-                    break
 
         # Name lookup can take a while, reconnect to SQL server
         conn = sql_connection()
