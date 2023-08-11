@@ -13,7 +13,7 @@ from .cohd_trapi import *
 from .biolink_mapper import *
 from .trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi
 from .translator import bm_toolkit, bm_version
-from .translator.ontology_kp import OntologyKP
+from .translator.ubergraph import Ubergraph
 
 
 class CohdTrapi140(CohdTrapi):
@@ -596,11 +596,11 @@ class CohdTrapi140(CohdTrapi):
         found = False
         ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
 
-        # Get subclasses for all CURIEs using ontology KP
+        # Get subclasses for all CURIEs using Automat-Ubergraph
         descendant_ids = list()
         ancestor_dict = dict()
 
-        descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
+        descendant_results = Ubergraph.get_descendants(ids, self._concept_1_qnode_categories)
         if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list
             descendants, ancestor_dict = descendant_results
@@ -611,7 +611,7 @@ class CohdTrapi140(CohdTrapi):
                     n_to_add = CohdTrapi.batch_size_limit - len(ids)
                     descendant_ids_ignored = descendant_ids[n_to_add:]
                     descendant_ids = descendant_ids[:n_to_add]
-                    description = f"More descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'"\
+                    description = f"More descendants from Automat-Ubergraph KP for QNode '{self._concept_1_qnode_key}'"\
                                   f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
                     self.log(description, level=logging.WARNING)
 
@@ -621,14 +621,14 @@ class CohdTrapi140(CohdTrapi):
                     ids = ids_deduped
                 else:
                     self.log(f'Issue encountered with SRI Node Norm when removing equivalents', level=logging.WARNING)
-                self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
+                self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
-                self.log(f"No descendants found from Ontology KP for QNode '{self._concept_1_qnode_key}'.",
+                self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'.",
                          level=logging.INFO)
         else:
-            # Add a warning that we didn't get descendants from Ontology KP
-            self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
+            # Add a warning that we didn't get descendants from Automat-Ubergraph
+            self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'",
                      level=logging.WARNING)
 
         # Update the ancestor dictionary for concept 1
@@ -716,10 +716,10 @@ class CohdTrapi140(CohdTrapi):
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
 
-            # Get subclasses for all CURIEs using ontology KP
+            # Get subclasses for all CURIEs using Automat-Ubergraph
             descendant_ids = list()
             ancestor_dict = dict()
-            descendant_results = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
+            descendant_results = Ubergraph.get_descendants(ids, self._concept_2_qnode_categories)
             if descendant_results is not None:
                 # Add new descendant CURIEs to the end of IDs list
                 descendants, ancestor_dict = descendant_results
@@ -730,7 +730,7 @@ class CohdTrapi140(CohdTrapi):
                         n_to_add = CohdTrapi.batch_size_limit - len(ids)
                         descendant_ids_ignored = descendant_ids[n_to_add:]
                         descendant_ids = descendant_ids[:n_to_add]
-                        description = f"More descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'" \
+                        description = f"More descendants from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'" \
                                       f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
                         self.log(description, level=logging.WARNING)
 
@@ -741,14 +741,14 @@ class CohdTrapi140(CohdTrapi):
                     else:
                         self.log(f'Issue encountered with SRI Node Norm when removing equivalents',
                                  level=logging.WARNING)
-                    self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
+                    self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:
-                    self.log(f"No descendants found from Ontology KP for QNode '{self._concept_2_qnode_key}'.",
+                    self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'.",
                              level=logging.INFO)
             else:
-                # Add a warning that we didn't get descendants from Ontology KP
-                self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
+                # Add a warning that we didn't get descendants from Automat-Ubergraph
+                self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'",
                          level=logging.WARNING)
 
             # Update the ancestor dictionary for concept 2
@@ -1635,13 +1635,13 @@ class CohdTrapi140(CohdTrapi):
             'object': ancestor_node_id,
             'sources': [
                 {
-                    'resource_id': OntologyKP.INFORES_ID,
+                    'resource_id': Ubergraph.INFORES_ID,
                     'resource_role': 'primary_knowledge_source',
                 },
                 {
                     'resource_id': CohdTrapi._INFORES_ID,
                     'resource_role': 'aggregator_knowledge_source',
-                    'upstream_resource_ids': [OntologyKP.INFORES_ID]
+                    'upstream_resource_ids': [Ubergraph.INFORES_ID]
                 },
             ]
         }
