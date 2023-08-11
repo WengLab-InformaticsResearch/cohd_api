@@ -1314,13 +1314,14 @@ class CohdTrapi140(CohdTrapi):
         # Add source retrieval
         sources = [
             {
-                'resource_id': CohdTrapi._INFORES_ID,
-                'resource_role': 'primary_knowledge_source',
-            },
-            {
                 'resource_id': 'infores:columbia-cdw-ehr-data',
                 'resource_role': 'supporting_data_source',
             },
+            {
+                'resource_id': CohdTrapi._INFORES_ID,
+                'resource_role': 'primary_knowledge_source',
+                'upstream_resource_ids': ['infores:columbia-cdw-ehr-data']
+            },            
         ]
 
         # Add properties from COHD results to the edge attributes
