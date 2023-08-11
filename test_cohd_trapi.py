@@ -20,9 +20,9 @@ from cohd.translator.ubergraph import Ubergraph
 
 # Choose which server to test
 # cr.server = 'https://dev.cohd.io/api'
-cr.server = 'https://cohd-api.ci.transltr.io/api'
+# cr.server = 'https://cohd-api.ci.transltr.io/api'
 # cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
-# cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.5.0'
