@@ -16,13 +16,13 @@ import warnings
 
 from notebooks.cohd_helpers import cohd_requests as cr
 from cohd.trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi, validate_trapi_response
-from cohd.translator.ontology_kp import OntologyKP
+from cohd.translator.ubergraph import Ubergraph
 
 # Choose which server to test
 # cr.server = 'https://dev.cohd.io/api'
-# cr.server = 'https://cohd-api.ci.transltr.io/api'
+cr.server = 'https://cohd-api.ci.transltr.io/api'
 # cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
-cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+# cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
 
 # Specify what Biolink and TRAPI versions are expected by the server
 BIOLINK_VERSION = '3.5.0'
@@ -152,18 +152,18 @@ def _test_ontology_kp():
     """ Check if Ontology KP is responding within a desired time """
     issue = False
     t1 = datetime.now()
-    r = OntologyKP.get_descendants(curies=['MONDO:0005148'], timeout=None, bypass=True)
+    r = Ubergraph.get_descendants(curies=['MONDO:0005148'], timeout=None, bypass=True)
     s = (datetime.now() - t1).seconds
 
-    if s > OntologyKP._TIMEOUT:
-        warnings.warn(f'OntologyKP::getDescendants took {s} seconds to respond, which is longer than the default timeout ({OntologyKP._TIMEOUT} seconds).')
+    if s > Ubergraph._TIMEOUT:
+        warnings.warn(f'Ubergraph::getDescendants took {s} seconds to respond, which is longer than the default timeout ({Ubergraph._TIMEOUT} seconds).')
         issue = True
 
     if r is None:
-        warnings.warn(f'OntologyKP::getDescendants had an error.')
+        warnings.warn(f'Ubergraph::getDescendants had an error.')
         issue = True
     elif len(r[0]) < 2:
-        warnings.warn(f'OntologyKP::getDescendants returned {len(r[0])} descendant nodes for T2DM.')
+        warnings.warn(f'Ubergraph::getDescendants returned {len(r[0])} descendant nodes for T2DM.')
         issue = True
 
     return issue
@@ -836,10 +836,10 @@ def test_translator_query_qnode_subclasses():
     # There should be more than 1 result
     results = json['message']['results']
     if _ontology_kp_issue and (not results or len(results) < 2):
-        # There was previously an issue observed with the OntologyKP, which may degrade results here.
+        # There was previously an issue observed with the Ubergraph, which may degrade results here.
         # Issue warning, but don't fail the test
         warnings.warn('test_translator_query_qnode_subclasses: Expected more than 1 result but only found '
-                      f'{len(results)} results. However, OntologyKP may be having issues right now.')
+                      f'{len(results)} results. However, Automat-Ubergraph may be having issues right now.')
         return
 
     assert results and len(results) > 1, _print_trapi_log(json)
