@@ -7,7 +7,7 @@ try:
     from yaml import CLoader as Loader
 except ImportError:
     from yaml import Loader
-from reasoner_validator import TRAPIResponseValidator
+from reasoner_validator.validator import TRAPIResponseValidator
 from reasoner_validator.trapi import TRAPISchemaValidator, openapi_to_jsonschema
 
 
@@ -130,7 +130,7 @@ def validate_trapi_14x(instance, component):
     >>> validate({"message": {}}, "Query")
     """
     # Validate against official TRAPI 1.4 release
-    validator = TRAPISchemaValidator(trapi_version='1.4.0-beta4')
+    validator = TRAPISchemaValidator(trapi_version='1.4.2')
     return validator.validate(instance, component)
 
 

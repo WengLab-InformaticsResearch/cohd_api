@@ -13,7 +13,7 @@ from .cohd_trapi import *
 from .biolink_mapper import *
 from .trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi
 from .translator import bm_toolkit, bm_version
-from .translator.ontology_kp import OntologyKP
+from .translator.ubergraph import Ubergraph
 
 
 class CohdTrapi140(CohdTrapi):
@@ -135,7 +135,10 @@ class CohdTrapi140(CohdTrapi):
         query_graph = query_message.get('query_graph')
         if query_graph is None or not query_graph:
             self._valid_query = False
-            self._invalid_query_response = ('Unsupported query: query_graph missing from query_message or empty', 400)
+            msg = 'Unsupported query: query_graph missing from query_message or empty'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check the structure of the query graph. Should have 2 nodes and 1 edge (one-hop query)
@@ -143,7 +146,10 @@ class CohdTrapi140(CohdTrapi):
         edges = query_graph.get('edges')
         if nodes is None or len(nodes) != 2 or edges is None or len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = ('Unsupported query. Only one-hop queries supported.', 400)
+            msg = 'Unsupported query. Only one-hop queries supported.'
+            self.log(msg, level=logging.WARNING)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check the workflow. Should be at most a single lookup operation
@@ -151,8 +157,10 @@ class CohdTrapi140(CohdTrapi):
         if workflow and type(workflow) is list:
             if len(workflow) > 1 or workflow[0]['id'] != 'lookup':
                 self._valid_query = False
-                self._invalid_query_response = ('Unsupported workflow. Only a single "lookup" operation is supported',
-                                                400)
+                msg = 'Unsupported workflow. Only a single "lookup" operation is supported'
+                self.log(msg, level=logging.WARNING)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
         # Everything looks good so far
@@ -214,8 +222,8 @@ class CohdTrapi140(CohdTrapi):
         -------
         True if input is valid, otherwise (False, message)
         """
-        # Log that TRAPI 1.3 was called because there's no clear indication otherwise
-        logging.debug('Query issued against TRAPI 1.3')
+        # Log that TRAPI 1.4 was called because there's no clear indication otherwise
+        logging.debug('Query issued against TRAPI 1.4')
 
         try:
             self._json_data = self._request.get_json()
@@ -260,8 +268,11 @@ class CohdTrapi140(CohdTrapi):
         else:
             if self._method not in CohdTrapi.supported_query_methods:
                 self._valid_query = False
-                self._invalid_query_response = ('Query method "{method}" not supported. Options are: {methods}'.format(
-                    method=self._method, methods=','.join(CohdTrapi.supported_query_methods)), 400)
+                msg = 'Query method "{method}" not supported. Options are: {methods}'.format(
+                    method=self._method, methods=','.join(CohdTrapi.supported_query_methods))
+                self.log(msg, level=logging.ERROR)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
         # Get the query_option for dataset ID
@@ -315,7 +326,10 @@ class CohdTrapi140(CohdTrapi):
         edges = self._query_graph['edges']
         if len(edges) != 1:
             self._valid_query = False
-            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries', 400)
+            msg = f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries'
+            self.log(msg, level=logging.WARNING)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Check if the edge type is supported by COHD Reasoner and how it should be processed
@@ -368,8 +382,10 @@ class CohdTrapi140(CohdTrapi):
                         self._association_direction = 0
             else:
                 self._valid_query = False
-                self._invalid_query_response = (f'None of the predicates in {self._query_edge_predicates} '
-                                                f'are supported by {CohdTrapi._SERVICE_NAME}.', 400)
+                msg = f'None of the predicates in {self._query_edge_predicates} are supported by {CohdTrapi._SERVICE_NAME}.'
+                self.log(msg, level=logging.ERROR)
+                response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
 
             if unrecognized_predicates:
@@ -386,13 +402,19 @@ class CohdTrapi140(CohdTrapi):
         subject_qnode = self._find_query_node(subject_qnode_key)
         if subject_qnode is None:
             self._valid_query = False
-            self._invalid_query_response = (f'QNode id "{subject_qnode_key}" not found in query graph', 400)
+            msg = f'QNode id "{subject_qnode_key}" not found in query graph'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
         object_qnode_key = self._query_edge['object']
         object_qnode = self._find_query_node(object_qnode_key)
         if object_qnode is None:
             self._valid_query = False
-            self._invalid_query_response = (f'QNode id "{object_qnode_key}" not found in query graph', 400)
+            msg = f'QNode id "{object_qnode_key}" not found in query graph'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # In COHD queries, concept_id_1 must be specified by ID. Figure out which QNode to use for concept_1
@@ -440,8 +462,10 @@ class CohdTrapi140(CohdTrapi):
         # COHD queries require at least 1 node with a specified ID
         if len(node_ids) == 0:
             self._valid_query = False
-            self._invalid_query_response = (f'{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID',
-                                            400)
+            msg = '{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
         # Get qnode categories and check the formatting
@@ -572,11 +596,11 @@ class CohdTrapi140(CohdTrapi):
         found = False
         ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
 
-        # Get subclasses for all CURIEs using ontology KP
+        # Get subclasses for all CURIEs using Automat-Ubergraph
         descendant_ids = list()
         ancestor_dict = dict()
 
-        descendant_results = OntologyKP.get_descendants(ids, self._concept_1_qnode_categories)
+        descendant_results = Ubergraph.get_descendants(ids, self._concept_1_qnode_categories)
         if descendant_results is not None:
             # Add new descendant CURIEs to the end of IDs list
             descendants, ancestor_dict = descendant_results
@@ -587,7 +611,7 @@ class CohdTrapi140(CohdTrapi):
                     n_to_add = CohdTrapi.batch_size_limit - len(ids)
                     descendant_ids_ignored = descendant_ids[n_to_add:]
                     descendant_ids = descendant_ids[:n_to_add]
-                    description = f"More descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'"\
+                    description = f"More descendants from Automat-Ubergraph KP for QNode '{self._concept_1_qnode_key}'"\
                                   f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
                     self.log(description, level=logging.WARNING)
 
@@ -597,14 +621,14 @@ class CohdTrapi140(CohdTrapi):
                     ids = ids_deduped
                 else:
                     self.log(f'Issue encountered with SRI Node Norm when removing equivalents', level=logging.WARNING)
-                self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
+                self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
                          level=logging.INFO)
             else:
-                self.log(f"No descendants found from Ontology KP for QNode '{self._concept_1_qnode_key}'.",
+                self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'.",
                          level=logging.INFO)
         else:
-            # Add a warning that we didn't get descendants from Ontology KP
-            self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_1_qnode_key}'",
+            # Add a warning that we didn't get descendants from Automat-Ubergraph
+            self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'",
                      level=logging.WARNING)
 
         # Update the ancestor dictionary for concept 1
@@ -692,10 +716,10 @@ class CohdTrapi140(CohdTrapi):
             # If CURIE of the 2nd node is specified, then query the association between concept_1 and concept_2
             self._domain_class_pairs = None
 
-            # Get subclasses for all CURIEs using ontology KP
+            # Get subclasses for all CURIEs using Automat-Ubergraph
             descendant_ids = list()
             ancestor_dict = dict()
-            descendant_results = OntologyKP.get_descendants(ids, self._concept_2_qnode_categories)
+            descendant_results = Ubergraph.get_descendants(ids, self._concept_2_qnode_categories)
             if descendant_results is not None:
                 # Add new descendant CURIEs to the end of IDs list
                 descendants, ancestor_dict = descendant_results
@@ -706,7 +730,7 @@ class CohdTrapi140(CohdTrapi):
                         n_to_add = CohdTrapi.batch_size_limit - len(ids)
                         descendant_ids_ignored = descendant_ids[n_to_add:]
                         descendant_ids = descendant_ids[:n_to_add]
-                        description = f"More descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'" \
+                        description = f"More descendants from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'" \
                                       f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
                         self.log(description, level=logging.WARNING)
 
@@ -717,14 +741,14 @@ class CohdTrapi140(CohdTrapi):
                     else:
                         self.log(f'Issue encountered with SRI Node Norm when removing equivalents',
                                  level=logging.WARNING)
-                    self.log(f"Adding descendants from Ontology KP to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
+                    self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_2_qnode_key}': {descendant_ids}.",
                              level=logging.INFO)
                 else:
-                    self.log(f"No descendants found from Ontology KP for QNode '{self._concept_2_qnode_key}'.",
+                    self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'.",
                              level=logging.INFO)
             else:
-                # Add a warning that we didn't get descendants from Ontology KP
-                self.log(f"Issue with retrieving descendants from Ontology KP for QNode '{self._concept_2_qnode_key}'",
+                # Add a warning that we didn't get descendants from Automat-Ubergraph
+                self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_2_qnode_key}'",
                          level=logging.WARNING)
 
             # Update the ancestor dictionary for concept 2
@@ -1290,13 +1314,14 @@ class CohdTrapi140(CohdTrapi):
         # Add source retrieval
         sources = [
             {
-                'resource_id': CohdTrapi._INFORES_ID,
-                'resource_role': 'primary_knowledge_source',
-            },
-            {
                 'resource_id': 'infores:columbia-cdw-ehr-data',
                 'resource_role': 'supporting_data_source',
             },
+            {
+                'resource_id': CohdTrapi._INFORES_ID,
+                'resource_role': 'primary_knowledge_source',
+                'upstream_resource_ids': ['infores:columbia-cdw-ehr-data']
+            },            
         ]
 
         # Add properties from COHD results to the edge attributes
@@ -1611,13 +1636,13 @@ class CohdTrapi140(CohdTrapi):
             'object': ancestor_node_id,
             'sources': [
                 {
-                    'resource_id': OntologyKP.INFORES_ID,
+                    'resource_id': Ubergraph.INFORES_ID,
                     'resource_role': 'primary_knowledge_source',
                 },
                 {
                     'resource_id': CohdTrapi._INFORES_ID,
                     'resource_role': 'aggregator_knowledge_source',
-                    'upstream_resource_ids': [OntologyKP.INFORES_ID]
+                    'upstream_resource_ids': [Ubergraph.INFORES_ID]
                 },
             ]
         }
@@ -1682,8 +1707,8 @@ class CohdTrapi140(CohdTrapi):
         return jsonify(self._response)
 
     def _trapi_mini_response(self,
-                             status: TrapiStatusCode,
-                             description: str):
+                             status: TrapiStatusCode = TrapiStatusCode.NO_RESULTS,
+                             description: str = ''):
         """ Creates a minimal TRAPI response without creating the knowledge graph or results.
         This is useful for situations where some issue occurred but the TRAPI convention expects an HTTP
         Status Code 200 and TRAPI Response object.
