@@ -10,3 +10,4 @@ semantic_version
 apscheduler
 bmt
 reasoner-validator>=3.8
+linkml-version<1.6.0
