@@ -11,3 +11,6 @@ apscheduler
 bmt
 reasoner-validator>=3.8
 linkml-runtime<1.6.0
+opentelemetry-sdk
+opentelemetry-instrumentation-flask
+opentelemetry-exporter-jaeger
