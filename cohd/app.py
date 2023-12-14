@@ -59,7 +59,6 @@ jaeger_host = 'localhost'
 deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
 if deployment_env[:4] == 'ITRB':
     jaeger_host = 'jaeger-otel-agent.sri'
-# jaeger_exporter = OTLPSpanExporter(endpoint=jaeger_host)
 jaeger_exporter = JaegerExporter(
             agent_host_name=jaeger_host,
             agent_port=6831,
@@ -73,5 +72,6 @@ trace.set_tracer_provider(
 )
 otel_excluded_urls = 'health,api/health'
 tracer = trace.get_tracer(__name__)
-FlaskInstrumentor().instrument_app(app)
+FlaskInstrumentor().instrument_app(app,
+                                   excluded_urls=otel_excluded_urls)
 logging.info('Finished instrumenting app for OTEL')
