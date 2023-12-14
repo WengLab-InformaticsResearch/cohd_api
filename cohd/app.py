@@ -70,7 +70,7 @@ tp.add_span_processor(
 trace.set_tracer_provider(
     tp
 )
-otel_excluded_urls = 'health,api/health'
+otel_excluded_urls = 'health,api/health,api/dev/.*'
 tracer = trace.get_tracer(__name__)
 FlaskInstrumentor().instrument_app(app,
                                    excluded_urls=otel_excluded_urls)
