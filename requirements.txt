@@ -14,3 +14,4 @@ linkml-runtime<1.6.0
 opentelemetry-sdk
 opentelemetry-instrumentation-flask
 opentelemetry-exporter-jaeger
+opentelemetry-instrumentation-requests

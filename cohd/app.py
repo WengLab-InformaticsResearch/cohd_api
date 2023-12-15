@@ -10,8 +10,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME as telemetery_service_name_
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
-
-from .google_analytics import GoogleAnalytics
+from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
 #########
 # INITS #
@@ -55,7 +54,7 @@ tp = TracerProvider(
         resource=Resource.create({telemetery_service_name_key: 'COHD'})
     )
 # create an exporter to jaeger     
-jaeger_host = 'localhost'
+jaeger_host = 'jaeger'
 deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
 if deployment_env[:4] == 'ITRB':
     jaeger_host = 'jaeger-otel-agent.sri'
@@ -74,4 +73,5 @@ otel_excluded_urls = 'health,api/health,api/dev/.*'
 tracer = trace.get_tracer(__name__)
 FlaskInstrumentor().instrument_app(app,
                                    excluded_urls=otel_excluded_urls)
+RequestsInstrumentor().instrument()
 logging.info('Finished instrumenting app for OTEL')
