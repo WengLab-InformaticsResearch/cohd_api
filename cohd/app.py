@@ -50,17 +50,17 @@ logging.config.dictConfig({
 logging.info('About to instrument app for OTEL')
 # set the service name for our trace provider 
 # this will tag every trace with the service name given
+otel_service_name = app.config.get('OTEL_SERVICE_NAME', 'COHD')
 tp = TracerProvider(
-        resource=Resource.create({telemetery_service_name_key: 'COHD'})
+        resource=Resource.create({telemetery_service_name_key: otel_service_name})
     )
 # create an exporter to jaeger     
-jaeger_host = 'jaeger'
+jaeger_host = app.config.get('JAEGER_HOST', 'jaeger-otel-agent.sri')
+jaeger_port = app.config.get('JAEGER_PORT', 6831)
 deployment_env = app.config.get('DEPLOYMENT_ENV', 'dev')
-if deployment_env[:4] == 'ITRB':
-    jaeger_host = 'jaeger-otel-agent.sri'
 jaeger_exporter = JaegerExporter(
             agent_host_name=jaeger_host,
-            agent_port=6831,
+            agent_port=jaeger_port,
         )
 # here we use the exporter to export each span in a trace
 tp.add_span_processor(
