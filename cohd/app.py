@@ -11,6 +11,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
+from opentelemetry.instrumentation.pymysql import PyMySQLInstrumentor
 
 #########
 # INITS #
@@ -74,4 +75,5 @@ tracer = trace.get_tracer(__name__)
 FlaskInstrumentor().instrument_app(app,
                                    excluded_urls=otel_excluded_urls)
 RequestsInstrumentor().instrument()
+PyMySQLInstrumentor().instrument()
 logging.info('Finished instrumenting app for OTEL')
