@@ -333,7 +333,10 @@ def api_call(service=None, meta=None, query=None, version=None):
             result = 'meta not recognized', 400
     elif service == 'health':
         # elastic load balancing health check
-        mysql_health = query_cohd_mysql.health()
+        # Disabling the MySQL health check since it's overloading OTEL and I don't see a way to exclude
+        # it from OTEL collection, and currently these health checks don't do much for COHD. 
+        #  mysql_health = query_cohd_mysql.health()
+        mysql_health = True
         if not mysql_health:
             result = 'unhealthy MySQL server', 503
         else:
