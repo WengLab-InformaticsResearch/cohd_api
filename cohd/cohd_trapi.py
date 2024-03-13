@@ -68,6 +68,7 @@ class CohdTrapi(ABC):
     limit_max_results = 500
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
+    supported_operation = 'lookup_and_score'
 
     # Mapping for which predicate should be used for each COHD analysis method. For now, it's all correlated_with
     default_predicate = 'biolink:correlated_with'

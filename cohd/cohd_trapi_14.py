@@ -37,7 +37,7 @@ class CohdTrapi140(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.12'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.3.13'
     schema_version = '1.4.2'
     biolink_version = bm_version
 
@@ -155,9 +155,9 @@ class CohdTrapi140(CohdTrapi):
         # Check the workflow. Should be at most a single lookup operation
         workflow = self._json_data.get('workflow')
         if workflow and type(workflow) is list:
-            if len(workflow) > 1 or workflow[0]['id'] != 'lookup':
+            if len(workflow) > 1 or workflow[0]['id'] != CohdTrapi.supported_operation:
                 self._valid_query = False
-                msg = 'Unsupported workflow. Only a single "lookup" operation is supported'
+                msg = f'Unsupported workflow. Only a single "{CohdTrapi.supported_operation}" operation is supported'
                 self.log(msg, level=logging.WARNING)
                 response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
                 self._invalid_query_response = response, 200
