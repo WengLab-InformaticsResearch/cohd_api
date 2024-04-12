@@ -61,12 +61,6 @@ servers:
   - url: 'https://cohd-api.test.transltr.io/api'
     description: COHD ITRB Test Server
     x-maturity: testing
-  - url: 'https://cohd-api.ci.transltr.io/api'
-    description: COHD ITRB CI Server
-    x-maturity: staging
-  - url: 'https://cohd.io/api'
-    description: COHD Development Server
-    x-maturity: development
 externalDocs:
   description: >-
     Documentation for the NCATS Biomedical Translator Reasoners web services

@@ -55,12 +55,12 @@ info:
         production/x-trapi/
     test_data_location: "https://raw.githubusercontent.com/WengLab-InformaticsResearch/cohd_api/master/cohd/translator/sri_testing_triples.json"
 servers:
-  - url: 'https://cohd-api.transltr.io/api'
-    description: COHD ITRB Production Server
-    x-maturity: production
-  - url: 'https://cohd-api.test.transltr.io/api'
-    description: COHD ITRB Test Server
-    x-maturity: testing
+  # - url: 'https://cohd-api.transltr.io/api'
+  #   description: COHD ITRB Production Server
+  #   x-maturity: production
+  # - url: 'https://cohd-api.test.transltr.io/api'
+  #   description: COHD ITRB Test Server
+  #   x-maturity: testing
   - url: 'https://cohd-api.ci.transltr.io/api'
     description: COHD ITRB CI Server
     x-maturity: staging
