@@ -29,6 +29,10 @@ class CohdTrapi150(CohdTrapi):
     supported_edge_types = ['biolink:positively_correlated_with', 'biolink:negatively_correlated_with',
                             'biolink:has_real_world_evidence_of_association_with']
 
+    # QNode set_interpretation values that COHD TRAPI does not support
+    supported_set_interpretation = ['BATCH']
+    unsupported_set_interpretation = list(set(['BATCH', 'ALL', 'MANY']) - set(supported_set_interpretation))
+
     # Biolink predicates that request positive associations only
     edge_types_positive = ['biolink:positively_correlated_with']
     default_positive_predicate = edge_types_positive[0]
@@ -568,8 +572,18 @@ class CohdTrapi150(CohdTrapi):
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
+        # If client specifies unsupported set_interpretation (ALL or MANY), respond with error code        
+        if concept_1_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation or \
+                concept_2_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation:
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} only supports QNode set_interpretation of {CohdTrapi150.supported_set_interpretation}'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+
         # Check to see if cohd doesn't recognize any properties
-        qnode_properties = {'ids','categories', 'is_set', 'constraints'}
+        qnode_properties = {'ids','categories', 'set_interpretation', 'constraints'}
         qedge_properties = {'knowledge_type', 'predicates', 'subject', 'object', 'attribute_constraints',
                             'qualifier_constraints'}
         sep = ', '
