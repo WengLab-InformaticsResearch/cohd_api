@@ -1056,10 +1056,12 @@ class CohdTrapi150(CohdTrapi):
         result = {
             'node_bindings': {
                 self._concept_1_qnode_key: [{
-                    'id': kg_node_1_id
+                    'id': kg_node_1_id,
+                    'attributes': []
                 }],
                 self._concept_2_qnode_key: [{
-                    'id': kg_node_2_id
+                    'id': kg_node_2_id,
+                    'attributes': []
                 }]
             },
             'analyses': [
@@ -1067,7 +1069,8 @@ class CohdTrapi150(CohdTrapi):
                     'resource_id': CohdTrapi._INFORES_ID,
                     'edge_bindings': {
                         self._query_edge_key: [{
-                            'id': kg_edge_id
+                            'id': kg_edge_id,
+                            'attributes': []
                         }]
                     },
                     'score': score,
