@@ -1254,6 +1254,9 @@ class CohdTrapi150(CohdTrapi):
         if categories is None:
             categories = list()
 
+        if attributes is None:
+            attributes = list()
+
         return {
             'name': name,
             'categories': categories,
@@ -1647,7 +1650,8 @@ class CohdTrapi150(CohdTrapi):
                     'resource_role': 'aggregator_knowledge_source',
                     'upstream_resource_ids': [Ubergraph.INFORES_ID]
                 },
-            ]
+            ],
+            'attributes': []
         }
 
     def _initialize_trapi_response(self):
