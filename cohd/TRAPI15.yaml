@@ -32,7 +32,7 @@ info:
     component: KP
     team:
       - Clinical Data Provider
-    biolink-version: 4.1.0
+    biolink-version: 4.1.6
     infores: infores:cohd
     externalDocs:
       description: >-
