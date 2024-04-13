@@ -26,6 +26,7 @@ class TrapiStatusCode(Enum):
     UNSUPPORTED_CONSTRAINT = 'UnsupportedConstraint'
     UNSUPPORTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
     UNSUPPORTED_QUAL_CONSTRAINT = 'UnsupportedQualifierConstraint'
+    UNSUPPORTED_SET_INTERPRETATION = 'UnsupportedSetInterpretation'
 
 
 class CohdTrapi(ABC):

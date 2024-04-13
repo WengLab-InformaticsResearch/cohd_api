@@ -299,4 +299,4 @@ def omop_to_biolink(request):
 
 
 def api_version():
-    return CohdTrapi140.tool_version, 200
+    return CohdTrapi150.tool_version, 200
