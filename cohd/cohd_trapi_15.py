@@ -259,6 +259,9 @@ class CohdTrapi150(CohdTrapi):
         if not input_check[0]:
             return input_check
 
+        # Check if bypass_cache is desired
+        self._bypass_cache = self._json_data.get('bypass_cache', False)
+
         # Get options that don't fit into query_graph structure from query_options
         self._query_options = self._json_data.get('query_options')
         if self._query_options is None:
@@ -943,7 +946,8 @@ class CohdTrapi150(CohdTrapi):
                                                                         domain_id=domain_id,
                                                                         concept_class_id=concept_class_id,
                                                                         ln_ratio_sign=self._association_direction,
-                                                                        confidence=self._confidence_interval)
+                                                                        confidence=self._confidence_interval,
+                                                                        bypass=self._bypass_cache)
                             if json_results:
                                 new_cohd_results.extend(json_results['results'])
                     else:
@@ -952,7 +956,8 @@ class CohdTrapi150(CohdTrapi):
                         json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
                                                                     dataset_id=self._dataset_id, domain_id=None,
                                                                     ln_ratio_sign=self._association_direction,
-                                                                    confidence=self._confidence_interval)
+                                                                    confidence=self._confidence_interval,
+                                                                    bypass=self._bypass_cache)
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
 
@@ -962,7 +967,8 @@ class CohdTrapi150(CohdTrapi):
                         json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
                                                                     concept_id_2=concept_2_id,
                                                                     dataset_id=self._dataset_id, domain_id=None,
-                                                                    confidence=self._confidence_interval)
+                                                                    confidence=self._confidence_interval,
+                                                                    bypass=self._bypass_cache)
                         if json_results:
                             new_cohd_results.extend(json_results['results'])
 
