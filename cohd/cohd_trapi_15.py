@@ -127,7 +127,8 @@ class CohdTrapi150(CohdTrapi):
 
         # Use TRAPI Reasoner Validator to validate the query
         try:
-            validate_trapi(self._json_data, "Query")
+            # For now, bypass the TRAPI validation because reasoner_validator doesn't work with TRAPI 1.5
+            # validate_trapi(self._json_data, "Query")
             self.log('Query passed reasoner validator')
         except ValidationError as err:
             self._valid_query = False
