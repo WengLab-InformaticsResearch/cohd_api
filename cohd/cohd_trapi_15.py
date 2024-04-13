@@ -572,7 +572,7 @@ class CohdTrapi150(CohdTrapi):
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
 
-        # If client specifies unsupported set_interpretation (ALL or MANY), respond with error code        
+        # If client specifies unsupported set_interpretation (ALL or MANY), respond with error code
         if concept_1_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation or \
                 concept_2_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation:
             self._valid_query = False
@@ -1410,6 +1410,18 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1048',  # Database ID
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
             },
@@ -1447,6 +1459,18 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1048',  # Database ID
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
             },
@@ -1491,6 +1515,18 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1048',  # Database ID
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
             },
@@ -1542,6 +1578,18 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1048',  # Database ID
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
             },
@@ -1585,8 +1633,32 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1048',  # Database ID
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
+            },
+            # Knowledge Level
+            {
+                'attribute_type_id': 'biolink:knowledge_level',  
+                'value': 'statistical_association',
+                'attribute_source': CohdTrapi._INFORES_ID
+            },
+            # Agent Type
+            {
+                'attribute_type_id': 'biolink:agent_type',  
+                'value': 'computational_model',
+                'attribute_source': CohdTrapi._INFORES_ID
             }
         ]
         # From calculation of chi_square
