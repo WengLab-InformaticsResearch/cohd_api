@@ -164,7 +164,7 @@ def validate_trapi_response(trapi_version, bl_version, response):
         strict_validation=None
     )
     validator.check_compliance_of_trapi_response(response)
-    vms = validator.get_messages()
+    vms = validator.get_all_messages()
 
     # Ignore certain codes
     for level, codes in codes_ignore.items():
