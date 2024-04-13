@@ -1453,9 +1453,13 @@ def get_total_pair_counts(dataset_id: int) -> int:
 get_total_pair_counts.total_pair_counts = None
 
 
-@cache.memoize(timeout=86400)
+def _bypass_cache(f, *args, **kwargs):
+    return kwargs.get('bypass', False)
+
+
+@cache.memoize(timeout=86400, unless=_bypass_cache)
 def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None, concept_class_id=None,
-                ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE):
+                ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE, bypass=False):
     """ Query for TRAPI. Performs the calculations for all association methods
 
     Parameters
