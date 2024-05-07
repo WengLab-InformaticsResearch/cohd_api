@@ -651,7 +651,7 @@ class BiolinkConceptMapper:
                 GROUP BY m.biolink_id, m.distance, m.string_similarity)
 
             UPDATE biolink.mappings m
-            JOIN ({" UNION ".join([f"SELECT * FROM {d}.concept_counts" for d in databases])}) cc 
+            JOIN ({" UNION ".join([f"SELECT concept_id, concept_count FROM {d}.concept_counts" for d in databases])}) cc 
                 ON m.omop_id = cc.concept_id                
             JOIN max_count x ON m.biolink_id = x.biolink_id
                 AND m.distance = x.distance
@@ -849,7 +849,7 @@ class BiolinkConceptMapper:
                 GROUP BY m.biolink_id, m.distance, m.string_similarity)
     
             UPDATE biolink.mappings m
-            JOIN ({" UNION ".join(f"SELECT * FROM {d}.concept_counts" for d in databases)}) cc ON m.omop_id = cc.concept_id
+            JOIN ({" UNION ".join(f"SELECT concept_id, concept_count FROM {d}.concept_counts" for d in databases)}) cc ON m.omop_id = cc.concept_id
             JOIN max_count x ON m.biolink_id = x.biolink_id
                 AND m.string_similarity = x.string_similarity
                 AND cc.concept_count = x.concept_count
