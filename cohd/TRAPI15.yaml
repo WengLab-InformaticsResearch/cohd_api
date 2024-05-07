@@ -58,9 +58,9 @@ servers:
   # - url: 'https://cohd-api.transltr.io/api'
   #   description: COHD ITRB Production Server
   #   x-maturity: production
-  # - url: 'https://cohd-api.test.transltr.io/api'
-  #   description: COHD ITRB Test Server
-  #   x-maturity: testing
+  - url: 'https://cohd-api.test.transltr.io/api'
+    description: COHD ITRB Test Server
+    x-maturity: testing
   - url: 'https://cohd-api.ci.transltr.io/api'
     description: COHD ITRB CI Server
     x-maturity: staging
