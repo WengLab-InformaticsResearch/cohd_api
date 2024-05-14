@@ -12,12 +12,12 @@ def _bypass_cache(f, *args, **kwargs):
 
 
 class Ubergraph:
-    base_url_default = 'https://automat.transltr.io/ubergraph/1.4/'
+    base_url_default = 'https://automat.transltr.io/ubergraph/'
     base_urls = {
-        'dev': 'https://automat.renci.org/ubergraph/1.4/',
-        'ITRB-CI': 'https://automat.ci.transltr.io/ubergraph/1.4/',
-        'ITRB-TEST': 'https://automat.test.transltr.io/ubergraph/1.4/',
-        'ITRB-PROD': 'https://automat.transltr.io/ubergraph/1.4/'
+        'dev': 'https://automat.renci.org/ubergraph/',
+        'ITRB-CI': 'https://automat.ci.transltr.io/ubergraph/',
+        'ITRB-TEST': 'https://automat.test.transltr.io/ubergraph/',
+        'ITRB-PROD': 'https://automat.transltr.io/ubergraph/'
     }    
     endpoint_query = 'query'
     endpoint_meta_kg = 'meta_knowledge_graph'
