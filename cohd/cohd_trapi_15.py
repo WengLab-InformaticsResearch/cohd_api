@@ -41,7 +41,7 @@ class CohdTrapi150(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.4.1'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.4.3'
     schema_version = '1.5.0'
     biolink_version = bm_version
 
