@@ -20,13 +20,13 @@ from cohd.translator.ubergraph import Ubergraph
 
 # Choose which server to test
 # cr.server = 'https://dev.cohd.io/api'
-# cr.server = 'https://cohd-api.ci.transltr.io/api'
-# cr.server = 'https://cohd-api.test.transltr.io/api'  # Temporarily default to Test as Translator consrotia has only deployed TRAPI 1.4 to Test
-cr.server = 'https://cohd-api.transltr.io/api'  # Default to ITRB-Production instance
+cr.server = 'https://cohd-api.ci.transltr.io/api'
+# cr.server = 'https://cohd-api.test.transltr.io/api'  
+# cr.server = 'https://cohd-api.transltr.io/api'  
 
 # Specify what Biolink and TRAPI versions are expected by the server
-BIOLINK_VERSION = '3.5.0'
-TRAPI_VERSION = '1.4.2'
+BIOLINK_VERSION = '4.1.6'
+TRAPI_VERSION = '1.5.0'
 
 # Static instance of the Biolink Model Toolkit
 bm_toolkit = Toolkit()
@@ -37,7 +37,7 @@ tuple for storing pairs of (key, type) for results schemas
 _s = namedtuple('_s', ['key', 'type'])
 
 # Proxy for main TRAPI version
-translator_query = cr.translator_query_130
+translator_query = cr.translator_query
 
 _logging_level_from_str = {logging.getLevelName(level): level for level in
                            [logging.DEBUG, logging.INFO, logging.WARNING, logging.ERROR]}
@@ -47,11 +47,11 @@ def _validate_trapi_response(response):
     vms = validate_trapi_response(TRAPI_VERSION, BIOLINK_VERSION, response)
 
     # expect no validation errors
-    assert len(vms['errors']) == 0 and len(vms['critical']) == 0, print(vms)
+    assert len(vms['error']) == 0 and len(vms['critical']) == 0, print(vms)
 
     # If there are validation warnings, display them, but don't fail
-    if len(vms['warnings']) > 0:
-        warnings.warn(str(vms['warnings']))
+    if len(vms['warning']) > 0:
+        warnings.warn(str(vms['warning']))
 
 
 def _print_trapi_log(trapi_response, print_level=logging.WARNING):
@@ -682,7 +682,7 @@ def test_translator_query_multiple_categories():
             "query_graph": {
                 "nodes": {
                     "subj": {
-                        "ids": ["UMLS:C0451709"]
+                        "ids": ["SNOMEDCT:197356006"]
                     },
                     "obj": {
                         "categories": ["biolink:DiseaseOrPhenotypicFeature"]
@@ -723,7 +723,7 @@ def test_translator_query_multiple_categories():
             "query_graph": {
                 "nodes": {
                     "subj": {
-                        "ids": ["UMLS:C0451709"]
+                        "ids": ["SNOMEDCT:197356006"]
                     },
                     "obj": {
                         "categories": ["biolink:Procedure"]
@@ -764,7 +764,7 @@ def test_translator_query_multiple_categories():
             "query_graph": {
                 "nodes": {
                     "subj": {
-                        "ids": ["UMLS:C0451709"]
+                        "ids": ["SNOMEDCT:197356006"]
                     },
                     "obj": {
                         "categories": ["biolink:DiseaseOrPhenotypicFeature", "biolink:Procedure"]
@@ -954,7 +954,7 @@ def test_translator_workflows():
             }
         },
         "workflow": [
-            {"id": "lookup"}
+            {"id": "lookup_and_score"}
         ],
         "query_options": {
             "max_results": 1

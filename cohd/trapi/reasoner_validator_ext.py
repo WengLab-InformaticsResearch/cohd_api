@@ -149,28 +149,27 @@ def validate_trapi_response(trapi_version, bl_version, response):
     """
     # Ignore the following codes
     codes_ignore = {
-        'warnings': [
-            'warning.response.knowledge_graph.empty',  # For TRAPI error responses, COHD uses null KG, which is allowed
-            'warning.response.results.empty',  # For TRAPI error responses, COHD uses null results, which is allowed
+        'warning': [
+            'warning.knowledge_graph.node.id.unmapped_prefix',  # False negative on SNOMEDCT
         ],
-        'errors': [
-        ]
+        'error': []
     }
 
     # Validation
     validator = TRAPIResponseValidator(
         trapi_version=trapi_version,
         biolink_version=bl_version,
-        strict_validation=None
+        strict_validation=False
     )
     validator.check_compliance_of_trapi_response(response)
-    vms = validator.get_all_messages()
+    messages = validator.get_all_messages()
+    standard_tests = messages['Validate TRAPI Response']['Standards Test']
 
     # Ignore certain codes
     for level, codes in codes_ignore.items():
-        v_messages = vms[level]
+        v_messages = standard_tests[level]
         for code in codes:
             # remove code from dictionary, no error if code not in dict
             v_messages.pop(code, None)
 
-    return vms
+    return standard_tests
