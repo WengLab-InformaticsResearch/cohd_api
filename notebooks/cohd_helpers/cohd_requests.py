@@ -844,10 +844,10 @@ def translator_query_100(node_1_curie, node_2_curie=None, node_2_type=None, max_
     return response, query
 
 
-def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=None, predicates=None, max_results=500,
-                         confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
-                         min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=300,
-                         query_id=True):
+def translator_query(node_1_curies, node_2_curies=None, node_2_categories=None, predicates=None, max_results=500,
+                     confidence_interval=None, dataset_id=3, local_oxo=True, method='obsExpRatio',
+                     min_cooccurrence=None, ontology_targets=None, biolink_only=True, threshold=None, timeout=300,
+                     query_id=True):
     """NCATS Translator Reasoner API. See documentation: https://github.com/NCATS-Tangerine/NCATS-ReasonerStdAPI
 
     Parameters
@@ -937,10 +937,6 @@ def translator_query_120(node_1_curies, node_2_curies=None, node_2_categories=No
 
     response = requests.post(url, json=query, timeout=timeout)
     return response, query
-
-
-# TRAPI 1.3 query on COHD is currently the same as TRAPI 1.2 query
-translator_query_130 = translator_query_120
 
 
 def translator_version():
