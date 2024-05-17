@@ -24,7 +24,7 @@ jobs:
       id: dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest requests pandas matplotlib "linkml-runtime<1.6.0" bmt reasoner-validator>=3.8.0 flask flask-cors flask-caching
+        pip install pytest requests pandas matplotlib linkml-runtime bmt reasoner-validator>=4.0.0 flask flask-cors flask-caching
         pip show reasoner-validator
 
       # Run /health checks on all COHD instances (dev, CI, Test, Prod)
