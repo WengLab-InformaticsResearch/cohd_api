@@ -96,7 +96,7 @@ def query_db_finalize(conn, cursor, json_return):
     conn.close()
 
     json_return = {"results": json_return}
-    return jsonify(json_return)
+    return json_return
 
 
 def query_db_datasets():        
@@ -239,20 +239,7 @@ def query_db(service, method, args):
     logging.debug(msg=f"Service: {service}; Method: {method}, Query: {query}")
 
     if service == 'omop':
-        # e.g. /api/v1/query?service=omop&meta=findConceptIDs&q=cancer
-        if method == 'findConceptIDs':
-            dataset_id = get_arg_dataset_id(args)
-            domain_id = args.get('domain')
-            min_count = args.get('min_count')
-            json_return = query_db_find_concept_ids(cur, dataset_id, query, domain_id, min_count)
-        
-        # e.g. /api/v1/query?service=omop&meta=concepts&q=4196636,437643
-        elif method == 'concepts':
-            json_return = query_db_concepts(query)
-
-        # Looks up ancestors of a given concept
-        # e.g. /api/query?service=omop&meta=conceptAncestors&concept_id=313217
-        elif method == 'conceptAncestors':
+        if method == 'conceptAncestors':
             # Get non-required parameters
             dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_HIER)
 
@@ -2083,9 +2070,9 @@ def omop_concept_definitions(concept_ids):
     if not concept_ids:
         return concept_defs
 
-    response = query_db(service='omop', method='concepts', args={'q': ','.join(str(c) for c in concept_ids)})
+    q = ','.join(str(c) for c in concept_ids)
+    concept_results = query_db_concepts(q)
 
-    concept_results = response.get_json()
     if concept_results is None or 'results' not in concept_results:
         return concept_defs
 

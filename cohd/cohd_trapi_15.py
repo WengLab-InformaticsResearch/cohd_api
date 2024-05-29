@@ -146,8 +146,8 @@ class CohdTrapi150(CohdTrapi):
             return self._valid_query, self._invalid_query_response
 
         # Check the structure of the query graph. Should have 2 nodes and 1 edge (one-hop query)
-        nodes = query_graph.get('nodes')
-        edges = query_graph.get('edges')
+        nodes = list(query_graph.get('nodes').values())
+        edges = list(query_graph.get('edges').values())
         if nodes is None or len(nodes) != 2 or edges is None or len(edges) != 1:
             self._valid_query = False
             msg = 'Unsupported query. Only one-hop queries supported.'
@@ -155,6 +155,55 @@ class CohdTrapi150(CohdTrapi):
             response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
+
+        # If client provided non-empty QNode constraints, respond with error code        
+        if nodes[0].get('constraints') or nodes[1].get('constraints'):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        if edges[0].get("attribute_constraints"):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        if edges[0].get("qualifier_constraints"):
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge qualifier constraints'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+
+        # If client specifies unsupported set_interpretation (ALL or MANY), respond with error code
+        if nodes[0].get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation or \
+                nodes[1].get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation:
+            self._valid_query = False
+            description = f'{CohdTrapi._SERVICE_NAME} only supports QNode set_interpretation of {CohdTrapi150.supported_set_interpretation}'
+            self.log(description, TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, description)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        
+        # Check to see if cohd doesn't recognize any properties
+        qnode_properties = {'ids','categories', 'set_interpretation', 'constraints'}        
+        unrec_properties = (set(nodes[0].keys()) | (set(nodes[1].keys()))) - qnode_properties
+        if unrec_properties:
+            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following node properties: ' \
+                          f'{", ".join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
+            self.log(description, level=logging.WARNING)
+
+        qedge_properties = {'knowledge_type', 'predicates', 'subject', 'object', 'attribute_constraints',
+                            'qualifier_constraints'}
+        unrec_properties = set(edges[0].keys()) - qedge_properties
+        if unrec_properties:
+            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following edge properties: ' \
+                          f'{", ".join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
+            self.log(description, level=logging.WARNING)
 
         # Check the workflow. Should be at most a single lookup operation
         workflow = self._json_data.get('workflow')
@@ -227,7 +276,7 @@ class CohdTrapi150(CohdTrapi):
         True if input is valid, otherwise (False, message)
         """
         # Log that TRAPI 1.4 was called because there's no clear indication otherwise
-        logging.debug('Query issued against TRAPI 1.4')
+        logging.debug(f'Query issued against TRAPI {CohdTrapi150.schema_version}')
 
         try:
             self._json_data = self._request.get_json()
@@ -551,62 +600,6 @@ class CohdTrapi150(CohdTrapi):
             if unrecognized_cats:
                 self.log(f'The following categories were not recognized in Biolink {bm_version}: {unrecognized_cats}',
                          level=logging.WARNING)
-
-        # If client provided non-empty QNode constraints, respond with error code
-        if concept_1_qnode.get('constraints') or concept_2_qnode.get('constraints'):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QNode constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        if self._query_edge.get("attribute_constraints"):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge attribute constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_ATTR_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-        if self._query_edge.get("qualifier_constraints"):
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} does not support QEdge qualifier constraints'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_QUAL_CONSTRAINT, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-
-        # If client specifies unsupported set_interpretation (ALL or MANY), respond with error code
-        if concept_1_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation or \
-                concept_2_qnode.get('set_interpretation') in CohdTrapi150.unsupported_set_interpretation:
-            self._valid_query = False
-            description = f'{CohdTrapi._SERVICE_NAME} only supports QNode set_interpretation of {CohdTrapi150.supported_set_interpretation}'
-            self.log(description, TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.UNSUPPORTED_SET_INTERPRETATION, description)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-
-        # Check to see if cohd doesn't recognize any properties
-        qnode_properties = {'ids','categories', 'set_interpretation', 'constraints'}
-        qedge_properties = {'knowledge_type', 'predicates', 'subject', 'object', 'attribute_constraints',
-                            'qualifier_constraints'}
-        sep = ', '
-        unrec_properties = set(concept_1_qnode.keys()) - qnode_properties
-        if unrec_properties:
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
-                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, level=logging.WARNING)
-
-        unrec_properties = set(concept_2_qnode.keys()) - qnode_properties
-        if unrec_properties:
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
-                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, level=logging.WARNING)
-
-        unrec_properties = set(self._query_edge.keys()) - qedge_properties
-        if unrec_properties:
-            description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following properties: ' \
-                          f'{sep.join(unrec_properties)}. {CohdTrapi._SERVICE_NAME} will ignore these properties.'
-            self.log(description, level=logging.WARNING)
 
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
