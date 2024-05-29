@@ -11,7 +11,7 @@ from . import query_cohd_mysql
 from .cohd_utilities import omop_concept_curie
 from .cohd_trapi import *
 from .biolink_mapper import *
-from .trapi.reasoner_validator_ext import validate_trapi_14x as validate_trapi
+from .trapi.reasoner_validator_ext import validate_trapi_15x as validate_trapi
 from .translator import bm_toolkit, bm_version
 from .translator.ubergraph import Ubergraph
 
@@ -41,7 +41,7 @@ class CohdTrapi150(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.4.3'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.0'
     schema_version = '1.5.0'
     biolink_version = bm_version
 
@@ -126,9 +126,8 @@ class CohdTrapi150(CohdTrapi):
             return self._valid_query, self._invalid_query_response
 
         # Use TRAPI Reasoner Validator to validate the query
-        try:
-            # For now, bypass the TRAPI validation because reasoner_validator doesn't work with TRAPI 1.5
-            # validate_trapi(self._json_data, "Query")
+        try:            
+            validate_trapi(self._json_data, "Query")
             self.log('Query passed reasoner validator')
         except ValidationError as err:
             self._valid_query = False

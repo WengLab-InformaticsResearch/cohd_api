@@ -134,6 +134,30 @@ def validate_trapi_14x(instance, component):
     return validator.validate(instance, component)
 
 
+def validate_trapi_15x(instance, component):
+    """Validate instance against TRAPI 1.5 schema.
+
+    Parameters
+    ----------
+    instance
+        instance to validate
+    component : str
+        component to validate against
+
+    Raises
+    ------
+    `ValidationError <https://python-jsonschema.readthedocs.io/en/latest/errors/#jsonschema.exceptions.ValidationError>`_
+        If the instance is invalid.
+
+    Examples
+    --------
+    >>> validate({"message": {}}, "Query")
+    """
+    # Validate against official TRAPI 1.4 release
+    validator = TRAPISchemaValidator(trapi_version='1.5.0')
+    return validator.validate(instance, component)
+
+
 def validate_trapi_response(trapi_version, bl_version, response):
     """ Uses the reasoner_validator's more advanced TRAPIResponseValidator to perform thorough validation
 
