@@ -75,7 +75,6 @@ class CohdTrapi150(CohdTrapi):
         self._request = request
         self._max_results_per_input = CohdTrapi.default_max_results_per_input
         self._max_results = CohdTrapi.default_max_results
-        self._local_oxo = CohdTrapi.default_local_oxo
         self._kg_nodes = {}
         self._knowledge_graph = {
             'nodes': {},
@@ -155,7 +154,16 @@ class CohdTrapi150(CohdTrapi):
             response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
             self._invalid_query_response = response, 200
             return self._valid_query, self._invalid_query_response
-
+        
+        # Check if QNodes are null
+        if nodes[0] is None or nodes[1] is None:
+            self._valid_query = False
+            msg = f'Null QNode found in query graph'
+            self.log(msg, level=logging.ERROR)
+            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+            self._invalid_query_response = response, 200
+            return self._valid_query, self._invalid_query_response
+        
         # If client provided non-empty QNode constraints, respond with error code        
         if nodes[0].get('constraints') or nodes[1].get('constraints'):
             self._valid_query = False
@@ -302,7 +310,7 @@ class CohdTrapi150(CohdTrapi):
             }
             self._log_level = log_level_enum.get(log_level, CohdTrapi.default_log_level)
 
-        # Check that the query input has the correct structure
+        # Check that the query input has the correct structure and doesn't request unsupported TRAPI features
         input_check = self._check_query_input()
         if not input_check[0]:
             return input_check
@@ -354,16 +362,6 @@ class CohdTrapi150(CohdTrapi):
             self._confidence_interval = CohdTrapi.default_confidence_interval
             self._query_options['confidence_interval'] = CohdTrapi.default_confidence_interval
 
-        # Get the query_option for local_oxo
-        self._local_oxo = self._query_options.get('local_oxo')
-        if self._local_oxo is None or not isinstance(self._local_oxo, bool):
-            self._local_oxo = CohdTrapi.default_local_oxo
-
-        # Get the query_option for maximum mapping distance
-        self._mapping_distance = self._query_options.get('mapping_distance')
-        if self._mapping_distance is None or not isinstance(self._mapping_distance, Number):
-            self._mapping_distance = CohdTrapi.default_mapping_distance
-
         # Get query_option for including only Biolink nodes
         self._biolink_only = self._query_options.get('biolink_only')
         if self._biolink_only is None or not isinstance(self._biolink_only, bool):
@@ -377,18 +375,9 @@ class CohdTrapi150(CohdTrapi):
 
         # Get query information from query_graph
         self._query_graph = self._json_data['message']['query_graph']
-
-        # Check that the query_graph is supported by the COHD reasoner (1-hop query)
-        edges = self._query_graph['edges']
-        if len(edges) != 1:
-            self._valid_query = False
-            msg = f'{CohdTrapi._SERVICE_NAME} reasoner only supports 1-hop queries'
-            self.log(msg, level=logging.WARNING)
-            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
-
+        
         # Check if the edge type is supported by COHD Reasoner and how it should be processed
+        edges = self._query_graph['edges']        
         self._query_edge_key = list(edges.keys())[0]  # Get first and only edge
         self._query_edge = edges[self._query_edge_key]
         self._query_edge_predicates = self._query_edge.get('predicates')
@@ -456,22 +445,8 @@ class CohdTrapi150(CohdTrapi):
         # Note: qnode_key refers to the key identifier for the qnode in the QueryGraph's nodes property, e.g., "n00"
         subject_qnode_key = self._query_edge['subject']
         subject_qnode = self._find_query_node(subject_qnode_key)
-        if subject_qnode is None:
-            self._valid_query = False
-            msg = f'QNode id "{subject_qnode_key}" not found in query graph'
-            self.log(msg, level=logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
         object_qnode_key = self._query_edge['object']
         object_qnode = self._find_query_node(object_qnode_key)
-        if object_qnode is None:
-            self._valid_query = False
-            msg = f'QNode id "{object_qnode_key}" not found in query graph'
-            self.log(msg, level=logging.ERROR)
-            response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
-            self._invalid_query_response = response, 200
-            return self._valid_query, self._invalid_query_response
 
         # In COHD queries, concept_id_1 must be specified by ID. Figure out which QNode to use for concept_1
         node_ids = set()
