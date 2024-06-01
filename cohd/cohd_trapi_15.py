@@ -30,8 +30,9 @@ class CohdTrapi150(CohdTrapi):
                             'biolink:has_real_world_evidence_of_association_with']
 
     # QNode set_interpretation values that COHD TRAPI does not support
-    supported_set_interpretation = ['BATCH']
+    supported_set_interpretation = ['BATCH', 'MANY']
     unsupported_set_interpretation = list(set(['BATCH', 'ALL', 'MANY']) - set(supported_set_interpretation))
+    DEFAULT_SET_INTERPRETATION = 'BATCH'
 
     # Biolink predicates that request positive associations only
     edge_types_positive = ['biolink:positively_correlated_with']
@@ -62,6 +63,8 @@ class CohdTrapi150(CohdTrapi):
         self._concept_2_ancestor_dict = None
         # Boolean indicating if concept_1 (from API context) is the subject node (True) or object node (False)
         self._concept_1_is_subject_qnode = True
+        self._concept_1_set_interpretation = None
+        self._concept_2_set_interpretation = None
         self._query_options = None
         self._method = None
         self._concept_1_omop_ids = None
@@ -219,7 +222,7 @@ class CohdTrapi150(CohdTrapi):
             if len(workflow) > 1 or workflow[0]['id'] != CohdTrapi.supported_operation:
                 self._valid_query = False
                 msg = f'Unsupported workflow. Only a single "{CohdTrapi.supported_operation}" operation is supported'
-                self.log(msg, level=logging.WARNING)
+                self.log(msg, level=logging.ERROR)
                 response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
@@ -458,10 +461,11 @@ class CohdTrapi150(CohdTrapi):
             concept_1_qnode = subject_qnode
             self._concept_2_qnode_key = object_qnode_key
             concept_2_qnode = object_qnode
+            self._concept_1_set_interpretation = concept_1_qnode.get('set_interpretation', CohdTrapi150.DEFAULT_SET_INTERPRETATION)            
 
-            # Check the length of the IDs list is below the batch size limit
-            ids = subject_qnode['ids']
-            if len(ids) > CohdTrapi.batch_size_limit:
+            # Check the length of the IDs list is below the batch size limit            
+            ids = subject_qnode['ids']            
+            if self._concept_1_set_interpretation == 'BATCH' and len(ids) > CohdTrapi.batch_size_limit:
                 # Warn the client and truncate the ids list
                 description = f"More IDs ({len(ids)}) in QNode '{subject_qnode_key}' than batch_size_limit allows "\
                               f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
@@ -470,6 +474,7 @@ class CohdTrapi150(CohdTrapi):
                 subject_qnode['ids'] = ids
             node_ids = node_ids.union(ids)
         if 'ids' in object_qnode:
+            object_qnode_set_interpretation = object_qnode.get('set_interpretation', CohdTrapi150.DEFAULT_SET_INTERPRETATION)
             if 'ids' not in subject_qnode:
                 # Swap the subj/obj mapping to concept1/2 if only the obj node has IDs
                 self._concept_1_is_subject_qnode = False
@@ -477,10 +482,22 @@ class CohdTrapi150(CohdTrapi):
                 concept_1_qnode = object_qnode
                 self._concept_2_qnode_key = subject_qnode_key
                 concept_2_qnode = subject_qnode
+                self._concept_1_set_interpretation = object_qnode_set_interpretation
+            else:
+                # Both QNodes have IDs specified
+                self._concept_2_set_interpretation = object_qnode_set_interpretation
+                # COHD only supports set_interpretation MANY when IDs given on 1 qnode
+                if self._concept_1_set_interpretation == 'MANY' or self._concept_2_set_interpretation == 'MANY':
+                    self._valid_query = False
+                    msg = f'For COHD MCQ, only a single QNode is allowed to have IDs'
+                    self.log(msg, level=logging.ERROR)
+                    response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
+                    self._invalid_query_response = response, 200
+                    return self._valid_query, self._invalid_query_response
 
             # Check the length of the IDs list is below the batch size limit
             ids = object_qnode['ids']
-            if len(ids) > CohdTrapi.batch_size_limit:
+            if object_qnode_set_interpretation == 'BATCH' and len(ids) > CohdTrapi.batch_size_limit:
                 # Warn the client and truncate the ids list
                 description = f"More IDs ({len(ids)}) in QNode '{object_qnode_key}' than batch_size_limit allows " \
                               f"({CohdTrapi.batch_size_limit}). IDs list will be truncated."
@@ -493,7 +510,7 @@ class CohdTrapi150(CohdTrapi):
         # COHD queries require at least 1 node with a specified ID
         if len(node_ids) == 0:
             self._valid_query = False
-            msg = '{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID'
+            msg = f'{CohdTrapi._SERVICE_NAME} TRAPI requires at least one node to have an ID'
             self.log(msg, level=logging.ERROR)
             response = self._trapi_mini_response(TrapiStatusCode.NO_RESULTS, msg)
             self._invalid_query_response = response, 200
@@ -584,37 +601,38 @@ class CohdTrapi150(CohdTrapi):
         # Get subclasses for all CURIEs using Automat-Ubergraph
         descendant_ids = list()
         ancestor_dict = dict()
+        # Don't get sublcasses for MCQ because it could make the query very complex 
+        if self._concept_1_set_interpretation != 'MANY':
+            descendant_results = Ubergraph.get_descendants(ids, self._concept_1_qnode_categories)
+            if descendant_results is not None:
+                # Add new descendant CURIEs to the end of IDs list
+                descendants, ancestor_dict = descendant_results
+                descendant_ids = list(set(descendants.keys()) - set(ids))
+                if len(descendant_ids) > 0:
+                    if (len(ids) + len(descendant_ids)) > CohdTrapi.batch_size_limit:
+                        # Only add up to the batch_size_limit
+                        n_to_add = CohdTrapi.batch_size_limit - len(ids)
+                        descendant_ids_ignored = descendant_ids[n_to_add:]
+                        descendant_ids = descendant_ids[:n_to_add]
+                        description = f"More descendants from Automat-Ubergraph KP for QNode '{self._concept_1_qnode_key}'"\
+                                    f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
+                        self.log(description, level=logging.WARNING)
 
-        descendant_results = Ubergraph.get_descendants(ids, self._concept_1_qnode_categories)
-        if descendant_results is not None:
-            # Add new descendant CURIEs to the end of IDs list
-            descendants, ancestor_dict = descendant_results
-            descendant_ids = list(set(descendants.keys()) - set(ids))
-            if len(descendant_ids) > 0:
-                if (len(ids) + len(descendant_ids)) > CohdTrapi.batch_size_limit:
-                    # Only add up to the batch_size_limit
-                    n_to_add = CohdTrapi.batch_size_limit - len(ids)
-                    descendant_ids_ignored = descendant_ids[n_to_add:]
-                    descendant_ids = descendant_ids[:n_to_add]
-                    description = f"More descendants from Automat-Ubergraph KP for QNode '{self._concept_1_qnode_key}'"\
-                                  f"than batch_size_limit allows. Ignored: {descendant_ids_ignored}."
-                    self.log(description, level=logging.WARNING)
-
-                ids.extend(descendant_ids)
-                ids_deduped = SriNodeNormalizer.remove_equivalents(ids)
-                if ids_deduped is not None:
-                    ids = ids_deduped
+                    ids.extend(descendant_ids)
+                    ids_deduped = SriNodeNormalizer.remove_equivalents(ids)
+                    if ids_deduped is not None:
+                        ids = ids_deduped
+                    else:
+                        self.log(f'Issue encountered with SRI Node Norm when removing equivalents', level=logging.WARNING)
+                    self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
+                            level=logging.INFO)
                 else:
-                    self.log(f'Issue encountered with SRI Node Norm when removing equivalents', level=logging.WARNING)
-                self.log(f"Adding descendants from Automat-Ubergraph to QNode '{self._concept_1_qnode_key}': {descendant_ids}.",
-                         level=logging.INFO)
+                    self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'.",
+                            level=logging.INFO)
             else:
-                self.log(f"No descendants found from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'.",
-                         level=logging.INFO)
-        else:
-            # Add a warning that we didn't get descendants from Automat-Ubergraph
-            self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'",
-                     level=logging.WARNING)
+                # Add a warning that we didn't get descendants from Automat-Ubergraph
+                self.log(f"Issue with retrieving descendants from Automat-Ubergraph for QNode '{self._concept_1_qnode_key}'",
+                        level=logging.WARNING)
 
         # Update the ancestor dictionary for concept 1
         self._concept_1_ancestor_dict = ancestor_dict
@@ -878,6 +896,142 @@ class CohdTrapi150(CohdTrapi):
         else:
             return self._valid_query, self._invalid_query_response
 
+    def operate_batch(self):
+        for i, concept_1_omop_id in enumerate(self._concept_1_omop_ids):
+            # Limit the amount of time the TRAPI query runs for
+            ellapsed_time = (datetime.now() - self._start_time).total_seconds()
+            if ellapsed_time > self._time_limit:
+                skipped_curies = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i:]]
+                description = f'Maximum time limit {self._time_limit} sec reached before all input IDs processed. '\
+                                f'Skipped IDs: {skipped_curies}'
+                self.log(description, level=logging.WARNING)
+                break
+
+            new_cohd_results = list()
+            if self._concept_2_omop_ids is None:
+                # Node 2's IDs were not specified
+                if self._domain_class_pairs:
+                    # Node 2's category was specified. Query associations between Node 1 and the requested
+                    # categories (domains)
+                    for domain_id, concept_class_id in self._domain_class_pairs:
+                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                    concept_id_2=None,
+                                                                    dataset_id=self._dataset_id,
+                                                                    domain_id=domain_id,
+                                                                    concept_class_id=concept_class_id,
+                                                                    ln_ratio_sign=self._association_direction,
+                                                                    confidence=self._confidence_interval,
+                                                                    bypass=self._bypass_cache)
+                        if json_results:
+                            new_cohd_results.extend(json_results['results'])
+                else:
+                    # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
+                    # domains
+                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
+                                                                dataset_id=self._dataset_id, domain_id=None,
+                                                                ln_ratio_sign=self._association_direction,
+                                                                confidence=self._confidence_interval,
+                                                                bypass=self._bypass_cache)
+                    if json_results:
+                        new_cohd_results.extend(json_results['results'])
+
+            else:
+                # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
+                for concept_2_id in self._concept_2_omop_ids:
+                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                concept_id_2=concept_2_id,
+                                                                dataset_id=self._dataset_id, domain_id=None,
+                                                                confidence=self._confidence_interval,
+                                                                bypass=self._bypass_cache)
+                    if json_results:
+                        new_cohd_results.extend(json_results['results'])
+
+            # Results within each query call should be sorted, but still need to be sorted across query calls
+            new_cohd_results = sort_cohd_results(new_cohd_results)
+
+            # Convert results from COHD format to Translator Reasoner standard
+            results_limit_reached = self._add_results_to_trapi(new_cohd_results)
+
+            # Log warnings and stop when results limits reached
+            if results_limit_reached:
+                curie = self._kg_omop_curie_map[concept_1_omop_id]
+                self.log(f'Results limit ({self._max_results_per_input}) reached for {curie}. '
+                            'There may be additional associations.', level=logging.WARNING)
+                if len(self._results) >= self._max_results:
+                    if i < len(self._concept_1_omop_ids) - 1:
+                        skipped_ids = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i+1:]]
+                        self.log(f'Total results limit ({self._max_results}) reached. Skipped {skipped_ids}',
+                                level=logging.WARNING)
+                    break
+
+    def operate_mcq(self):
+        for i, concept_1_omop_id in enumerate(self._concept_1_omop_ids):
+            # Limit the amount of time the TRAPI query runs for
+            ellapsed_time = (datetime.now() - self._start_time).total_seconds()
+            if ellapsed_time > self._time_limit:
+                skipped_curies = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i:]]
+                description = f'Maximum time limit {self._time_limit} sec reached before all input IDs processed. '\
+                                f'Skipped IDs: {skipped_curies}'
+                self.log(description, level=logging.WARNING)
+                break
+
+            new_cohd_results = list()
+            if self._concept_2_omop_ids is None:
+                # Node 2's IDs were not specified
+                if self._domain_class_pairs:
+                    # Node 2's category was specified. Query associations between Node 1 and the requested
+                    # categories (domains)
+                    for domain_id, concept_class_id in self._domain_class_pairs:
+                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                    concept_id_2=None,
+                                                                    dataset_id=self._dataset_id,
+                                                                    domain_id=domain_id,
+                                                                    concept_class_id=concept_class_id,
+                                                                    ln_ratio_sign=self._association_direction,
+                                                                    confidence=self._confidence_interval,
+                                                                    bypass=self._bypass_cache)
+                        if json_results:
+                            new_cohd_results.extend(json_results['results'])
+                else:
+                    # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
+                    # domains
+                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
+                                                                dataset_id=self._dataset_id, domain_id=None,
+                                                                ln_ratio_sign=self._association_direction,
+                                                                confidence=self._confidence_interval,
+                                                                bypass=self._bypass_cache)
+                    if json_results:
+                        new_cohd_results.extend(json_results['results'])
+
+            else:
+                # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
+                for concept_2_id in self._concept_2_omop_ids:
+                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
+                                                                concept_id_2=concept_2_id,
+                                                                dataset_id=self._dataset_id, domain_id=None,
+                                                                confidence=self._confidence_interval,
+                                                                bypass=self._bypass_cache)
+                    if json_results:
+                        new_cohd_results.extend(json_results['results'])
+
+            # Results within each query call should be sorted, but still need to be sorted across query calls
+            new_cohd_results = sort_cohd_results(new_cohd_results)
+
+            # Convert results from COHD format to Translator Reasoner standard
+            results_limit_reached = self._add_results_to_trapi(new_cohd_results)
+
+            # Log warnings and stop when results limits reached
+            if results_limit_reached:
+                curie = self._kg_omop_curie_map[concept_1_omop_id]
+                self.log(f'Results limit ({self._max_results_per_input}) reached for {curie}. '
+                            'There may be additional associations.', level=logging.WARNING)
+                if len(self._results) >= self._max_results:
+                    if i < len(self._concept_1_omop_ids) - 1:
+                        skipped_ids = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i+1:]]
+                        self.log(f'Total results limit ({self._max_results}) reached. Skipped {skipped_ids}',
+                                level=logging.WARNING)
+                    break                
+
     def operate(self):
         """ Performs the COHD query and reasoning.
 
@@ -890,72 +1044,10 @@ class CohdTrapi150(CohdTrapi):
             self._cohd_results = []
             self._initialize_trapi_response()
 
-            for i, concept_1_omop_id in enumerate(self._concept_1_omop_ids):
-                # Limit the amount of time the TRAPI query runs for
-                ellapsed_time = (datetime.now() - self._start_time).total_seconds()
-                if ellapsed_time > self._time_limit:
-                    skipped_curies = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i:]]
-                    description = f'Maximum time limit {self._time_limit} sec reached before all input IDs processed. '\
-                                  f'Skipped IDs: {skipped_curies}'
-                    self.log(description, level=logging.WARNING)
-                    break
-
-                new_cohd_results = list()
-                if self._concept_2_omop_ids is None:
-                    # Node 2's IDs were not specified
-                    if self._domain_class_pairs:
-                        # Node 2's category was specified. Query associations between Node 1 and the requested
-                        # categories (domains)
-                        for domain_id, concept_class_id in self._domain_class_pairs:
-                            json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
-                                                                        concept_id_2=None,
-                                                                        dataset_id=self._dataset_id,
-                                                                        domain_id=domain_id,
-                                                                        concept_class_id=concept_class_id,
-                                                                        ln_ratio_sign=self._association_direction,
-                                                                        confidence=self._confidence_interval,
-                                                                        bypass=self._bypass_cache)
-                            if json_results:
-                                new_cohd_results.extend(json_results['results'])
-                    else:
-                        # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
-                        # domains
-                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
-                                                                    dataset_id=self._dataset_id, domain_id=None,
-                                                                    ln_ratio_sign=self._association_direction,
-                                                                    confidence=self._confidence_interval,
-                                                                    bypass=self._bypass_cache)
-                        if json_results:
-                            new_cohd_results.extend(json_results['results'])
-
-                else:
-                    # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
-                    for concept_2_id in self._concept_2_omop_ids:
-                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
-                                                                    concept_id_2=concept_2_id,
-                                                                    dataset_id=self._dataset_id, domain_id=None,
-                                                                    confidence=self._confidence_interval,
-                                                                    bypass=self._bypass_cache)
-                        if json_results:
-                            new_cohd_results.extend(json_results['results'])
-
-                # Results within each query call should be sorted, but still need to be sorted across query calls
-                new_cohd_results = sort_cohd_results(new_cohd_results)
-
-                # Convert results from COHD format to Translator Reasoner standard
-                results_limit_reached = self._add_results_to_trapi(new_cohd_results)
-
-                # Log warnings and stop when results limits reached
-                if results_limit_reached:
-                    curie = self._kg_omop_curie_map[concept_1_omop_id]
-                    self.log(f'Results limit ({self._max_results_per_input}) reached for {curie}. '
-                             'There may be additional associations.', level=logging.WARNING)
-                    if len(self._results) >= self._max_results:
-                        if i < len(self._concept_1_omop_ids) - 1:
-                            skipped_ids = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i+1:]]
-                            self.log(f'Total results limit ({self._max_results}) reached. Skipped {skipped_ids}',
-                                    level=logging.WARNING)
-                        break
+            if self._concept_1_set_interpretation == 'BATCH':
+                self.operate_batch()
+            elif self._concept_1_set_interpretation == 'MANY':
+                self.operate_mcq()
 
             return self._finalize_trapi_response()
         else:
