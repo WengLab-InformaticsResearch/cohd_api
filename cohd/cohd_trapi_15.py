@@ -83,6 +83,7 @@ class CohdTrapi150(CohdTrapi):
             'nodes': {},
             'edges': {}
         }
+        self._auxiliary_graphs = {}
         # Track in the KG which CURIEs are being used by which OMOP IDs (may be more than 1 OMOP ID)
         self._kg_curie_omop_use = defaultdict(list)
         # Track mappings from OMOP to Biolink used for this KG
@@ -201,7 +202,7 @@ class CohdTrapi150(CohdTrapi):
             return self._valid_query, self._invalid_query_response
         
         # Check to see if cohd doesn't recognize any properties
-        qnode_properties = {'ids','categories', 'set_interpretation', 'constraints'}        
+        qnode_properties = {'ids','categories', 'set_interpretation', 'constraints', 'member_ids'}        
         unrec_properties = (set(nodes[0].keys()) | (set(nodes[1].keys()))) - qnode_properties
         if unrec_properties:
             description = f'{CohdTrapi._SERVICE_NAME} does not recognize the following node properties: ' \
@@ -596,7 +597,28 @@ class CohdTrapi150(CohdTrapi):
         # Get concept_id_1. QNode IDs is a list.
         self._concept_1_omop_ids = list()
         found = False
-        ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
+        if self._concept_1_set_interpretation == 'BATCH':
+            ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
+        elif self._concept_1_set_interpretation == 'MANY':
+            member_ids = concept_1_qnode.get('member_ids')
+            if not member_ids:
+                # Missing required member_ids for MCQ
+                self._valid_query = False
+                description = 'set_interpretation: MANY but no member_ids'
+                response = self._trapi_mini_response(TrapiStatusCode.MISSING_MEMBER_IDS, description)
+                self._invalid_query_response = response, 200
+                return self._valid_query, self._invalid_query_response
+            ids = list(set(concept_1_qnode['member_ids']))  # remove duplicate CURIEs
+
+            # Get the MCQ set ID
+            self._mcq_set_id = concept_1_qnode['ids'][0]
+            
+            # Copy over the knowledge graph from the input message
+            self._knowledge_graph = self._json_data['message']['knowledge_graph']
+
+            # Find the member of edges
+            self._member_of_edges = {edge['subject']:edge_id for edge_id, edge in self._knowledge_graph['edges'].items() if 
+                                     edge['predicate'] == 'biolink:member_of' and edge['object'] == self._mcq_set_id}
 
         # Get subclasses for all CURIEs using Automat-Ubergraph
         descendant_ids = list()
@@ -854,21 +876,26 @@ class CohdTrapi150(CohdTrapi):
         # Criteria for returning results
         self._criteria = []
 
-        # Add a criterion for minimum co-occurrence
-        if self._min_cooccurrence > 0:
-            self._criteria.append(ResultCriteria(function=criteria_min_cooccurrence,
-                                                 kargs={'cooccurrence': self._min_cooccurrence}))
-
-        # Get query_option for threshold. Don't use filter if not specified (i.e., no default option for threshold)
-        self._threshold = self._query_options.get('threshold')
-        if self._threshold is not None and isinstance(self._threshold, Number):
-            self._criteria.append(ResultCriteria(function=criteria_threshold,
+        if self._concept_1_set_interpretation == 'MANY':
+            self._threshold = self._query_options.get('threshold', CohdTrapi.default_ln_ratio_ci_thresohld)
+            self._criteria.append(ResultCriteria(function=criteria_mcq_score, 
                                                  kargs={'threshold': self._threshold}))
+        else:
+            # Add a criterion for minimum co-occurrence
+            if self._min_cooccurrence > 0:
+                self._criteria.append(ResultCriteria(function=criteria_min_cooccurrence,
+                                                    kargs={'cooccurrence': self._min_cooccurrence}))
 
-        # If the method is obsExpRatio, add a criteria for confidence interval
-        if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
-            self._criteria.append(ResultCriteria(function=criteria_confidence,
-                                                 kargs={'confidence': self._confidence_interval}))
+            # Get query_option for threshold. Don't use filter if not specified (i.e., no default option for threshold)
+            self._threshold = self._query_options.get('threshold')
+            if self._threshold is not None and isinstance(self._threshold, Number):
+                self._criteria.append(ResultCriteria(function=criteria_threshold,
+                                                    kargs={'threshold': self._threshold}))
+
+            # If the method is obsExpRatio, add a criteria for confidence interval
+            if self._method.lower() == 'obsexpratio' and self._confidence_interval > 0:
+                self._criteria.append(ResultCriteria(function=criteria_confidence,
+                                                    kargs={'confidence': self._confidence_interval}))
 
         if self._dataset_auto:
             # Automatically select the dataset based on which data types being queried
@@ -965,72 +992,41 @@ class CohdTrapi150(CohdTrapi):
                     break
 
     def operate_mcq(self):
-        for i, concept_1_omop_id in enumerate(self._concept_1_omop_ids):
-            # Limit the amount of time the TRAPI query runs for
-            ellapsed_time = (datetime.now() - self._start_time).total_seconds()
-            if ellapsed_time > self._time_limit:
-                skipped_curies = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i:]]
-                description = f'Maximum time limit {self._time_limit} sec reached before all input IDs processed. '\
-                                f'Skipped IDs: {skipped_curies}'
-                self.log(description, level=logging.WARNING)
-                break
-
-            new_cohd_results = list()
-            if self._concept_2_omop_ids is None:
-                # Node 2's IDs were not specified
-                if self._domain_class_pairs:
-                    # Node 2's category was specified. Query associations between Node 1 and the requested
-                    # categories (domains)
-                    for domain_id, concept_class_id in self._domain_class_pairs:
-                        json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
-                                                                    concept_id_2=None,
-                                                                    dataset_id=self._dataset_id,
-                                                                    domain_id=domain_id,
-                                                                    concept_class_id=concept_class_id,
-                                                                    ln_ratio_sign=self._association_direction,
-                                                                    confidence=self._confidence_interval,
-                                                                    bypass=self._bypass_cache)
-                        if json_results:
-                            new_cohd_results.extend(json_results['results'])
-                else:
-                    # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
-                    # domains
-                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id, concept_id_2=None,
-                                                                dataset_id=self._dataset_id, domain_id=None,
+        set_results = list()
+        single_results = dict()
+        if self._domain_class_pairs:
+            # Node 2's category was specified. Query associations between Node 1 and the requested
+            # categories (domains)
+            for domain_id, concept_class_id in self._domain_class_pairs:
+                new_results = query_cohd_mysql.query_trapi_mcq(concept_ids=self._concept_1_omop_ids,
+                                                                dataset_id=self._dataset_id,
+                                                                domain_id=domain_id,
+                                                                concept_class_id=concept_class_id,
                                                                 ln_ratio_sign=self._association_direction,
                                                                 confidence=self._confidence_interval,
                                                                 bypass=self._bypass_cache)
-                    if json_results:
-                        new_cohd_results.extend(json_results['results'])
+                new_set_results, new_single_results = new_results
+                if new_set_results:
+                    set_results.extend(new_set_results)
+                    single_results.update(new_single_results)
+        else:
+            # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
+            # domains
+            new_results = query_cohd_mysql.query_trapi_mcq(concept_id_1=self._concept_1_omop_ids,
+                                                            dataset_id=self._dataset_id, domain_id=None,
+                                                            ln_ratio_sign=self._association_direction,
+                                                            confidence=self._confidence_interval,
+                                                            bypass=self._bypass_cache)
+            new_set_results, new_single_results = new_results
+            if new_set_results:
+                set_results.extend(new_set_results)
+                single_results.update(new_single_results)
 
-            else:
-                # Concept 2's IDs were specified. Query Concept 1 against all IDs for Concept 2
-                for concept_2_id in self._concept_2_omop_ids:
-                    json_results = query_cohd_mysql.query_trapi(concept_id_1=concept_1_omop_id,
-                                                                concept_id_2=concept_2_id,
-                                                                dataset_id=self._dataset_id, domain_id=None,
-                                                                confidence=self._confidence_interval,
-                                                                bypass=self._bypass_cache)
-                    if json_results:
-                        new_cohd_results.extend(json_results['results'])
+        # Results within each query call should be sorted, but still need to be sorted across query calls
+        new_set_results = sort_cohd_results(new_set_results, sort_field='ln_ratio_score')
 
-            # Results within each query call should be sorted, but still need to be sorted across query calls
-            new_cohd_results = sort_cohd_results(new_cohd_results)
-
-            # Convert results from COHD format to Translator Reasoner standard
-            results_limit_reached = self._add_results_to_trapi(new_cohd_results)
-
-            # Log warnings and stop when results limits reached
-            if results_limit_reached:
-                curie = self._kg_omop_curie_map[concept_1_omop_id]
-                self.log(f'Results limit ({self._max_results_per_input}) reached for {curie}. '
-                            'There may be additional associations.', level=logging.WARNING)
-                if len(self._results) >= self._max_results:
-                    if i < len(self._concept_1_omop_ids) - 1:
-                        skipped_ids = [self._kg_omop_curie_map[x] for x in self._concept_1_omop_ids[i+1:]]
-                        self.log(f'Total results limit ({self._max_results}) reached. Skipped {skipped_ids}',
-                                level=logging.WARNING)
-                    break                
+        # Convert results from COHD format to Translator Reasoner standard
+        self._add_mcq_results_to_trapi(set_results, single_results)
 
     def operate(self):
         """ Performs the COHD query and reasoning.
@@ -1118,6 +1114,87 @@ class CohdTrapi150(CohdTrapi):
         # Add to results
         score = score_cohd_result(cohd_result)
         self._add_result(node_1['primary_curie'], node_2['primary_curie'], kg_edge_id, score)
+
+    def _add_aux_graph(self, edges, attributes=None):
+        if attributes is None:
+            attributes = list()
+
+        ag_id = f'ag{(len(self._auxiliary_graphs)+1):06d}'
+        self._auxiliary_graphs[ag_id] = {
+            'edges': edges,
+            'attributes': attributes
+        }
+        return ag_id
+    
+    def _add_mcq_result(self, set_result, single_results, criteria):
+        """ Adds a COHD result. The COHD result is always added to the knowledge graph. If the COHD result passes all
+        criteria, it is also added to the results.
+
+        Parameters
+        ----------
+        cohd_result
+        criteria: List - [ResultCriteria]
+        """
+        assert set_result is not None and 'concept_id_2' in set_result, \
+            'Translator::KnowledgeGraph::_add_mcq_result() - Bad set_result'
+
+        assert single_results, 'Translator::KnowledgeGraph::_add_mcq_result() - Bad set_result'
+
+        # Check if result passes all filters before adding
+        if criteria is not None:
+            if not all([c.check(set_result) for c in criteria]):
+                return
+
+        # Get node for concept 2
+        concept_2_id = set_result['concept_id_2']
+        concept_2_name = set_result.get('concept_2_name')
+        concept_2_domain = set_result.get('concept_2_domain')
+        concept_2_class_id = set_result.get('concept_2_class_id')
+        node_2 = self._get_kg_node(concept_2_id, concept_2_name, concept_2_domain, concept_2_class_id,
+                                   query_node_categories=self._concept_2_qnode_categories)
+
+        if not node_2.get('query_category_compliant', False) or \
+                (self._biolink_only and not node_2.get('biolink_compliant', False)):
+            # Only include results when node_2 maps to biolink and matches the queried category
+            return
+
+        # Only allow one OMOP ID to use a CURIE. Will allow the first result using a given CURIE to go through. Since
+        # results are in descending order, will give priority to the OMOP ID with the strongest association
+        concept_2_curie = node_2['primary_curie']
+        if (self._kg_curie_omop_use[concept_2_curie] and concept_2_id not in self._kg_curie_omop_use[concept_2_curie]):
+            return
+
+        # Add nodes and edge to knowledge graph
+        is_subject = self._query_edge['subject'] != self._concept_1_qnode_key
+        kg_node_2, kg_set_edge, kg_set_edge_id = self._add_kg_set_edge(node_2, is_subject, set_result)
+
+        # Add to results
+        score = set_result['ln_ratio_score']
+        self._add_result(self._mcq_set_id, concept_2_curie, kg_set_edge_id, score)        
+        
+        # Add single result edges and auxiliary graphs
+        support_graphs = list()
+        for sr in single_results:
+            concept_1_id = sr['concept_id_1']
+            node_1 = self._get_kg_node(concept_1_id, query_node_categories=self._concept_1_qnode_categories)
+            if is_subject:
+                subject_node = node_2
+                object_node = node_1
+            else:
+                subject_node = node_1
+                object_node = node_2
+            kg_node_1, kg_node_2, kg_edge, kg_edge_id = self._add_kg_edge(subject_node, object_node, sr)
+
+            member_of_edge_id = self._member_of_edges[node_1['primary_curie']]
+            ag_id = self._add_aux_graph([kg_edge_id, member_of_edge_id])
+            support_graphs.append(ag_id)
+
+        # Add support graphs to the set edge
+        kg_set_edge['attributes'].append({
+            "attribute_source": CohdTrapi._INFORES_ID,
+            "attribute_type_id": "biolink:support_graphs",
+            "values": support_graphs
+        })
 
     def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score):
         """ Adds a knowledge graph edge to the results list
@@ -1765,6 +1842,128 @@ class CohdTrapi150(CohdTrapi):
         self._knowledge_graph['edges'][ke_id] = kg_edge
 
         return kg_node_1, kg_node_2, kg_edge, ke_id
+    
+    def _add_kg_set_edge(self, node_2, is_subject, set_result):
+        """ Adds the edge to the knowledge graph
+
+        Parameters
+        ----------
+        node_2: Answer node
+        is_subject: True if the answer node should be the subject node
+        set_result: COHD set result - data gets added to edge
+
+        Returns
+        -------
+        kg_node_1, kg_node_2, kg_edge
+        """
+        # Add nodes to knowledge graph
+        kg_node_2 = self._add_internal_node_to_kg(node_2)
+
+        # Mint a new identifier
+        ke_id = self._get_new_kg_edge_id()
+
+        # Determine identifiers for sub and obj
+        if is_subject:            
+            curie_subj = node_2['primary_curie']
+            curie_obj = self._mcq_set_id
+        else:
+            curie_obj = node_2['primary_curie']
+            curie_subj = self._mcq_set_id
+
+        # Add source retrieval
+        sources = [
+            {
+                'resource_id': 'infores:columbia-cdw-ehr-data',
+                'resource_role': 'supporting_data_source',
+            },
+            {
+                'resource_id': CohdTrapi._INFORES_ID,
+                'resource_role': 'primary_knowledge_source',
+                'upstream_resource_ids': ['infores:columbia-cdw-ehr-data']
+            },            
+        ]
+
+        # Add properties from COHD results to the edge attributes        
+        attributes = [
+            # Knowledge Level
+            {
+                'attribute_type_id': 'biolink:knowledge_level',  
+                'value': 'statistical_association',
+                'attribute_source': CohdTrapi._INFORES_ID
+            },
+            # Agent Type
+            {
+                'attribute_type_id': 'biolink:agent_type',  
+                'value': 'computational_model',
+                'attribute_source': CohdTrapi._INFORES_ID
+            },
+            # Observed-expected frequency ratio analysis
+            {
+                "attribute_source": CohdTrapi._INFORES_ID,
+                "attribute_type_id": "biolink:has_supporting_study_result",
+                "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
+                "value": set_result['ln_ratio_score'],
+                "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
+                'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
+                "attributes": [
+                    {
+                        'attribute_type_id': 'biolink:ln_ratio',
+                        'original_attribute_name': 'ln_ratio',
+                        'value': set_result['ln_ratio_score'],
+                        'value_type_id': 'EDAM:data_1772',  # Score
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': 'Observed-expected frequency ratio.'
+                    },
+                    {
+                        'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
+                        'original_attribute_name': 'dataset_id',
+                        'value': f"COHD:dataset_{set_result['dataset_id']}",
+                        'value_type_id': 'EDAM:data_1048',  # Database ID
+                        'attribute_source': CohdTrapi._INFORES_ID,
+                        'description': f'Dataset ID within {CohdTrapi._SERVICE_NAME}'
+                    },
+                    # Knowledge Level
+                    {
+                        'attribute_type_id': 'biolink:knowledge_level',  
+                        'value': 'statistical_association',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    },
+                    # Agent Type
+                    {
+                        'attribute_type_id': 'biolink:agent_type',  
+                        'value': 'computational_model',
+                        'attribute_source': CohdTrapi._INFORES_ID
+                    }
+                ]
+            },            
+        ]
+
+        # Determine which predicate to use
+        predicate = CohdTrapi.default_predicate
+        if self._kg_edge_predicate is not None:
+            predicate = self._kg_edge_predicate
+        else:
+            ln_ratio = set_result['ln_ratio_score']
+            if ln_ratio > 0:
+                predicate = self.default_positive_predicate
+            elif ln_ratio < 0:
+                predicate = self.default_negative_predicate
+            else:
+                predicate = self.default_predicate
+
+        # Set the knowledge graph edge properties
+        kg_edge = {
+            'predicate': predicate,
+            'subject': curie_subj,
+            'object': curie_obj,
+            'attributes': attributes,
+            'sources': sources
+        }
+
+        # Add the new edge
+        self._knowledge_graph['edges'][ke_id] = kg_edge
+
+        return kg_node_2, kg_edge, ke_id
 
     def _add_kg_edge_subclass_of(self, descendant_node_id, ancestor_node_id):
         """ Adds the biolink:subclass_of edge to the knowledge graph
@@ -1820,7 +2019,7 @@ class CohdTrapi150(CohdTrapi):
         }
 
     def _add_results_to_trapi(self, new_cohd_results):
-        """ Creates the response message with JSON data in Reasoner Std API format
+        """ Add results
 
         Returns
         -------
@@ -1840,6 +2039,26 @@ class CohdTrapi150(CohdTrapi):
                 self._add_cohd_result(result, self._criteria)
         return False
 
+    def _add_mcq_results_to_trapi(self, new_set_results, new_single_results):
+        """ Add set results and their corresponding single results
+
+        Returns
+        -------
+        boolean: True if results limit reached, otherwise False
+        """
+        n_prior_results = len(self._results)
+        for _, set_result in enumerate(new_set_results):
+            # Don't add more than the maximum number of results per input ID
+            if len(self._results) - n_prior_results >= self._max_results_per_input:
+                return True
+            # Don't add more than the maximum total number of results
+            if len(self._results) >= self._max_results:
+                return True
+
+            cid2 = set_result['concept_id_2']
+            self._add_mcq_result(set_result, new_single_results[cid2], self._criteria)
+        return False
+
     def _finalize_trapi_response(self, status: TrapiStatusCode = TrapiStatusCode.SUCCESS):
         """ Finalizes the TRAPI response
 
@@ -1857,7 +2076,8 @@ class CohdTrapi150(CohdTrapi):
         self._response['message'] = {
             'results': self._results,
             'query_graph': self._query_graph,
-            'knowledge_graph': self._knowledge_graph
+            'knowledge_graph': self._knowledge_graph,
+            'auxiliary_graphs': self._auxiliary_graphs
         }
 
         if self._logs is not None and self._logs:

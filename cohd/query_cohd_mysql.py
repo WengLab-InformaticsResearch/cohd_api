@@ -1132,7 +1132,11 @@ def query_db(service, method, args):
             elif type(concept_ids) is not list:
                 concept_ids = [concept_ids]
             
-            json_return = query_trapi_mcq(concept_ids, dataset_id, domain_id, bypass=True)['results']
+            set_results, single_results = query_trapi_mcq(concept_ids, dataset_id, domain_id, bypass=True)
+            json_return = {
+                'set_results': set_results,
+                'single_results': single_results
+            }
 
     logging.debug(cur._executed)
     logging.debug(json_return)
@@ -1712,10 +1716,6 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
 
     # Perform calculations for results
     for row in json_return:
-        cpc = row['concept_pair_count']
-        c1 = row['concept_1_count']
-        c2 = row['concept_2_count']
-
         # Confidence interval for obsExpRatio
         # The CI bounds may hit Inf, which causes issues with JSON serialization. Limit it to 999
         row['ln_ratio_ci'] = (clip(row['ln_ratio_ci_lo'], JSON_INFINITY_REPLACEMENT), 
@@ -1833,6 +1833,7 @@ def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_i
     Input 2: concept_list in the query for weight calculation (currently only support jaccard index based weight calculation.)
     return weighted json_key. e.g. ws_jaccard_index. 
     '''
+    pair_count_df = pair_count_df.copy()
     concept_list_1_w_df= pd.DataFrame({'concept_id_1':concept_id_1})
     concept_list_1_w_df['w'] = 1
 
@@ -1856,23 +1857,22 @@ def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_i
     
     # Group by concept_id_2. Sum the scores and combine concept_id_1 into a list
     gb = pair_count_df.groupby('concept_id_2')
-    weighted_stats = gb['concept_id_1'].agg(list).reset_index()
-    weighted_stats = weighted_stats.merge(gb[json_key].agg('sum'), on='concept_id_2')
-    return weighted_stats
+    weighted_stats = gb[json_key].agg('sum')
+    return weighted_stats.reset_index()
 
 
-def _get_ci_scores(r, low, high):
-    if r[low] > 0:
-        return r[low]
-    elif r[high] < 0:
-        return r[high]
+def _get_ci_scores(r, score_col):
+    if r[score_col][0] > 0:
+        return r[score_col][0]
+    elif r[score_col][1] < 0:
+        return r[score_col][1]
     else:
         return 0   
 
 
 @cache.memoize(timeout=86400, unless=_bypass_cache)
 def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_id=None,
-                    ln_ratio_sign=0, bypass=False):
+                    ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE, bypass=False):
     """ Query for TRAPI Multicurie Query. Calculates weighted scores using methods similar to linkage disequilibrium to
     downweight contributions from input concepts that are similar to each other 
 
@@ -1898,111 +1898,42 @@ def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_
     conn = sql_connection()
     cur = conn.cursor()
 
-    # Filter ln ratio
-    if ln_ratio_sign == 0:
-        ln_ratio_filter = ''
-    elif ln_ratio_sign > 0:
-        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) > 0'
-    elif ln_ratio_sign < 0:
-        ln_ratio_filter = 'AND log(cp.concept_count * pc.count / (c1.concept_count * c2.concept_count + 0E0)) < 0'
-
-    sql = '''SELECT *
-        FROM
-            ((SELECT
-                cp.dataset_id,
-                cp.concept_id_1,
-                cp.concept_id_2,
-                ln_ratio,
-                ln_ratio_ci_lo,
-                ln_ratio_ci_hi,                  
-                log_odds,
-                log_odds_ci_lo,
-                log_odds_ci_hi,
-                c.concept_name AS concept_2_name,
-                c.domain_id AS concept_2_domain,
-                c.concept_class_id AS concept_2_class_id
-            FROM cohd.concept_pair_counts cp
-            JOIN cohd.concept c ON cp.concept_id_2 = c.concept_id
-            WHERE cp.dataset_id = %(dataset_id)s
-                AND cp.concept_id_1 = %(concept_id_1)s
-                {domain_filter}
-                {concept_class_filter}
-                {ln_ratio_filter})
-            UNION
-            (SELECT
-                cp.dataset_id,
-                cp.concept_id_2 AS concept_id_1,
-                cp.concept_id_1 AS concept_id_2,
-                ln_ratio,                    
-                ln_ratio_ci_lo,
-                ln_ratio_ci_hi,
-                log_odds,
-                log_odds_ci_lo,
-                log_odds_ci_hi,            
-                c.concept_name AS concept_2_name,
-                c.domain_id AS concept_2_domain,
-                c.concept_class_id AS concept_2_class_id
-            FROM cohd.concept_pair_counts cp
-            JOIN cohd.concept c ON cp.concept_id_1 = c.concept_id
-            WHERE cp.dataset_id = %(dataset_id)s
-                AND cp.concept_id_2 = %(concept_id_1)s
-                {domain_filter}
-                {concept_class_filter}
-                {ln_ratio_filter})) x
-        ORDER BY ABS(ln_ratio) DESC;'''
-    params = {
-        'dataset_id': dataset_id,
-    }
-
-    if domain_id is not None and not domain_id == ['']:
-        # Restrict the associated concept by domain
-        domain_filter = 'AND c.domain_id = %(domain_id)s'
-        params['domain_id'] = domain_id
-    else:
-        # Unrestricted domain
-        domain_filter = ''
-
-    # Filter concepts by concept_class
-    if concept_class_id is None or not concept_class_id or concept_class_id == [''] or \
-            concept_class_id.isspace():
-        concept_class_filter = ''
-    else:
-        concept_class_filter = 'AND concept_class_id = %(concept_class_id)s'
-        params['concept_class_id'] = concept_class_id
-
     # Get the associations for each of the concepts in the list
-    pair_counts = list()
+    associations = list()
     for concept_id_1 in concept_ids:
-        params['concept_id_1'] = concept_id_1
-        sqlp = sql.format(domain_filter=domain_filter, concept_class_filter=concept_class_filter,
-                            ln_ratio_filter=ln_ratio_filter)
-
-        cur.execute(sqlp, params)
-        pair_counts.extend(cur.fetchall())
-    pair_count = pd.DataFrame(pair_counts)
+        a = query_trapi(concept_id_1=concept_id_1, concept_id_2=None, dataset_id=dataset_id, domain_id=domain_id, 
+                        concept_class_id=concept_class_id, ln_ratio_sign=ln_ratio_sign, confidence=confidence, bypass=bypass)
+        associations.extend(a['results'])
+    associations = pd.DataFrame(associations)
 
     # Scorify ln_ratio and log_odds
-    pair_count['ln_ratio_score'] = pair_count.apply(_get_ci_scores, axis=1, low='ln_ratio_ci_lo', high='ln_ratio_ci_hi')
-    # pair_count['log_odds_score'] = pair_count.apply(_get_ci_scores, axis=1, low='log_odds_ci_lo', high='log_odds_ci_hi')
+    associations['ln_ratio_score'] = associations.apply(_get_ci_scores, axis=1, score_col='ln_ratio_ci')
+    # associations['log_odds_score'] = associations.apply(_get_ci_scores, axis=1, low='log_odds_ci_lo', high='log_odds_ci_hi')
 
     # Adjust the scores by weights 
-    concept_list_1 = list(set(pair_count['concept_id_1'].tolist()))
+    concept_list_1 = list(set(associations['concept_id_1'].tolist()))
     weighted_ln_ratio = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
-                                                concept_id_1=concept_list_1, pair_count_df=pair_count, 
+                                                concept_id_1=concept_list_1, pair_count_df=associations, 
                                                 json_key = 'ln_ratio_score')
     # weighted_log_odds = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
-    #                                             concept_id_1=concept_list_1, pair_count_df=pair_count, 
+    #                                             concept_id_1=concept_list_1, pair_count_df=associations, 
     #                                             json_key = 'log_odds_score')
 
+    # Add list of single associations 
+    single_associations = dict()
+    for i, row in weighted_ln_ratio.iterrows():
+        cid2 = int(row['concept_id_2'])
+        single_associations[cid2] = associations.loc[associations.concept_id_2 == cid2, :].to_dict('records')
+    
     # Extract concept 2 definitions
     columns_c2 = ['dataset_id', 'concept_id_2', 'concept_2_name', 'concept_2_domain', 'concept_2_class_id']
-    concept_2_defs = pair_count[columns_c2].groupby('concept_id_2').agg(lambda x: x.iloc[0])
+    concept_2_defs = associations[columns_c2].groupby('concept_id_2').agg(lambda x: x.iloc[0])
     
     # Merge and sort results, and convert to dict for JSON results
-    results = concept_2_defs.merge(weighted_ln_ratio, on='concept_id_2')
+    set_associations = concept_2_defs.merge(weighted_ln_ratio, on='concept_id_2')
     # results = results.merge(weighted_log_odds[['concept_id_2', 'log_odds_score']], on='concept_id_2')
-    results = results.sort_values('ln_ratio_score', ascending=False)
-    json_return = {'results': results.to_dict('records')}
+    set_associations = set_associations.sort_values('ln_ratio_score', ascending=False)
+    json_return = set_associations.to_dict('records'), single_associations
 
     cur.close()
     conn.close()
