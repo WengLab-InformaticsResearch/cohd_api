@@ -17,7 +17,7 @@ info:
     [Athena](http://athena.ohdsi.org) (OMOP vocabularies, search, concept relationships, concept hierarchy)
     [Atlas](http://www.ohdsi.org/web/atlas/) (OMOP vocabularies, search, concept relationships, concept hierarchy,
     concept sets)
-  version: 6.4.1
+  version: 6.5.0
   title: COHD TRAPI
   contact:
     name: Casey Ta
@@ -42,7 +42,9 @@ info:
         production/x-translator/
   x-trapi:
     version: 1.5.0
+    multicuriequery: true
     asyncquery: false
+    pathfinderquery: false
     operations:
       - lookup_and_score
     batch_size_limit: 100
@@ -55,9 +57,9 @@ info:
         production/x-trapi/
     test_data_location: "https://raw.githubusercontent.com/WengLab-InformaticsResearch/cohd_api/master/cohd/translator/sri_testing_triples.json"
 servers:
-  # - url: 'https://cohd-api.transltr.io/api'
-  #   description: COHD ITRB Production Server
-  #   x-maturity: production
+#  - url: 'https://cohd-api.transltr.io/api'
+#    description: COHD ITRB Production Server
+#    x-maturity: production
   - url: 'https://cohd-api.test.transltr.io/api'
     description: COHD ITRB Test Server
     x-maturity: testing
@@ -603,7 +605,7 @@ components:
             items:
               $ref: '#/components/schemas/NodeBinding'
             minItems: 1
-          nullable: false 
+          nullable: false
         analyses:
           type: array
           description: >-
@@ -612,7 +614,7 @@ components:
           items:
             $ref: '#/components/schemas/Analysis'
           minItems: 0
-          nullable: false 
+          nullable: false
       additionalProperties: true
       required:
         - node_bindings
@@ -854,8 +856,20 @@ components:
           items:
             $ref: '#/components/schemas/CURIE'
           minItems: 1
-          example: [OMIM:603903]
-          description: CURIE identifier for this node
+          example: ["OMIM:603903"]
+          description: >-
+            A CURIE identifier (or list of identifiers) for this node. 
+            The 'ids' field will hold a list of CURIEs only in the case of a
+            BATCH set_interpretation, where each CURIE is queried 
+            separately. If a list of queried CURIEs is to be considered as a  
+            set (as under a MANY or ALL set_interpretation), the 'ids' field 
+            will hold a single id representing this set, and the individual members 
+            of this set will be captured in a separate 'member_ids' field. 
+            Note that the set id MUST be created as a UUID by the system that 
+            defines the queried set, using a centralized nodenorm service. 
+            Note also that downstream systems MUST re-use the original set UUID 
+            in the messages they create/send, which will facilitate merging or 
+            caching operations.
           nullable: true
         categories:
           type: array
@@ -883,6 +897,17 @@ components:
             - ALL
             - MANY
           nullable: true
+        member_ids:
+          type: array
+          description: >-
+            A list of CURIE identifiers for members of a queried set. This 
+            field MUST be populated under a set_interpretation of MANY
+            or ALL, when the 'ids' field holds a UUID representing the set 
+            itself. This field MUST NOT be used under a set_interpretation 
+            of BATCH.
+          nullable: true
+          items:
+            $ref: '#/components/schemas/CURIE'
         constraints:
           type: array
           description: >-
@@ -1003,7 +1028,7 @@ components:
             Indicates that the node represents a set of entities.
             If this property is missing or null, it is assumed to be
             false.
-          nullable: true        
+          nullable: true
       required:
         - categories
         - attributes
@@ -1550,7 +1575,7 @@ components:
             an Edge provided by the ARAGORN ARA can expressing knowledge it
             retrieved from both the automat-mychem-info and molepro KPs,
             which both provided it with records of this single fact.
-          example: [infores:automat-mychem-info, infores:molepro]
+          example: ["infores:automat-mychem-info", "infores:molepro"]
         source_record_urls:
           type: array
           nullable: true
