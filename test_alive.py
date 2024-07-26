@@ -22,7 +22,10 @@ def test_alive():
     for server in servers:
         try:
             print(f'\ntest_alive: testing /health on {server}..... ')
-            response = requests.get(urljoin(server, '/health'), timeout=10)
+            headers = {
+                'User-Agent': 'PostmanRuntime/7.39.0'
+            }
+            response = requests.get(urljoin(server, '/health'), timeout=10, headers=headers)
 
             if response.status_code == 200:
                 print('\t' + response.text)
