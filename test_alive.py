@@ -14,6 +14,17 @@ servers = ['https://cohd-api.ci.transltr.io/api',
            'https://cohd.io/api',
            'https://cohd-api.transltr.io/api']
 
+other_tests = ['https://openpredict.ci.transltr.io/meta_knowledge_graph',
+               'https://openpredict.test.transltr.io/meta_knowledge_graph',
+               'https://openpredict.transltr.io/meta_knowledge_graph',
+               'https://collaboratory-api.ci.transltr.io/meta_knowledge_graph',
+               'https://collaboratory-api.test.transltr.io/meta_knowledge_graph',
+               'https://collaboratory-api.transltr.io/meta_knowledge_graph',
+               'https://automat.transltr.io/ubergraph/meta_knowledge_graph',
+               'https://automat.ci.transltr.io/icees-kg/meta_knowledge_graph',
+               'https://automat.test.transltr.io/icees-kg/meta_knowledge_graph',
+               'https://automat.transltr.io/icees-kg/meta_knowledge_graph']
+
 
 def test_alive():
     """ Check the /health endpoint of each server to check that it's alive.
@@ -36,7 +47,22 @@ def test_alive():
             print(f'UNHEALTHY: {str(e)}')
         time.sleep(2)
         
-        
+    for server in other_tests:
+        try:
+            print(f'\ntest_alive: testing /health on {server}..... ')
+            headers = {
+                'User-Agent': 'PostmanRuntime/7.39.0'
+            }
+            response = requests.get(server, timeout=20, headers=headers)
+
+            if response.status_code == 200:
+                print('\tSuccessful')
+            else:
+                print(f'\tUNHEALTHY: {response.status_code}\n{response.text}')
+                unhealthy = True
+        except Exception as e:
+            print(f'UNHEALTHY: {str(e)}')
+        time.sleep(2)    
 
     # No server should be unhealthy
     assert not unhealthy
