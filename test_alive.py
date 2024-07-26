@@ -14,16 +14,19 @@ servers = ['https://cohd-api.ci.transltr.io/api',
            'https://cohd.io/api',
            'https://cohd-api.transltr.io/api']
 
-other_tests = ['https://openpredict.ci.transltr.io/meta_knowledge_graph',
-               'https://openpredict.test.transltr.io/meta_knowledge_graph',
-               'https://openpredict.transltr.io/meta_knowledge_graph',
-               'https://collaboratory-api.ci.transltr.io/meta_knowledge_graph',
-               'https://collaboratory-api.test.transltr.io/meta_knowledge_graph',
-               'https://collaboratory-api.transltr.io/meta_knowledge_graph',
-               'https://automat.transltr.io/ubergraph/meta_knowledge_graph',
-               'https://automat.ci.transltr.io/icees-kg/meta_knowledge_graph',
-               'https://automat.test.transltr.io/icees-kg/meta_knowledge_graph',
-               'https://automat.transltr.io/icees-kg/meta_knowledge_graph']
+other_tests = [
+            #    'https://openpredict.ci.transltr.io/meta_knowledge_graph',
+            #    'https://openpredict.test.transltr.io/meta_knowledge_graph',
+            #    'https://openpredict.transltr.io/meta_knowledge_graph',
+            #    'https://collaboratory-api.ci.transltr.io/meta_knowledge_graph',
+            #    'https://collaboratory-api.test.transltr.io/meta_knowledge_graph',
+            #    'https://collaboratory-api.transltr.io/meta_knowledge_graph',
+            #    'https://automat.transltr.io/ubergraph/meta_knowledge_graph',
+            #    'https://automat.ci.transltr.io/icees-kg/meta_knowledge_graph',
+            #    'https://automat.test.transltr.io/icees-kg/meta_knowledge_graph',
+            #    'https://automat.transltr.io/icees-kg/meta_knowledge_graph'
+            'https://cohd-api.ci.transltr.io/api/meta_knowledge_graph'
+            ]
 
 
 def test_alive():
@@ -34,7 +37,7 @@ def test_alive():
         try:
             print(f'\ntest_alive: testing /health on {server}..... ')
             headers = {
-                'User-Agent': 'PostmanRuntime/7.39.0'
+                'User-Agent': 'Casey Testing 2024-07-26'
             }
             response = requests.get(urljoin(server, '/health'), timeout=10, headers=headers)
 
@@ -51,7 +54,7 @@ def test_alive():
         try:
             print(f'\ntest_alive: testing /health on {server}..... ')
             headers = {
-                'User-Agent': 'PostmanRuntime/7.39.0'
+                'User-Agent': 'Casey Testing 2024-07-26'
             }
             response = requests.get(server, timeout=20, headers=headers)
 
