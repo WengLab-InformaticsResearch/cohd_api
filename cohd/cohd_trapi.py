@@ -27,6 +27,7 @@ class TrapiStatusCode(Enum):
     UNSUPPORTED_ATTR_CONSTRAINT = 'UnsupportedAttributeConstraint'
     UNSUPPORTED_QUAL_CONSTRAINT = 'UnsupportedQualifierConstraint'
     UNSUPPORTED_SET_INTERPRETATION = 'UnsupportedSetInterpretation'
+    MISSING_MEMBER_IDS = 'MissingMemberIDs'
 
 
 class CohdTrapi(ABC):
@@ -210,6 +211,28 @@ def criteria_confidence(cohd_result, confidence, threshold=CohdTrapi.default_ln_
         return True
 
 
+def criteria_mcq_score(cohd_result, threshold=CohdTrapi.default_ln_ratio_ci_thresohld):
+    """ Checks the confidence interval of the result for significance using alpha. Only applies to observed-expected
+    frequency ratio. Returns True for all other types of results.
+
+    Parameters
+    ----------
+    cohd_result
+    confidence
+    threshold
+
+    Returns
+    -------
+    True if significant
+    """
+    if 'ln_ratio_score' in cohd_result:
+        # obsExpFreq
+        return abs(cohd_result['ln_ratio_score']) >= threshold
+    else:
+        # Missing the score to filter on
+        return False        
+
+
 mappings_domain_ontology = {
     '_DEFAULT': ['ICD9CM', 'RxNorm', 'UMLS', 'DOID', 'MONDO']
 }
@@ -318,7 +341,7 @@ def sort_cohd_results(cohd_results, sort_field='ln_ratio_ci', ascending=False):
     if cohd_results is None or len(cohd_results) == 0:
         return cohd_results
 
-    if sort_field in ['p-value', 'ln_ratio', 'relative_frequency']:
+    if sort_field in ['p-value', 'ln_ratio', 'relative_frequency', 'ln_ratio_score']:
         sort_values = [x[sort_field] for x in cohd_results]
     elif sort_field == 'ln_ratio_ci':
         sort_values = [score_cohd_result(x) for x in cohd_results]

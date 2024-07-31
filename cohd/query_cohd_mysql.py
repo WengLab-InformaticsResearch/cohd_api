@@ -3,6 +3,7 @@ from flask import jsonify
 from scipy.stats import chisquare
 from numpy import argsort
 import logging
+import pandas as pd
 
 from .omop_xref import xref_to_omop_standard_concept, omop_map_to_standard, omop_map_from_standard, \
     xref_from_omop_standard_concept, xref_from_omop_local, xref_to_omop_local
@@ -87,8 +88,146 @@ def get_arg_boolean(args, param_name):
     return None
 
 
-def query_db(service, method, args):
+def query_db_finalize(conn, cursor, json_return):
+    logging.debug(cursor._executed)
+    logging.debug(json_return)
 
+    cursor.close()
+    conn.close()
+
+    json_return = {"results": json_return}
+    return json_return
+
+
+def query_db_datasets():        
+    # The datasets in the COHD database
+    conn = sql_connection()
+    cur = conn.cursor()
+    sql = '''SELECT *
+        FROM cohd.dataset;'''    
+    cur.execute(sql)
+    json_return = cur.fetchall()    
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db_domain_counts(dataset_id):
+    # The number of concepts in each domain
+    conn = sql_connection()
+    cur = conn.cursor()
+    sql = '''SELECT *
+        FROM cohd.domain_concept_counts
+        WHERE dataset_id=%(dataset_id)s;'''
+    params = {'dataset_id': dataset_id}
+    cur.execute(sql, params)
+    json_return = cur.fetchall()
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db_domain_pair_counts(dataset_id):
+    # The number of pairs of concepts in each pair of domains
+    conn = sql_connection()
+    cur = conn.cursor()
+    sql = '''SELECT *
+        FROM cohd.domain_pair_concept_counts
+        WHERE dataset_id=%(dataset_id)s;'''
+    params = {'dataset_id': dataset_id}
+    cur.execute(sql, params)
+    json_return = cur.fetchall()
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db_patient_count(dataset_id):
+    # The number of patients in the dataset
+    conn = sql_connection()
+    cur = conn.cursor()
+    sql = '''SELECT *
+        FROM cohd.patient_count
+        WHERE dataset_id=%(dataset_id)s;'''
+    params = {'dataset_id': dataset_id}
+    cur = sql_connection().cursor()
+    cur.execute(sql, params)
+    json_return = cur.fetchall()    
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db_find_concept_ids(dataset_id, query, domain_id=None, min_count=None):
+    conn = sql_connection()
+    cur = conn.cursor()
+    
+    # Check query parameter
+    if query is None or query == [''] or query.isspace():
+        return 'q parameter is missing', 400
+    
+    # Find concept IDs given name (query)
+    sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
+            CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
+        FROM cohd.concept c
+        LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
+        WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C')
+            {domain_filter}
+            {count_filter}
+        ORDER BY cc.concept_count DESC
+        LIMIT 1000;'''
+    params = {
+        'like_query': '%' + query + '%',
+        'dataset_id': dataset_id,
+        'query': query
+    }
+
+    # Filter concepts by domain            
+    if domain_id is None or domain_id == [''] or domain_id.isspace():
+        domain_filter = ''
+    else:
+        domain_filter = 'AND domain_id = %(domain_id)s'
+        params['domain_id'] = domain_id
+
+    # Filter concepts by minimum count            
+    if min_count is None or min_count == ['']:
+        # Default to set min_count = 1
+        count_filter = 'AND cc.concept_count >= 1'
+    else:
+        if min_count.strip().isdigit():
+            min_count = int(min_count.strip())
+            if min_count > 0:
+                count_filter = 'AND cc.concept_count >= %(min_count)s'
+                params['min_count'] = min_count
+            else:
+                count_filter = ''
+        else:
+            return 'min_count parameter should be an integer', 400
+
+    sql = sql.format(domain_filter=domain_filter, count_filter=count_filter)
+
+    cur = sql_connection().cursor()
+    cur.execute(sql, params)
+    json_return = cur.fetchall()
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db_concepts(query):
+    conn = sql_connection()
+    cur = conn.cursor()
+
+    # Check query parameter
+    if query is None or query == [''] or query.isspace():
+        return 'q parameter is missing', 400
+    for concept_id in query.split(','):
+        if not concept_id.strip().isdigit():
+            return 'Error in q: concept_ids should be integers', 400
+
+    # Convert query paramter to a list of concept ids
+    concept_ids = [int(x.strip()) for x in query.split(',')]
+
+    sql = '''SELECT concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code
+        FROM cohd.concept
+        WHERE concept_id IN (%s);''' % ','.join(['%s' for _ in concept_ids])
+
+    cur.execute(sql, concept_ids)
+    json_return = cur.fetchall()
+    return query_db_finalize(conn, cur, json_return)
+
+
+def query_db(service, method, args):
     # Connect to MYSQL database
     conn = sql_connection()
     cur = conn.cursor()
@@ -99,125 +238,8 @@ def query_db(service, method, args):
 
     logging.debug(msg=f"Service: {service}; Method: {method}, Query: {query}")
 
-    if service == 'metadata':
-        # The datasets in the COHD database
-        # endpoint: /api/v1/query?service=metadata&meta=datasets
-        if method == 'datasets':
-            sql = '''SELECT *
-                FROM cohd.dataset;'''
-            cur.execute(sql)
-            json_return = cur.fetchall()
-
-        # The number of concepts in each domain
-        # endpoint: /api/v1/query?service=metadata&meta=domainCounts&dataset_id=1
-        elif method == 'domainCounts':
-            dataset_id = get_arg_dataset_id(args)
-            sql = '''SELECT *
-                FROM cohd.domain_concept_counts
-                WHERE dataset_id=%(dataset_id)s;'''
-            params = {'dataset_id': dataset_id}
-            cur.execute(sql, params)
-            json_return = cur.fetchall()
-
-        # The number of pairs of concepts in each pair of domains
-        # endpoint: /api/v1/query?service=metadata&meta=domainPairCounts&dataset_id=1
-        elif method == 'domainPairCounts':
-            dataset_id = get_arg_dataset_id(args)
-            sql = '''SELECT *
-                FROM cohd.domain_pair_concept_counts
-                WHERE dataset_id=%(dataset_id)s;'''
-            params = {'dataset_id': dataset_id}
-            cur.execute(sql, params)
-            json_return = cur.fetchall()
-
-        # The number of patients in the dataset
-        # endpoint: /api/v1/query?service=metadata&meta=patientCount&dataset_id=1
-        elif method == 'patientCount':
-            dataset_id = get_arg_dataset_id(args)
-            sql = '''SELECT *
-                FROM cohd.patient_count
-                WHERE dataset_id=%(dataset_id)s;'''
-            params = {'dataset_id': dataset_id}
-            cur.execute(sql, params)
-            json_return = cur.fetchall()
-
-    elif service == 'omop':
-        # Find concept_ids and concept_names that are similar to the query
-        # e.g. /api/v1/query?service=omop&meta=findConceptIDs&q=cancer
-        if method == 'findConceptIDs':
-            # Check query parameter
-            if query is None or query == [''] or query.isspace():
-                return 'q parameter is missing', 400
-
-            dataset_id = get_arg_dataset_id(args)
-
-            sql = '''SELECT c.concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code,
-                    CAST(IFNULL(concept_count, 0) AS UNSIGNED) AS concept_count
-                FROM cohd.concept c
-                LEFT JOIN cohd.concept_counts cc ON (cc.dataset_id = %(dataset_id)s AND cc.concept_id = c.concept_id)
-                WHERE concept_name like %(like_query)s AND standard_concept IN ('S','C')
-                    {domain_filter}
-                    {count_filter}
-                ORDER BY cc.concept_count DESC
-                LIMIT 1000;'''
-            params = {
-                'like_query': '%' + query + '%',
-                'dataset_id': dataset_id,
-                'query': query
-            }
-
-            # Filter concepts by domain
-            domain_id = args.get('domain')
-            if domain_id is None or domain_id == [''] or domain_id.isspace():
-                domain_filter = ''
-            else:
-                domain_filter = 'AND domain_id = %(domain_id)s'
-                params['domain_id'] = domain_id
-
-            # Filter concepts by minimum count
-            min_count = args.get('min_count')
-            if min_count is None or min_count == ['']:
-                # Default to set min_count = 1
-                count_filter = 'AND cc.concept_count >= 1'
-            else:
-                if min_count.strip().isdigit():
-                    min_count = int(min_count.strip())
-                    if min_count > 0:
-                        count_filter = 'AND cc.concept_count >= %(min_count)s'
-                        params['min_count'] = min_count
-                    else:
-                        count_filter = ''
-                else:
-                    return 'min_count parameter should be an integer', 400
-
-            sql = sql.format(domain_filter=domain_filter, count_filter=count_filter)
-
-            cur.execute(sql, params)
-            json_return = cur.fetchall()
-
-        # Looks up concepts for a list of concept_ids
-        # e.g. /api/v1/query?service=omop&meta=concepts&q=4196636,437643
-        elif method == 'concepts':
-            # Check query parameter
-            if query is None or query == [''] or query.isspace():
-                return 'q parameter is missing', 400
-            for concept_id in query.split(','):
-                if not concept_id.strip().isdigit():
-                    return 'Error in q: concept_ids should be integers', 400
-
-            # Convert query paramter to a list of concept ids
-            concept_ids = [int(x.strip()) for x in query.split(',')]
-
-            sql = '''SELECT concept_id, concept_name, domain_id, vocabulary_id, concept_class_id, concept_code
-                FROM cohd.concept
-                WHERE concept_id IN (%s);''' % ','.join(['%s' for _ in concept_ids])
-
-            cur.execute(sql, concept_ids)
-            json_return = cur.fetchall()
-
-        # Looks up ancestors of a given concept
-        # e.g. /api/query?service=omop&meta=conceptAncestors&concept_id=313217
-        elif method == 'conceptAncestors':
+    if service == 'omop':
+        if method == 'conceptAncestors':
             # Get non-required parameters
             dataset_id = get_arg_dataset_id(args, DATASET_ID_DEFAULT_HIER)
 
@@ -1096,6 +1118,25 @@ def query_db(service, method, args):
             for row in json_return:
                 row['confidence_interval'] = rel_freq_ci(row['concept_pair_count'], row['concept_2_count'],
                                                           confidence_level)
+        elif method == 'mcq':
+            # Get non-required parameters
+            dataset_id = get_arg_dataset_id(args)
+            domain_id = args.get('domain')
+
+            # concept_id_1 is required
+            concept_ids = args.get('concept_ids')
+            if concept_ids is None:
+                return 'No concept_ids selected', 400
+            if type(concept_ids) is str:
+                concept_ids = [int(x) for x in concept_ids.split(',')]
+            elif type(concept_ids) is not list:
+                concept_ids = [concept_ids]
+            
+            set_results, single_results = query_trapi_mcq(concept_ids, dataset_id, domain_id, bypass=True)
+            json_return = {
+                'set_results': set_results,
+                'single_results': single_results
+            }
 
     logging.debug(cur._executed)
     logging.debug(json_return)
@@ -1675,10 +1716,6 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
 
     # Perform calculations for results
     for row in json_return:
-        cpc = row['concept_pair_count']
-        c1 = row['concept_1_count']
-        c2 = row['concept_2_count']
-
         # Confidence interval for obsExpRatio
         # The CI bounds may hit Inf, which causes issues with JSON serialization. Limit it to 999
         row['ln_ratio_ci'] = (clip(row['ln_ratio_ci_lo'], JSON_INFINITY_REPLACEMENT), 
@@ -1702,7 +1739,206 @@ def query_trapi(concept_id_1, concept_id_2=None, dataset_id=None, domain_id=None
     conn.close()
 
     json_return = {"results": json_return}
-    return json_return    
+    return json_return     
+
+
+def get_pair_concept_count(cur = None, concept_id_list_1 = [], concept_id_list_2 = [], dataset_id = 3,domain_id = None, top_n = 999999):
+    sql = '''
+        SELECT * FROM
+        (
+            SELECT
+                cp.concept_id_1 as concept_id_1,
+                cp.concept_id_2 as concept_id_2,
+                cp.concept_count as concept_pair_count,
+                c1.concept_count as concept_count_1,
+                c2.concept_count as concept_count_2
+                FROM concept_pair_counts cp
+                INNER JOIN concept_counts c1 ON cp.concept_id_1 = c1.concept_id
+                INNER JOIN concept_counts c2 ON cp.concept_id_2 = c2.concept_id
+                INNER JOIN concept con on con.concept_id = cp.concept_id_2
+                WHERE cp.dataset_id = %(dataset_id)s 
+                AND c1.dataset_id = %(dataset_id)s 
+                AND c2.dataset_id = %(dataset_id)s
+                {concept_id_filter_1}
+                {domain_filter}
+                GROUP BY concept_id_1, concept_id_2
+            UNION 
+            SELECT
+                cp.concept_id_2 as concept_id_1,
+                cp.concept_id_1 as concept_id_2,
+                cp.concept_count as concept_pair_count,
+                c1.concept_count as concept_count_1,
+                c2.concept_count as concept_count_2
+                FROM concept_pair_counts cp
+                INNER JOIN concept_counts c1 ON cp.concept_id_2 = c1.concept_id
+                INNER JOIN concept_counts c2 ON cp.concept_id_1 = c2.concept_id
+                INNER JOIN concept con on con.concept_id = cp.concept_id_1
+                WHERE cp.dataset_id = %(dataset_id)s 
+                AND c1.dataset_id = %(dataset_id)s 
+                AND c2.dataset_id = %(dataset_id)s
+                {concept_id_filter_2}
+                {domain_filter}
+                GROUP BY concept_id_1, concept_id_2
+        ) x
+        ORDER BY x.concept_pair_count DESC
+        LIMIT {top_n_filter};
+        '''
+    params = {
+        'dataset_id': dataset_id,
+    }
+    concept_id_1 = ','.join([str(c) for c in concept_id_list_1])
+    if len(concept_id_list_2) > 0:
+        concept_id_2 = ','.join([str(c) for c in concept_id_list_2])
+        concept_id_filter_1 = '''
+            AND (
+                (cp.concept_id_1 in ({concept_id_1}) AND cp.concept_id_2 in ({concept_id_2}) )
+            )
+        '''
+        concept_id_filter_2 = '''
+            AND (
+                (cp.concept_id_2 in ({concept_id_1}) AND cp.concept_id_1 in ({concept_id_2}) )
+            )
+        '''
+        concept_id_filter_1 = concept_id_filter_1.format(concept_id_1= concept_id_1, concept_id_2 = concept_id_2)
+        concept_id_filter_2 = concept_id_filter_2.format(concept_id_1= concept_id_1, concept_id_2 = concept_id_2)
+    else:
+        concept_id_filter_1 = '''
+            AND (
+                (cp.concept_id_1 in ({concept_id_1}) )
+            )
+        '''
+        concept_id_filter_2 = '''
+            AND (
+                (cp.concept_id_2 in ({concept_id_1}) )
+            )
+        '''
+        concept_id_filter_1 = concept_id_filter_1.format(concept_id_1 = concept_id_1)
+        concept_id_filter_2 = concept_id_filter_2.format(concept_id_1 = concept_id_1)
+    # Filter concepts by domain
+    if domain_id is not None and not domain_id == ['']:
+        domain_filter = 'AND con.domain_id = %(domain_id)s'
+        params['domain_id'] = domain_id
+    else:
+        domain_filter = ''
+    
+    sql = sql.format(concept_id_filter_1 = concept_id_filter_1, concept_id_filter_2 = concept_id_filter_2, domain_filter=domain_filter, top_n_filter = top_n)
+    cur.execute(sql, params)
+    return cur.fetchall()        
+
+
+def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_id_1 = None, pair_count_df = None, json_key = 'jaccard_index'):
+    '''
+    help function.
+    Input 1: original association statistics required
+    Input 2: concept_list in the query for weight calculation (currently only support jaccard index based weight calculation.)
+    return weighted json_key. e.g. ws_jaccard_index. 
+    '''
+    pair_count_df = pair_count_df.copy()
+    concept_list_1_w_df= pd.DataFrame({'concept_id_1':concept_id_1})
+    concept_list_1_w_df['w'] = 1
+
+    # Calculate the weights based on Jaccard index between input concep
+    pair_count_q1 = pd.DataFrame(get_pair_concept_count(cur=cur,dataset_id=dataset_id,domain_id=domain_id, concept_id_list_1=concept_id_1,concept_id_list_2=concept_id_1))
+    if pair_count_q1.shape[0] > 0:
+        # Sum of Jaccard index
+        pair_count_q1['jaccard_index'] = pair_count_q1['concept_pair_count'] / (pair_count_q1['concept_count_1'] + pair_count_q1['concept_count_2'] - pair_count_q1['concept_pair_count'])
+        pair_count_q1 = pair_count_q1.groupby('concept_id_1')['jaccard_index'].agg('sum').reset_index()
+        concept_list_1_w_df = concept_list_1_w_df.merge(pair_count_q1).reset_index()
+        # 1 + sum(Jaccards)
+        concept_list_1_w_df['w'] = concept_list_1_w_df['w'] + concept_list_1_w_df['jaccard_index']
+    # Weight = 1/(1 + sum(Jaccards))
+    concept_list_1_w_df['w'] = 1/concept_list_1_w_df['w']
+    concept_list_1_w_df = concept_list_1_w_df[['concept_id_1','w']]
+
+    # Multiply the scores by the weights
+    pair_count_df = pair_count_df.merge(concept_list_1_w_df)
+    pair_count_df[json_key] = pair_count_df['w'] * pair_count_df[json_key]
+    pair_count_df = pair_count_df[~pair_count_df['concept_id_2'].isin(concept_id_1)]
+    
+    # Group by concept_id_2. Sum the scores and combine concept_id_1 into a list
+    gb = pair_count_df.groupby('concept_id_2')
+    weighted_stats = gb[json_key].agg('sum')
+    return weighted_stats.reset_index()
+
+
+def _get_ci_scores(r, score_col):
+    if r[score_col][0] > 0:
+        return r[score_col][0]
+    elif r[score_col][1] < 0:
+        return r[score_col][1]
+    else:
+        return 0   
+
+
+@cache.memoize(timeout=86400, unless=_bypass_cache)
+def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_id=None,
+                    ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE, bypass=False):
+    """ Query for TRAPI Multicurie Query. Calculates weighted scores using methods similar to linkage disequilibrium to
+    downweight contributions from input concepts that are similar to each other 
+
+    Parameters
+    ----------
+    concept_ids: list of OMOP concept IDs
+    dataset_id: (optional) String - COHD dataset ID
+    domain_id: (optional) String - OMOP domain ID
+    concept_class_id: (optional) String - OMOP concept class ID
+    ln_ratio_sign: (optional) Int - 1: positive ln_ratio only; -1: negative ln_ratio only; 0: any ln_ratio
+    confidence: (optional) Float - Confidence level
+
+    Returns
+    -------
+    Dict results
+    """
+    assert concept_ids is not None and type(concept_ids) is list, \
+        'query_cohd_mysql.py::query_trapi_mcq() - Bad input. concept_id_1={concept_ids}'.format(
+            concept_ids=str(concept_ids)
+        )
+
+    # Connect to MYSQL database
+    conn = sql_connection()
+    cur = conn.cursor()
+
+    # Get the associations for each of the concepts in the list
+    associations = list()
+    for concept_id_1 in concept_ids:
+        a = query_trapi(concept_id_1=concept_id_1, concept_id_2=None, dataset_id=dataset_id, domain_id=domain_id, 
+                        concept_class_id=concept_class_id, ln_ratio_sign=ln_ratio_sign, confidence=confidence, bypass=bypass)
+        associations.extend(a['results'])
+    associations = pd.DataFrame(associations)
+
+    # Scorify ln_ratio and log_odds
+    associations['ln_ratio_score'] = associations.apply(_get_ci_scores, axis=1, score_col='ln_ratio_ci')
+    # associations['log_odds_score'] = associations.apply(_get_ci_scores, axis=1, low='log_odds_ci_lo', high='log_odds_ci_hi')
+
+    # Adjust the scores by weights 
+    concept_list_1 = list(set(associations['concept_id_1'].tolist()))
+    weighted_ln_ratio = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
+                                                concept_id_1=concept_list_1, pair_count_df=associations, 
+                                                json_key = 'ln_ratio_score')
+    # weighted_log_odds = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
+    #                                             concept_id_1=concept_list_1, pair_count_df=associations, 
+    #                                             json_key = 'log_odds_score')
+
+    # Add list of single associations 
+    single_associations = dict()
+    for i, row in weighted_ln_ratio.iterrows():
+        cid2 = int(row['concept_id_2'])
+        single_associations[cid2] = associations.loc[associations.concept_id_2 == cid2, :].to_dict('records')
+    
+    # Extract concept 2 definitions
+    columns_c2 = ['dataset_id', 'concept_id_2', 'concept_2_name', 'concept_2_domain', 'concept_2_class_id']
+    concept_2_defs = associations[columns_c2].groupby('concept_id_2').agg(lambda x: x.iloc[0])
+    
+    # Merge and sort results, and convert to dict for JSON results
+    set_associations = concept_2_defs.merge(weighted_ln_ratio, on='concept_id_2')
+    # results = results.merge(weighted_log_odds[['concept_id_2', 'log_odds_score']], on='concept_id_2')
+    set_associations = set_associations.sort_values('ln_ratio_score', ascending=False)
+    json_return = set_associations.to_dict('records'), single_associations
+
+    cur.close()
+    conn.close()
+
+    return json_return
 
 
 def health():
@@ -1765,9 +2001,9 @@ def omop_concept_definitions(concept_ids):
     if not concept_ids:
         return concept_defs
 
-    response = query_db(service='omop', method='concepts', args={'q': ','.join(str(c) for c in concept_ids)})
+    q = ','.join(str(c) for c in concept_ids)
+    concept_results = query_db_concepts(q)
 
-    concept_results = response.get_json()
     if concept_results is None or 'results' not in concept_results:
         return concept_defs
 

@@ -48,16 +48,44 @@ def api_cohd():
     return redirect("https://cohd.smart-api.info/", code=302)
 
 
+@app.route('/api/metadata/datasets')
+def api_metadata_datasets():
+    return query_cohd_mysql.query_db_datasets()
+
+
+@app.route('/api/metadata/domainCounts')
+def api_metadata_domainCounts():
+    dataset_id = query_cohd_mysql.get_arg_dataset_id(request.args)
+    return query_cohd_mysql.query_db_domain_counts(dataset_id)
+
+
+@app.route('/api/metadata/domainPairCounts')
+def api_metadata_domainPairCounts():
+    dataset_id = query_cohd_mysql.get_arg_dataset_id(request.args)
+    return query_cohd_mysql.query_db_domain_pair_counts(dataset_id)
+
+
+@app.route('/api/metadata/patientCount')
+def api_metadata_patientCount():
+    dataset_id = query_cohd_mysql.get_arg_dataset_id(request.args)
+    return query_cohd_mysql.query_db_patient_count(dataset_id)
+
+
 @app.route('/api/omop/findConceptIDs')
 @app.route('/api/v1/omop/findConceptIDs')
 def api_omop_reference():
-    return api_call('omop', 'findConceptIDs')
+    query = request.args.get('q')
+    dataset_id = query_cohd_mysql.get_arg_dataset_id(request.args)
+    domain_id = request.args.get('domain')
+    min_count = request.args.get('min_count')
+    return query_cohd_mysql.query_db_find_concept_ids(dataset_id, query, domain_id, min_count)
 
 
 @app.route('/api/omop/concepts')
 @app.route('/api/v1/omop/concepts')
 def api_omop_concepts():
-    return api_call('omop', 'concepts')
+    query = request.args.get('q')
+    return query_cohd_mysql.query_db_concepts(query)
 
 
 @app.route('/api/omop/conceptAncestors')
@@ -94,25 +122,6 @@ def api_omop_xrefToOMOP():
 def api_omop_xrefFromOMOP():
     return api_call('omop', 'xrefFromOMOP')
 
-
-@app.route('/api/metadata/datasets')
-def api_metadata_datasets():
-    return api_call('metadata', 'datasets')
-
-
-@app.route('/api/metadata/domainCounts')
-def api_metadata_domainCounts():
-    return api_call('metadata', 'domainCounts')
-
-
-@app.route('/api/metadata/domainPairCounts')
-def api_metadata_domainPairCounts():
-    return api_call('metadata', 'domainPairCounts')
-
-
-@app.route('/api/metadata/patientCount')
-def api_metadata_patientCount():
-    return api_call('metadata', 'patientCount')
 
 
 @app.route('/api/frequencies/singleConceptFreq')
@@ -158,6 +167,11 @@ def api_association_obsExpRatio():
 @app.route('/api/association/relativeFrequency')
 def api_association_relativeFrequency():
     return api_call('association', 'relativeFrequency')
+
+
+@app.route('/api/association/mcq')
+def api_association_mcq():
+    return api_call('association', 'mcq')
 
 
 @app.route('/api/temporal/conceptAgeCounts')
@@ -306,7 +320,8 @@ def api_call(service=None, meta=None, query=None, version=None):
     elif service == 'association':
         if meta == 'chiSquare' or \
                 meta == 'obsExpRatio' or \
-                meta == 'relativeFrequency':
+                meta == 'relativeFrequency' or \
+                meta == 'mcq':
             result = query_cohd_mysql.query_db(service, meta, request.args)
         else:
             result = 'meta not recognized', 400

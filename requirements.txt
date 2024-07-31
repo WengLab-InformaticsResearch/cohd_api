@@ -16,3 +16,4 @@ opentelemetry-instrumentation-flask
 opentelemetry-exporter-jaeger
 opentelemetry-instrumentation-requests
 opentelemetry-instrumentation-pymysql
+pandas
