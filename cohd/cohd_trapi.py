@@ -82,6 +82,8 @@ class CohdTrapi(ABC):
 
     _INFORES_ID = 'infores:cohd'
     _SERVICE_NAME = 'COHD'
+    _KNOWLEDGE_LEVEL = 'statistical_association'
+    _AGENT_TYPE = 'data_analysis_pipeline'
 
     def _get_kg_predicate(self) -> str:
         """ Determines which predicate should be used to represent the COHD analysis
