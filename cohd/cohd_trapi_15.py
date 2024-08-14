@@ -42,7 +42,7 @@ class CohdTrapi150(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.0'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.1'
     schema_version = '1.5.0'
     biolink_version = bm_version
 
@@ -1193,7 +1193,7 @@ class CohdTrapi150(CohdTrapi):
         kg_set_edge['attributes'].append({
             "attribute_source": CohdTrapi._INFORES_ID,
             "attribute_type_id": "biolink:support_graphs",
-            "values": support_graphs
+            "value": support_graphs
         })
 
     def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score):
