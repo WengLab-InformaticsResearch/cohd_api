@@ -42,7 +42,7 @@ class CohdTrapi150(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.1'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.2'
     schema_version = '1.5.0'
     biolink_version = bm_version
 
@@ -1557,13 +1557,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
@@ -1606,13 +1606,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
@@ -1662,13 +1662,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
@@ -1725,13 +1725,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
@@ -1780,13 +1780,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
@@ -1794,13 +1794,13 @@ class CohdTrapi150(CohdTrapi):
             # Knowledge Level
             {
                 'attribute_type_id': 'biolink:knowledge_level',  
-                'value': 'statistical_association',
+                'value': CohdTrapi._KNOWLEDGE_LEVEL,
                 'attribute_source': CohdTrapi._INFORES_ID
             },
             # Agent Type
             {
                 'attribute_type_id': 'biolink:agent_type',  
-                'value': 'computational_model',
+                'value': CohdTrapi._AGENT_TYPE,
                 'attribute_source': CohdTrapi._INFORES_ID
             }
         ]
@@ -1888,13 +1888,13 @@ class CohdTrapi150(CohdTrapi):
             # Knowledge Level
             {
                 'attribute_type_id': 'biolink:knowledge_level',  
-                'value': 'statistical_association',
+                'value': CohdTrapi._KNOWLEDGE_LEVEL,
                 'attribute_source': CohdTrapi._INFORES_ID
             },
             # Agent Type
             {
                 'attribute_type_id': 'biolink:agent_type',  
-                'value': 'computational_model',
+                'value': CohdTrapi._AGENT_TYPE,
                 'attribute_source': CohdTrapi._INFORES_ID
             },
             # Observed-expected frequency ratio analysis
@@ -1925,13 +1925,13 @@ class CohdTrapi150(CohdTrapi):
                     # Knowledge Level
                     {
                         'attribute_type_id': 'biolink:knowledge_level',  
-                        'value': 'statistical_association',
+                        'value': CohdTrapi._KNOWLEDGE_LEVEL,
                         'attribute_source': CohdTrapi._INFORES_ID
                     },
                     # Agent Type
                     {
                         'attribute_type_id': 'biolink:agent_type',  
-                        'value': 'computational_model',
+                        'value': CohdTrapi._AGENT_TYPE,
                         'attribute_source': CohdTrapi._INFORES_ID
                     }
                 ]
