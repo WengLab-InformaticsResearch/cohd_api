@@ -65,6 +65,9 @@ def test_alive():
 
             if response.status_code == 200:
                 print('\tSuccessful')
+            elif response.status_code == 403:
+                print(f'\tUNHEALTHY: {response.status_code}')
+                unhealthy = True
             else:
                 print(f'\tUNHEALTHY: {response.status_code}\n{response.text}')
                 unhealthy = True
