@@ -15,17 +15,22 @@ servers = ['https://cohd-api.ci.transltr.io/api',
            'https://cohd-api.transltr.io/api']
 
 other_tests = [
-            #    'https://openpredict.ci.transltr.io/meta_knowledge_graph',
-            #    'https://openpredict.test.transltr.io/meta_knowledge_graph',
-            #    'https://openpredict.transltr.io/meta_knowledge_graph',
-            #    'https://collaboratory-api.ci.transltr.io/meta_knowledge_graph',
-            #    'https://collaboratory-api.test.transltr.io/meta_knowledge_graph',
-            #    'https://collaboratory-api.transltr.io/meta_knowledge_graph',
-            #    'https://automat.transltr.io/ubergraph/meta_knowledge_graph',
-            #    'https://automat.ci.transltr.io/icees-kg/meta_knowledge_graph',
-            #    'https://automat.test.transltr.io/icees-kg/meta_knowledge_graph',
-            #    'https://automat.transltr.io/icees-kg/meta_knowledge_graph'
-            'https://cohd-api.ci.transltr.io/api/meta_knowledge_graph'
+            'https://openpredict.ci.transltr.io/meta_knowledge_graph',
+            'https://openpredict.test.transltr.io/meta_knowledge_graph',
+            'https://openpredict.transltr.io/meta_knowledge_graph',
+            'https://collaboratory-api.ci.transltr.io/meta_knowledge_graph',
+            'https://collaboratory-api.test.transltr.io/meta_knowledge_graph',
+            'https://collaboratory-api.transltr.io/meta_knowledge_graph',
+            'https://automat.transltr.io/ubergraph/meta_knowledge_graph',
+            'https://automat.ci.transltr.io/icees-kg/meta_knowledge_graph',
+            'https://automat.test.transltr.io/icees-kg/meta_knowledge_graph',
+            'https://automat.transltr.io/icees-kg/meta_knowledge_graph',
+            'https://chp-api.ci.transltr.io/meta_knowledge_graph',
+            'https://chp-api.transltr.io/meta_knowledge_graph',
+            'https://cooccurrence.ci.transltr.io/meta_knowledge_graph',
+            'https://cooccurrence.transltr.io/meta_knowledge_graph',
+            'https://bte.ci.transltr.io/v1/meta_knowledge_graph',
+            'https://bte.transltr.io/v1/meta_knowledge_graph',
             ]
 
 
@@ -65,7 +70,7 @@ def test_alive():
                 unhealthy = True
         except Exception as e:
             print(f'UNHEALTHY: {str(e)}')
-        time.sleep(2)    
+        time.sleep(1)    
 
     # No server should be unhealthy
     assert not unhealthy
