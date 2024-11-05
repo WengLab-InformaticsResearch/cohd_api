@@ -1,6 +1,7 @@
 import pymysql
 from flask import jsonify
 from scipy.stats import chisquare
+import numpy as np
 from numpy import argsort
 import logging
 import pandas as pd
@@ -15,6 +16,7 @@ CONFIG_FILE = "database.cnf"  # log-in credentials for database
 DATASET_ID_DEFAULT = 1
 DATASET_ID_DEFAULT_HIER = 3
 DEFAULT_CONFIDENCE = 0.99
+DEFAULT_MCQ_SCORE_SCALING = 0.75
 
 # OXO API configuration
 URL_OXO_SEARCH = 'https://www.ebi.ac.uk/spot/oxo/api/search'
@@ -1132,7 +1134,11 @@ def query_db(service, method, args):
             elif type(concept_ids) is not list:
                 concept_ids = [concept_ids]
             
-            set_results, single_results = query_trapi_mcq(concept_ids, dataset_id, domain_id, bypass=True)
+            set_results, single_results = query_trapi_mcq(concept_ids=concept_ids, 
+                                                          n_member_ids=len(concept_ids), 
+                                                          dataset_id=dataset_id, 
+                                                          domain_id=domain_id, 
+                                                          bypass=True)
             json_return = {
                 'set_results': set_results,
                 'single_results': single_results
@@ -1837,7 +1843,7 @@ def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_i
     concept_list_1_w_df= pd.DataFrame({'concept_id_1':concept_id_1})
     concept_list_1_w_df['w'] = 1
 
-    # Calculate the weights based on Jaccard index between input concep
+    # Calculate the weights based on Jaccard index between input concepts
     pair_count_q1 = pd.DataFrame(get_pair_concept_count(cur=cur,dataset_id=dataset_id,domain_id=domain_id, concept_id_list_1=concept_id_1,concept_id_list_2=concept_id_1))
     if pair_count_q1.shape[0] > 0:
         # Sum of Jaccard index
@@ -1849,6 +1855,7 @@ def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_i
     # Weight = 1/(1 + sum(Jaccards))
     concept_list_1_w_df['w'] = 1/concept_list_1_w_df['w']
     concept_list_1_w_df = concept_list_1_w_df[['concept_id_1','w']]
+    total_weights = concept_list_1_w_df.w.sum()
 
     # Multiply the scores by the weights
     pair_count_df = pair_count_df.merge(concept_list_1_w_df)
@@ -1858,7 +1865,7 @@ def _get_weighted_statistics(cur=None,dataset_id=None,domain_id = None,concept_i
     # Group by concept_id_2. Sum the scores and combine concept_id_1 into a list
     gb = pair_count_df.groupby('concept_id_2')
     weighted_stats = gb[json_key].agg('sum')
-    return weighted_stats.reset_index()
+    return weighted_stats.reset_index(), total_weights
 
 
 def _get_ci_scores(r, score_col):
@@ -1871,7 +1878,8 @@ def _get_ci_scores(r, score_col):
 
 
 @cache.memoize(timeout=86400, unless=_bypass_cache)
-def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_id=None,
+def query_trapi_mcq(concept_ids, n_member_ids, score_scaling=DEFAULT_MCQ_SCORE_SCALING, 
+                    dataset_id=None, domain_id=None, concept_class_id=None,
                     ln_ratio_sign=0, confidence=DEFAULT_CONFIDENCE, bypass=False):
     """ Query for TRAPI Multicurie Query. Calculates weighted scores using methods similar to linkage disequilibrium to
     downweight contributions from input concepts that are similar to each other 
@@ -1879,6 +1887,8 @@ def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_
     Parameters
     ----------
     concept_ids: list of OMOP concept IDs
+    n_member_ids: number of input IDs in set node
+    score_scaling: linear scaling of ln_ratio_score prior to logistic normalization
     dataset_id: (optional) String - COHD dataset ID
     domain_id: (optional) String - OMOP domain ID
     concept_class_id: (optional) String - OMOP concept class ID
@@ -1912,12 +1922,18 @@ def query_trapi_mcq(concept_ids, dataset_id=None, domain_id=None, concept_class_
 
     # Adjust the scores by weights 
     concept_list_1 = list(set(associations['concept_id_1'].tolist()))
-    weighted_ln_ratio = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
+    weighted_ln_ratio, total_weights = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
                                                 concept_id_1=concept_list_1, pair_count_df=associations, 
                                                 json_key = 'ln_ratio_score')
     # weighted_log_odds = _get_weighted_statistics(cur=cur, dataset_id=dataset_id, domain_id=domain_id, 
     #                                             concept_id_1=concept_list_1, pair_count_df=associations, 
     #                                             json_key = 'log_odds_score')
+
+    # For TRAPI result score, normalize the score relative to the number of input CURIEs and 
+    # scale the score range to [0-1] using a scaled logistic function
+    n_mapped_ids = len(concept_list_1)
+    weighted_ln_ratio['mcq_score'] = weighted_ln_ratio['ln_ratio_score'] / total_weights * n_mapped_ids / n_member_ids    
+    weighted_ln_ratio['mcq_score'] = (1/(1+np.exp(-np.abs(weighted_ln_ratio['mcq_score']*score_scaling)))-0.5) * 2
 
     # Add list of single associations 
     single_associations = dict()

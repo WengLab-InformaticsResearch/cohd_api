@@ -42,7 +42,7 @@ class CohdTrapi150(CohdTrapi):
     edge_types_negative = ['biolink:negatively_correlated_with']
     default_negative_predicate = edge_types_negative[0]
 
-    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.3'
+    tool_version = f'{CohdTrapi._SERVICE_NAME} 6.5.4'
     schema_version = '1.5.0'
     biolink_version = bm_version
 
@@ -600,15 +600,15 @@ class CohdTrapi150(CohdTrapi):
         if self._concept_1_set_interpretation == 'BATCH':
             ids = list(set(concept_1_qnode['ids']))  # remove duplicate CURIEs
         elif self._concept_1_set_interpretation == 'MANY':
-            member_ids = concept_1_qnode.get('member_ids')
-            if not member_ids:
+            self._mcq_member_ids = concept_1_qnode.get('member_ids')
+            if not self._mcq_member_ids:
                 # Missing required member_ids for MCQ
                 self._valid_query = False
                 description = 'set_interpretation: MANY but no member_ids'
                 response = self._trapi_mini_response(TrapiStatusCode.MISSING_MEMBER_IDS, description)
                 self._invalid_query_response = response, 200
                 return self._valid_query, self._invalid_query_response
-            ids = list(set(concept_1_qnode['member_ids']))  # remove duplicate CURIEs
+            ids = list(self._mcq_member_ids)  # remove duplicate CURIEs
 
             # Get the MCQ set ID
             self._mcq_set_id = concept_1_qnode['ids'][0]
@@ -999,12 +999,14 @@ class CohdTrapi150(CohdTrapi):
             # categories (domains)
             for domain_id, concept_class_id in self._domain_class_pairs:
                 new_results = query_cohd_mysql.query_trapi_mcq(concept_ids=self._concept_1_omop_ids,
-                                                                dataset_id=self._dataset_id,
-                                                                domain_id=domain_id,
-                                                                concept_class_id=concept_class_id,
-                                                                ln_ratio_sign=self._association_direction,
-                                                                confidence=self._confidence_interval,
-                                                                bypass=self._bypass_cache)
+                                                               n_member_ids=len(self._mcq_member_ids),
+                                                               score_scaling=CohdTrapi.mcq_score_scaling,
+                                                               dataset_id=self._dataset_id,
+                                                               domain_id=domain_id,
+                                                               concept_class_id=concept_class_id,
+                                                               ln_ratio_sign=self._association_direction,
+                                                               confidence=self._confidence_interval,
+                                                               bypass=self._bypass_cache)
                 new_set_results, new_single_results = new_results
                 if new_set_results:
                     set_results.extend(new_set_results)
@@ -1012,18 +1014,21 @@ class CohdTrapi150(CohdTrapi):
         else:
             # No category (domain) was specified for Node 2. Query the associations between Node 1 and all
             # domains
-            new_results = query_cohd_mysql.query_trapi_mcq(concept_id_1=self._concept_1_omop_ids,
-                                                            dataset_id=self._dataset_id, domain_id=None,
-                                                            ln_ratio_sign=self._association_direction,
-                                                            confidence=self._confidence_interval,
-                                                            bypass=self._bypass_cache)
+            new_results = query_cohd_mysql.query_trapi_mcq(concept_ids=self._concept_1_omop_ids,
+                                                           n_member_ids=len(self._mcq_member_ids),
+                                                           score_scaling=CohdTrapi.mcq_score_scaling,
+                                                           dataset_id=self._dataset_id, 
+                                                           domain_id=None,
+                                                           ln_ratio_sign=self._association_direction,
+                                                           confidence=self._confidence_interval,
+                                                           bypass=self._bypass_cache)
             new_set_results, new_single_results = new_results
             if new_set_results:
                 set_results.extend(new_set_results)
                 single_results.update(new_single_results)
 
         # Results within each query call should be sorted, but still need to be sorted across query calls
-        new_set_results = sort_cohd_results(new_set_results, sort_field='ln_ratio_score')
+        new_set_results = sort_cohd_results(new_set_results, sort_field='mcq_score')
 
         # Convert results from COHD format to Translator Reasoner standard
         self._add_mcq_results_to_trapi(set_results, single_results)
@@ -1169,8 +1174,8 @@ class CohdTrapi150(CohdTrapi):
         kg_node_2, kg_set_edge, kg_set_edge_id = self._add_kg_set_edge(node_2, is_subject, set_result)
 
         # Add to results
-        score = set_result['ln_ratio_score']
-        self._add_result(self._mcq_set_id, concept_2_curie, kg_set_edge_id, score)        
+        score = set_result['mcq_score']
+        self._add_result(self._mcq_set_id, concept_2_curie, kg_set_edge_id, score, mcq=True)        
         
         # Add single result edges and auxiliary graphs
         support_graphs = list()
@@ -1196,7 +1201,7 @@ class CohdTrapi150(CohdTrapi):
             "value": support_graphs
         })
 
-    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score):
+    def _add_result(self, kg_node_1_id, kg_node_2_id, kg_edge_id, score, mcq=False):
         """ Adds a knowledge graph edge to the results list
 
         Parameters
@@ -1205,6 +1210,7 @@ class CohdTrapi150(CohdTrapi):
         kg_node_2_id: Object node ID
         kg_edge_id: edge ID
         score: result score
+        mcq: True/False if MCQ analysis
 
         Returns
         -------
@@ -1231,7 +1237,7 @@ class CohdTrapi150(CohdTrapi):
                         }]
                     },
                     'score': score,
-                    'scoring_method': 'Lower bound of biolink:ln_ratio_confidence_interval',
+                    'scoring_method': 'COHD set-input query scoring, range: [0,1]' if mcq else 'Lower bound of biolink:ln_ratio_confidence_interval',
                 }
             ]
         }
@@ -1913,7 +1919,7 @@ class CohdTrapi150(CohdTrapi):
                         'value_type_id': 'EDAM:data_1772',  # Score
                         'attribute_source': CohdTrapi._INFORES_ID,
                         'description': 'Observed-expected frequency ratio.'
-                    },
+                    },                 
                     {
                         'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
                         'original_attribute_name': 'dataset_id',
