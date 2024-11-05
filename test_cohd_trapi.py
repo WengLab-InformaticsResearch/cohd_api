@@ -21,7 +21,7 @@ from cohd.translator.ubergraph import Ubergraph
 # Choose which server to test
 # cr.server = 'https://dev.cohd.io/api'
 cr.server = 'https://cohd-api.ci.transltr.io/api'
-# cr.server = 'https://cohd-api.test.transltr.io/api'  
+# cr.server = 'https://cohd-api.test.transltr.io/api'
 # cr.server = 'https://cohd-api.transltr.io/api'  
 
 # Specify what Biolink and TRAPI versions are expected by the server
@@ -901,6 +901,242 @@ def test_translator_query_qnode_empty_constraint():
                         "subject": "subj",
                         "object": "obj",
                         "predicates": ["biolink:correlated_with"]
+                    }
+                }
+            }
+        },
+        "query_options": {
+            "max_results": 10
+        }
+    }
+    '''
+    query = j.loads(query)
+    query['query_options']['query_id'] = str(uuid.uuid4())
+    print(j.dumps(query))
+    resp = requests.post(url, json=query, timeout=300)
+
+    # Expect HTTP 200 status response
+    assert resp.status_code == 200, 'Expected an HTTP 200 status response code' \
+                                    f'Received {resp.status_code}: {resp.text}'
+
+    # Use the Reasoner Validator Python package to validate against Reasoner Standard API
+    json = resp.json()
+    _validate_trapi_response(json)
+
+    # There should be at least 1 result
+    assert len(json['message']['results']) >= 1, _print_trapi_log(json)
+
+
+def test_translator_set_input_query():
+    """ Check the TRAPI endpoint to make sure it returns properly formatted TRAPI for set-input query. """
+    print(f'\ntest_cohd_trapi::test_translator_set_input_query: testing TRAPI set-input query on {cr.server}..... ')
+
+    url = f'{cr.server}/query'
+
+    # Query with empty constraints
+    query = '''
+    {
+        "message": {
+            "query_graph": {
+                "nodes": {
+                    "input": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "ids": [
+                            "uuid:1"
+                        ],
+                        "member_ids": [
+                            "HP:0000739",
+                            "HP:0001288",
+                            "HP:0001252",
+                            "HP:0001250",
+                            "HP:0000750",
+                            "HP:0002378",
+                            "HP:0002019",
+                            "HP:0007146"
+                        ],
+                        "set_interpretation": "MANY"
+                    },
+                    "output": {
+                        "categories": [
+                            "biolink:Disease"
+                        ]
+                    }
+                },
+                "edges": {
+                    "edge_0": {
+                        "subject": "input",
+                        "object": "output",
+                        "predicates": [
+                            "biolink:correlated_with"
+                        ]
+                    }
+                }
+            },
+            "knowledge_graph": {
+                "nodes": {
+                    "uuid:1": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": true,
+                        "name": "set1",
+                        "attributes": []
+                    },
+                    "HP:0000739": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0001288": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0001252": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0001250": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0000750": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0002378": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0002019": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    },
+                    "HP:0007146": {
+                        "categories": [
+                            "biolink:PhenotypicFeature"
+                        ],
+                        "is_set": false,
+                        "attributes": []
+                    }
+                },
+                "edges": {
+                    "kgedge_member_of_0001": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0000739"
+                    },
+                    "kgedge_member_of_0002": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0001288"
+                    },
+                    "kgedge_member_of_0003": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0001252"
+                    },
+                    "kgedge_member_of_0004": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0001250"
+                    },
+                    "kgedge_member_of_0005": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0000750"
+                    },
+                    "kgedge_member_of_0006": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0002378"
+                    },
+                    "kgedge_member_of_0007": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0002019"
+                    },
+                    "kgedge_member_of_0008": {
+                        "attributes": [],
+                        "object": "uuid:1",
+                        "predicate": "biolink:member_of",
+                        "sources": [
+                            {
+                                "resource_id": "infores:user-interface",
+                                "resource_role": "primary_knowledge_source"
+                            }
+                        ],
+                        "subject": "HP:0007146"
                     }
                 }
             }
