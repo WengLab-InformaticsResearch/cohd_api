@@ -69,6 +69,7 @@ class CohdTrapi(ABC):
     batch_size_limit = 100  # max length of any IDs list
     limit_max_results = 500
     json_inf_replacement = 999  # value to replace +/-Infinity with in JSON
+    mcq_score_scaling = 0.75  # magic number to adjust normalized MCQ score
     supported_query_methods = ['relativeFrequency', 'obsExpRatio', 'chiSquare']
     supported_operation = 'lookup_and_score'
 
