@@ -235,7 +235,7 @@ def clip(x, clip):
 
 # Read OMOP concep definitions
 omop_concepts = dict()
-with open(path.join(DIR_DATA, 'concepts.tsv'), 'r') as f_concepts:
+with open(path.join(DIR_DATA, 'concepts.tsv'), 'r', encoding='utf-8') as f_concepts:
     # skip header line
     f_concepts.readline()
     while line := f_concepts.readline():
@@ -388,6 +388,7 @@ with open(path.join(dir_output, 'cohd_edges.jsonl'), 'w') as f_edges:
                     rel_freq_study_value = f"Relative to {curie_subj}: {rel_freq_subj_value:.3f} [{rel_freq_subj_ci_value[0]:.3f}, {rel_freq_subj_ci_value[1]:.3f}]; " \
                                         f"Relative to {curie_obj}: {rel_freq_obj_value:.3f} [{rel_freq_obj_ci_value[0]:.3f}, {rel_freq_obj_ci_value[1]:.3f}]"
                     log_odds_study_value = f"{lo:.3f} [{lo_ci[0]:.3f}, {lo_ci[1]:.3f}]"
+                    score = lnr_ci[0] if lnr > 0 else -lnr_ci[1]
 
                     # Build attributes
                     attributes = [
@@ -514,6 +515,60 @@ with open(path.join(dir_output, 'cohd_edges.jsonl'), 'w') as f_edges:
                         {
                             "attribute_source": INFORES_ID,
                             "attribute_type_id": "biolink:has_supporting_study_result",
+                            "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
+                            "value": oefr_study_value,
+                            "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
+                            'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
+                            "attributes": [
+                                {
+                                    'attribute_type_id': 'biolink:expected_count',
+                                    'original_attribute_name': 'expected_count',
+                                    'value': count_expected,
+                                    'value_type_id': 'EDAM:operation_3438',
+                                    'attribute_source': INFORES_ID,
+                                    'description': 'Calculated expected count of concept pair.'
+                                },
+                                {
+                                    'attribute_type_id': 'biolink:ln_ratio',
+                                    'original_attribute_name': 'ln_ratio',
+                                    'value': lnr,
+                                    'value_type_id': 'EDAM:data_1772',  # Score
+                                    'attribute_source': INFORES_ID,
+                                    'description': 'Observed-expected frequency ratio.'
+                                },
+                                {
+                                    'attribute_type_id': 'biolink:ln_ratio_confidence_interval',
+                                    'original_attribute_name': 'ln_ratio_confidence_interval',
+                                    'value': lnr_ci,
+                                    'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
+                                    'attribute_source': INFORES_ID,
+                                    'description': f'Observed-expected frequency ratio {CONFIDENCE*100}% confidence interval'
+                                },
+                                {
+                                    'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
+                                    'original_attribute_name': 'dataset_id',
+                                    'value': f"COHD:dataset_{dataset_id}",
+                                    'value_type_id': 'EDAM:data_1048',  # Database ID
+                                    'attribute_source': INFORES_ID,
+                                    'description': f'Dataset ID within COHD'
+                                },
+                                # Knowledge Level
+                                {
+                                    'attribute_type_id': 'biolink:knowledge_level',  
+                                    'value': KNOWLEDGE_LEVEL,
+                                    'attribute_source': INFORES_ID
+                                },
+                                # Agent Type
+                                {
+                                    'attribute_type_id': 'biolink:agent_type',  
+                                    'value': AGENT_TYPE,
+                                    'attribute_source': INFORES_ID
+                                }
+                            ]
+                        },
+                        {
+                            "attribute_source": INFORES_ID,
+                            "attribute_type_id": "biolink:has_supporting_study_result",
                             "description": "A study result describing a relative frequency anaylsis on a single pair of concepts",
                             "value": rel_freq_study_value,
                             "value_type_id": "biolink:RelativeFrequencyAnalysisResult",
@@ -550,60 +605,6 @@ with open(path.join(dir_output, 'cohd_edges.jsonl'), 'w') as f_edges:
                                     'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
                                     'attribute_source': INFORES_ID,
                                     'description': f'Relative frequency (object) {CONFIDENCE*100}% confidence interval'
-                                },
-                                {
-                                    'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
-                                    'original_attribute_name': 'dataset_id',
-                                    'value': f"COHD:dataset_{dataset_id}",
-                                    'value_type_id': 'EDAM:data_1048',  # Database ID
-                                    'attribute_source': INFORES_ID,
-                                    'description': f'Dataset ID within COHD'
-                                },
-                                # Knowledge Level
-                                {
-                                    'attribute_type_id': 'biolink:knowledge_level',  
-                                    'value': KNOWLEDGE_LEVEL,
-                                    'attribute_source': INFORES_ID
-                                },
-                                # Agent Type
-                                {
-                                    'attribute_type_id': 'biolink:agent_type',  
-                                    'value': AGENT_TYPE,
-                                    'attribute_source': INFORES_ID
-                                }
-                            ]
-                        },
-                        {
-                            "attribute_source": INFORES_ID,
-                            "attribute_type_id": "biolink:has_supporting_study_result",
-                            "description": "A study result describing an observed-expected frequency anaylsis on a single pair of concepts",
-                            "value": oefr_study_value,
-                            "value_type_id": "biolink:ObservedExpectedFrequencyAnalysisResult",
-                            'value_url': 'https://github.com/NCATSTranslator/Translator-All/wiki/COHD-KP',
-                            "attributes": [
-                                {
-                                    'attribute_type_id': 'biolink:expected_count',
-                                    'original_attribute_name': 'expected_count',
-                                    'value': count_expected,
-                                    'value_type_id': 'EDAM:operation_3438',
-                                    'attribute_source': INFORES_ID,
-                                    'description': 'Calculated expected count of concept pair.'
-                                },
-                                {
-                                    'attribute_type_id': 'biolink:ln_ratio',
-                                    'original_attribute_name': 'ln_ratio',
-                                    'value': lnr,
-                                    'value_type_id': 'EDAM:data_1772',  # Score
-                                    'attribute_source': INFORES_ID,
-                                    'description': 'Observed-expected frequency ratio.'
-                                },
-                                {
-                                    'attribute_type_id': 'biolink:ln_ratio_confidence_interval',
-                                    'original_attribute_name': 'ln_ratio_confidence_interval',
-                                    'value': lnr_ci,
-                                    'value_type_id': 'EDAM:data_0951',  # Statistical estimate score
-                                    'attribute_source': INFORES_ID,
-                                    'description': f'Observed-expected frequency ratio {CONFIDENCE*100}% confidence interval'
                                 },
                                 {
                                     'attribute_type_id': 'biolink:supporting_data_set',  # Database ID
@@ -690,6 +691,7 @@ with open(path.join(dir_output, 'cohd_edges.jsonl'), 'w') as f_edges:
                         'subject': biolink_id_1,
                         'object': biolink_id_2,
                         'predicate': predicate,
+                        'score': score,
                         'attributes': attributes,
                         'sources': [
                             {
